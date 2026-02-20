@@ -1,0 +1,40 @@
+{
+  "name": "astro-inline-review",
+  "version": "0.1.0",
+  "description": "Dev-only text annotation overlay for Astro sites — select text, add notes, export markdown",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./client": "./dist/client.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "astro-integration",
+    "annotation",
+    "review",
+    "developer-tools",
+    "copy-review"
+  ],
+  "author": "Matthew Vivian",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "astro": "^5.3.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
+  }
+}
