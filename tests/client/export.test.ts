@@ -1,0 +1,141 @@
+import { describe, it, expect } from 'vitest';
+import { generateExportMarkdown } from '../../src/client/export.js';
+import type { ReviewStore } from '../../src/client/types.js';
+
+function makeStore(overrides?: Partial<ReviewStore>): ReviewStore {
+  return {
+    version: 1,
+    annotations: [],
+    pageNotes: [],
+    ...overrides,
+  };
+}
+
+describe('generateExportMarkdown', () => {
+  it('returns empty message when store has no data', () => {
+    const result = generateExportMarkdown(makeStore());
+
+    expect(result).toContain('# Inline Review');
+    expect(result).toContain('No annotations or notes yet');
+  });
+
+  it('includes export date in ISO-like format', () => {
+    const result = generateExportMarkdown(makeStore());
+
+    expect(result).toContain('Exported:');
+    // Date should be YYYY-MM-DD HH:MM format
+    expect(result).toMatch(/Exported: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
+  });
+
+  it('groups annotations by page URL', () => {
+    const store = makeStore({
+      annotations: [
+        {
+          id: '1', pageUrl: '/', pageTitle: 'Home',
+          selectedText: 'hello', note: 'note1',
+          range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello', contextBefore: '', contextAfter: '' },
+          createdAt: '', updatedAt: '',
+        },
+        {
+          id: '2', pageUrl: '/about', pageTitle: 'About',
+          selectedText: 'world', note: 'note2',
+          range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'world', contextBefore: '', contextAfter: '' },
+          createdAt: '', updatedAt: '',
+        },
+      ],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('## / — Home');
+    expect(result).toContain('## /about — About');
+  });
+
+  it('renders selected text in bold quotes', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', pageUrl: '/', pageTitle: '',
+        selectedText: 'important text', note: 'fix this',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        createdAt: '', updatedAt: '',
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('**"important text"**');
+  });
+
+  it('renders notes as blockquotes', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', pageUrl: '/', pageTitle: '',
+        selectedText: 'text', note: 'This needs fixing',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        createdAt: '', updatedAt: '',
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('> This needs fixing');
+  });
+
+  it('numbers annotations within each page', () => {
+    const store = makeStore({
+      annotations: [
+        { id: '1', pageUrl: '/', pageTitle: '', selectedText: 'first', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+        { id: '2', pageUrl: '/', pageTitle: '', selectedText: 'second', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+      ],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('1. **"first"**');
+    expect(result).toContain('2. **"second"**');
+  });
+
+  it('includes page notes as bullet list', () => {
+    const store = makeStore({
+      pageNotes: [
+        { id: '1', pageUrl: '/', pageTitle: 'Home', note: 'General feedback', createdAt: '', updatedAt: '' },
+        { id: '2', pageUrl: '/', pageTitle: 'Home', note: 'Tone is off', createdAt: '', updatedAt: '' },
+      ],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('### Page Notes');
+    expect(result).toContain('- General feedback');
+    expect(result).toContain('- Tone is off');
+  });
+
+  it('separates pages with horizontal rules', () => {
+    const store = makeStore({
+      annotations: [
+        { id: '1', pageUrl: '/', pageTitle: '', selectedText: 'a', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+        { id: '2', pageUrl: '/about', pageTitle: '', selectedText: 'b', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+      ],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('---');
+  });
+
+  it('omits annotation note blockquote when note is empty', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', pageUrl: '/', pageTitle: '',
+        selectedText: 'text', note: '',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        createdAt: '', updatedAt: '',
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('**"text"**');
+    expect(result).not.toContain('> ');
+  });
+});
