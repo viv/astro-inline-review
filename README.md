@@ -1,5 +1,10 @@
 # astro-inline-review
 
+[![CI](https://github.com/viv/astro-inline-review/actions/workflows/ci.yml/badge.svg)](https://github.com/viv/astro-inline-review/actions/workflows/ci.yml)
+[![Acceptance Tests](https://github.com/viv/astro-inline-review/actions/workflows/acceptance.yml/badge.svg)](https://github.com/viv/astro-inline-review/actions/workflows/acceptance.yml)
+[![npm version](https://img.shields.io/npm/v/astro-inline-review)](https://www.npmjs.com/package/astro-inline-review)
+[![licence](https://img.shields.io/npm/l/astro-inline-review)](LICENSE)
+
 A bridge between human reviewers and coding agents for [Astro](https://astro.build) sites.
 
 Browse your rendered site, select text, attach notes, and export location-aware Markdown that a coding agent (Claude, Cursor, Copilot, etc.) can act on immediately. No hunting through source files to explain *where* the problem is.

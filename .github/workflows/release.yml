@@ -1,0 +1,62 @@
+name: Release Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected version (e.g. 0.2.0)"
+        required: true
+        type: string
+      dry-run:
+        description: "Dry run (skip nothing, just validate)"
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  validate-release:
+    name: Validate release v${{ inputs.version }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Validate version
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "package.json version: $PKG_VERSION"
+          echo "Expected version: ${{ inputs.version }}"
+          if [ "$PKG_VERSION" != "${{ inputs.version }}" ]; then
+            echo "::error::Version mismatch — package.json has $PKG_VERSION but expected ${{ inputs.version }}"
+            exit 1
+          fi
+
+      - name: Pack
+        run: npm pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-tarball-v${{ inputs.version }}
+          path: "*.tgz"
+
+      - name: Publish instructions
+        run: |
+          echo "## Ready to publish" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All checks passed for v${{ inputs.version }}." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npm publish --otp <code>" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
