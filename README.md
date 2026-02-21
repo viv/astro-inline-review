@@ -2,17 +2,17 @@
 
 A bridge between human reviewers and coding agents for [Astro](https://astro.build) sites.
 
-Browse your rendered site, select text, attach notes, and export location-aware Markdown that a coding agent (Claude, Cursor, Copilot, etc.) can act on immediately — no hunting through source files to explain *where* the problem is.
+Browse your rendered site, select text, attach notes, and export location-aware Markdown that a coding agent (Claude, Cursor, Copilot, etc.) can act on immediately. No hunting through source files to explain *where* the problem is.
 
 <!-- TODO: Add screenshot/GIF here -->
 
 ## The Problem
 
-Reviewing a live site and turning that into actionable code changes is tedious. You spot a typo, an awkward heading, a paragraph that needs rewriting — but translating "that bit on the homepage, third section down" into a precise instruction for a coding agent means switching context, finding the right file, identifying the right line, and describing what you saw.
+Reviewing a live site and turning that into actionable code changes is tedious. You spot a typo, an awkward heading, a paragraph that needs rewriting, but translating "that bit on the homepage, third section down" into a precise instruction for a coding agent means switching context, finding the right file, identifying the right line, and describing what you saw.
 
 ## The Solution
 
-**astro-inline-review** lets you stay in the browser. Select the text, write your note, move on. When you're done reviewing, export everything as structured Markdown. Each annotation carries the page URL and the exact selected text — giving your coding agent both the instruction and the location context it needs to make the change.
+**astro-inline-review** lets you stay in the browser. Select the text, write your note, move on. When you're done reviewing, export everything as structured Markdown. Each annotation carries the page URL and the exact selected text, giving your coding agent both the instruction and the location context it needs to make the change.
 
 ```markdown
 ## / — Home Page
@@ -27,18 +27,18 @@ Reviewing a live site and turning that into actionable code changes is tedious. 
 
 Paste that into Claude, Cursor, or any agent and it knows exactly what to fix and where.
 
-Ships **zero bytes** in production builds — all UI, storage, and API infrastructure exists only during `astro dev`.
+Ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during `astro dev`.
 
 ## Features
 
-- **Text annotations** — select any text on the page and attach a note
-- **Page notes** — add free-text notes scoped to a page (not tied to a selection)
-- **Location-aware export** — each annotation carries the page URL and selected text, so coding agents know exactly where to act
-- **Persistent** — annotations survive page reloads, navigation, and dev server restarts
-- **Multi-page** — annotations are scoped by URL but viewable across all pages
-- **Shadow DOM isolation** — all UI is isolated from your site's styles
-- **Keyboard shortcuts** — toggle panel, export, add notes without touching the mouse
-- **Zero-config** — works with a single line in `astro.config.mjs`
+- **Text annotations.** Select any text on the page and attach a note.
+- **Page notes.** Add free-text notes scoped to a page, not tied to a selection.
+- **Location-aware export.** Each annotation carries the page URL and selected text, so coding agents know exactly where to act.
+- **Persistent.** Annotations survive page reloads, navigation, and dev server restarts.
+- **Multi-page.** Annotations are scoped by URL but viewable across all pages.
+- **Shadow DOM isolation.** All UI is isolated from your site's styles.
+- **Keyboard shortcuts.** Toggle panel, export, and add notes without touching the mouse.
+- **Zero-config.** Works with a single line in `astro.config.mjs`.
 
 ## Install
 
@@ -71,11 +71,11 @@ That's it. Run `astro dev` and you'll see an orange floating action button in th
 ## Workflow
 
 1. Run `astro dev` and browse your site
-2. **Select text** — a popup appears to add a note about what needs changing
+2. **Select text** and a popup appears to add a note about what needs changing
 3. **Add page notes** for broader feedback (via the panel or `Cmd/Ctrl+Shift+N`)
 4. Review your annotations in the **slide-out panel** (click the FAB or `Cmd/Ctrl+Shift+.`)
 5. **Export** all annotations as Markdown (`Cmd/Ctrl+Shift+E`)
-6. **Paste the export** into your coding agent — it has everything it needs to act
+6. **Paste the export** into your coding agent. It has everything it needs to act
 
 ### Keyboard Shortcuts
 
@@ -137,20 +137,20 @@ The acceptance test suite lives in a separate repository: [astro-inline-review-t
 
 ## Alternatives
 
-[astro-annotate](https://github.com/jan-nikolov/astro-annotate) is a similar Astro integration built independently around the same time. Both tools solve the same core problem — annotating a rendered Astro site and producing structured output for coding agents — but they take different approaches:
+[astro-annotate](https://github.com/jan-nikolov/astro-annotate) is a similar Astro integration built independently around the same time. Both tools solve the same core problem (annotating a rendered Astro site and producing structured output for coding agents) but they take different approaches:
 
 | | astro-inline-review | astro-annotate |
 |---|---|---|
-| **Selection model** | Text selection — highlight exact words or sentences | Element selection — annotate whole HTML elements |
+| **Selection model** | Text selection (highlight exact words or sentences) | Element selection (annotate whole HTML elements) |
 | **Location tracking** | XPath ranges with surrounding context | CSS selectors (IDs, data-testid, tag+class) |
 | **Export formats** | Markdown (clipboard) + JSON file | JSON file |
-| **Status tracking** | No — annotations are transient review feedback | Yes — open/resolved status per annotation |
-| **Device tagging** | No | Yes — desktop/mobile/tablet with viewport dimensions |
+| **Status tracking** | No, annotations are transient review feedback | Yes, open/resolved status per annotation |
+| **Device tagging** | No | Yes, desktop/mobile/tablet with viewport dimensions |
 | **Deployment model** | Dev-only by design | Dev-only now, deployed mode planned (Cloudflare Pages) |
 
-**Choose astro-inline-review** if you're doing copy review or content editing — you need to point at specific text ("this sentence is awkward") and the Markdown export is designed for pasting straight into a coding agent chat.
+**Choose astro-inline-review** if you're doing copy review or content editing. You need to point at specific text ("this sentence is awkward") and the Markdown export is designed for pasting straight into a coding agent chat.
 
-**Choose astro-annotate** if you're collecting UI/layout feedback from clients or stakeholders — element-level selection maps well to "make this section wider" or "change this button colour", and the status tracking helps manage a backlog of feedback.
+**Choose astro-annotate** if you're collecting UI/layout feedback from clients or stakeholders. Element-level selection maps well to "make this section wider" or "change this button colour", and the status tracking helps manage a backlog of feedback.
 
 ## Licence
 
