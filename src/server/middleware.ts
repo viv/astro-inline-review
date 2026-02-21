@@ -1,3 +1,4 @@
+import type http from 'node:http';
 import type { Connect } from 'vite';
 import type { Annotation, PageNote, ReviewStore } from '../types.js';
 import { ReviewStorage } from './storage.js';
@@ -166,12 +167,12 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-function sendJson(res: Connect.ServerResponse, data: unknown, status = 200): void {
+function sendJson(res: http.ServerResponse, data: unknown, status = 200): void {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
 }
 
-function sendError(res: Connect.ServerResponse, status: number, message: string): void {
+function sendError(res: http.ServerResponse, status: number, message: string): void {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: message }));
 }
