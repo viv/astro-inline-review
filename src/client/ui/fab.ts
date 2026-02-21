@@ -32,10 +32,9 @@ export function createFab(shadowRoot: ShadowRoot, onToggle: () => void): FabElem
   badge.textContent = '0';
   button.appendChild(badge);
 
-  let isOpen = false;
-
   button.addEventListener('click', () => {
-    isOpen = !isOpen;
+    const wasOpen = button.getAttribute('data-air-state') === 'open';
+    const isOpen = !wasOpen;
     button.innerHTML = isOpen ? PLUS_ICON : CLIPBOARD_ICON;
     button.appendChild(badge); // Re-append badge after innerHTML change
     button.classList.toggle('air-fab--open', isOpen);
@@ -46,6 +45,14 @@ export function createFab(shadowRoot: ShadowRoot, onToggle: () => void): FabElem
   shadowRoot.appendChild(button);
 
   return { button, badge };
+}
+
+/** Reset the FAB to its closed visual state (used when panel is closed externally). */
+export function resetFab(fab: FabElements): void {
+  fab.button.innerHTML = CLIPBOARD_ICON;
+  fab.button.appendChild(fab.badge);
+  fab.button.classList.remove('air-fab--open');
+  fab.button.setAttribute('data-air-state', 'closed');
 }
 
 /** Update the badge count on the FAB */

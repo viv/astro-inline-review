@@ -5,7 +5,7 @@
  * and loads existing annotations. Idempotent — safe to call multiple times.
  */
 import { createHost } from './ui/host.js';
-import { createFab, updateBadge, type FabElements } from './ui/fab.js';
+import { createFab, updateBadge, resetFab, type FabElements } from './ui/fab.js';
 import { createPanel, togglePanel, closePanel, isPanelOpen, type PanelElements } from './ui/panel.js';
 import { createAnnotator, type AnnotatorInstance } from './annotator.js';
 import { isPopupVisible, hidePopup } from './ui/popup.js';
@@ -113,6 +113,7 @@ function init(): void {
       }
       if (isPanelOpen(panel)) {
         closePanel(panel);
+        resetFab(fab);
       }
     },
     exportToClipboard: async () => {
