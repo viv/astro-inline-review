@@ -1381,62 +1381,7 @@ These may be added in future if the tool gains broader adoption.
 ---
 
 
-## Appendix A: Acceptance Test Coverage Gaps (for test authors, not implementers)
-
-The following areas are specified above but have **incomplete or missing coverage** in the acceptance test suite (12 spec files):
-
-### A.1 Gaps in Existing Tests
-
-1. **Orphaned annotations in panel** (Tier 3 restoration):
-   No test verifies that when a highlight cannot be restored (DOM changed since annotation was created), the annotation still appears in the panel with an orphaned warning. The `.air-annotation-item__orphan` CSS class exists but is untested.
-
-2. **Context matching fallback** (Tier 2 restoration):
-   No acceptance test verifies that when XPath restoration fails but context matching succeeds, the highlight is still restored. All persistence tests rely on the DOM being unchanged between save and reload.
-
-3. **Page note edit flow**:
-   The acceptance test `07-page-notes.spec.ts` tests the edit happy path (click Edit, modify text, click Save, verify updated text persists). It does not test cancelling an edit or editing to empty text.
-
-4. **Toast notification content**:
-   The export test (`09-export.spec.ts`) checks that a toast is visible after export, but doesn't verify the exact toast message ("Copied to clipboard!" vs "Export failed"). The `expectToastVisible` helper accepts optional text but most tests don't use it.
-
-5. **Panel tab counts**:
-   The test for "annotation count appears in tab label" (`06-panel.spec.ts`) only checks that the tab contains "2". It doesn't verify the count includes page notes (the implementation counts both annotations and page notes). There is no test for the All Pages tab count.
-
-6. **Clear All confirmation auto-reset**:
-   The Clear All test verifies the confirmation step appears, but doesn't test that the confirmation auto-resets after 3 seconds if the user doesn't click again.
-
-7. **Popup positioning**:
-   The selection test checks that the popup is "positioned near the selection" but uses a broad check (popup y-coordinate within 200px of selection). There's no test for the specific above/below fallback logic or horizontal clamping to viewport edges.
-
-8. **Highlight removal normalises text nodes**:
-   The highlight test `04-highlights.spec.ts` tests deletion but doesn't explicitly verify that `parent.normalize()` was called and adjacent text nodes were merged. This is important for subsequent selections to work correctly.
-
-### A.2 Missing Test Scenarios
-
-1. **Clipboard API fallback**: No test for the `execCommand('copy')` fallback path when `navigator.clipboard` is unavailable.
-
-2. **Concurrent API requests**: No acceptance test for rapid concurrent operations (e.g. creating and deleting simultaneously). The edge case test covers rapid creation but not mixed operations.
-
-3. **External JSON file editing**: No test verifies that externally editing `inline-review.json` (e.g. in a text editor) and reloading the page picks up the changes. This is guaranteed by the storage design (always reads from disk) but untested.
-
-4. **Storage file permissions**: No test for when the JSON file exists but is not writable (permission error).
-
-5. **API error responses**: No acceptance test verifies client behaviour when the API returns 500 or other error status codes.
-
-6. **Multiple browser tabs**: No test for the scenario where the same dev site is open in multiple tabs and annotations are created in both. The JSON file serialisation queue prevents corruption on the server side, but the client-side caches may become stale.
-
-7. **Annotation on text within inline elements**: No explicit test for selecting text that spans across `<strong>`, `<em>`, `<a>`, or other inline elements within the same paragraph (distinct from the cross-element test which spans block elements).
-
-8. **Very large store performance**: No test for performance with hundreds of annotations. The storage design reads/writes the entire file on each operation.
-
-9. **Page note form cancel**: No test verifies that cancelling the add-note or edit-note form discards changes and doesn't create/update a note.
-
-10. **Panel scroll position**: No test verifies that the panel's scroll position is preserved when switching between tabs, or that long lists of annotations are scrollable.
-
-11. **Dev Toolbar companion**: The plan includes an Astro Dev Toolbar companion app (Session A5), but no tests exist for this yet as it hasn't been implemented.
-
-
-## Appendix B: Action-Response Quick Reference
+## Appendix A: Action-Response Quick Reference
 
 | User Action | System Response | Key Sections |
 |-------------|----------------|--------------|
