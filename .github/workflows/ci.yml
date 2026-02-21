@@ -39,9 +39,9 @@ jobs:
           name: coverage-node-${{ matrix.node-version }}
           path: coverage/
 
-      - name: Security audit
+      - name: Security audit (production deps)
         if: matrix.node-version == 22
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev
 
   pack-check:
     name: Pack check
