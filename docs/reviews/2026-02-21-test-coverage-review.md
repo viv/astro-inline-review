@@ -358,16 +358,16 @@ All 10 recommended tests were implemented on 2026-02-21. See implementation log 
 
 | # | Test | Addresses | Effort | Status |
 |---|---|---|---|---|
-| T1 | Tier 2 context matching restoration (modify DOM between save and reload) | G1 | High | **Done** — `13-coverage-gaps-high-priority.spec.ts` |
-| T2 | Tier 3 orphaned annotation visible in panel with warning class | G2 | Medium | **Done** — `13-coverage-gaps-high-priority.spec.ts` |
-| T3 | FAB badge counts annotations only (create annotation + page note, verify badge) | G3 | Low | **Done** — `13-coverage-gaps-high-priority.spec.ts` |
-| T4 | Clear All confirmation auto-reset after 3 seconds (wait 3s, verify button reverts) | G4 | Low | **Done** — `13-coverage-gaps-high-priority.spec.ts` |
-| T5 | Page note cancel discards changes (edit, cancel, verify original persists) | G7 | Low | **Done** — `13-coverage-gaps-high-priority.spec.ts` |
-| T6 | Invalid JSON schema recovery (write `{ version: 2 }`, reload, verify empty state) | G6 | Low | **Done** — `14-coverage-gaps-low-priority.spec.ts` |
-| T7 | Tab count includes both annotations and page notes | G9 | Low | **Done** — `14-coverage-gaps-low-priority.spec.ts` |
-| T8 | API DELETE 404 for missing IDs | G12 | Low | **Done** — `14-coverage-gaps-low-priority.spec.ts` |
-| T9 | Export: annotation with empty note produces no blockquote | G11 | Low | **Done** — `14-coverage-gaps-low-priority.spec.ts` |
-| T10 | + Note button toggles form visibility | G8 | Low | **Done** — `14-coverage-gaps-low-priority.spec.ts` |
+| T1 | Tier 2 context matching restoration (modify DOM between save and reload) | G1 | High | **Done** — `05-persistence.spec.ts` |
+| T2 | Tier 3 orphaned annotation visible in panel with warning class | G2 | Medium | **Done** — `05-persistence.spec.ts` |
+| T3 | FAB badge counts annotations only (create annotation + page note, verify badge) | G3 | Low | **Done** — `02-fab.spec.ts` |
+| T4 | Clear All confirmation auto-reset after 3 seconds (wait 3s, verify button reverts) | G4 | Low | **Done** — `06-panel.spec.ts` |
+| T5 | Page note cancel discards changes (edit, cancel, verify original persists) | G7 | Low | **Done** — `07-page-notes.spec.ts` |
+| T6 | Invalid JSON schema recovery (write `{ version: 2 }`, reload, verify empty state) | G6 | Low | **Done** — `05-persistence.spec.ts` |
+| T7 | Tab count includes both annotations and page notes | G9 | Low | **Done** — `06-panel.spec.ts` |
+| T8 | API DELETE 404 for missing IDs | G12 | Low | **Done** — `11-edge-cases.spec.ts` |
+| T9 | Export: annotation with empty note produces no blockquote | G11 | Low | **Done** — `09-export.spec.ts` |
+| T10 | + Note button toggles form visibility | G8 | Low | **Done** — `07-page-notes.spec.ts` |
 
 ---
 
@@ -403,8 +403,14 @@ All 10 recommended tests were implemented on 2026-02-21. See implementation log 
 
 Tests T1–T10 were written and added to the `astro-inline-review-tests` repo:
 
-- `tests/13-coverage-gaps-high-priority.spec.ts` — T1 through T5 (critical and high-priority gaps)
-- `tests/14-coverage-gaps-low-priority.spec.ts` — T6 through T10 (high and medium-priority gaps)
+Each test was placed in the existing spec file where it naturally belongs:
+
+- T1, T2, T6 → `05-persistence.spec.ts` (restoration tiers and schema recovery)
+- T3 → `02-fab.spec.ts` (badge behaviour)
+- T4, T7 → `06-panel.spec.ts` (Clear All and tab counts)
+- T5, T10 → `07-page-notes.spec.ts` (cancel and toggle)
+- T8 → `11-edge-cases.spec.ts` (API error handling)
+- T9 → `09-export.spec.ts` (empty note formatting)
 
 **Result: 120/120 tests passing.** No component changes were required — all 10 new tests passed against the existing component code, confirming the implementation already handled these edge cases correctly; they were simply untested.
 
