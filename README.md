@@ -135,6 +135,23 @@ Contributions are welcome. Please open an issue first to discuss what you'd like
 
 The acceptance test suite lives in a separate repository: [astro-inline-review-tests](https://github.com/viv/astro-inline-review-tests).
 
+## Alternatives
+
+[astro-annotate](https://github.com/jan-nikolov/astro-annotate) is a similar Astro integration built independently around the same time. Both tools solve the same core problem — annotating a rendered Astro site and producing structured output for coding agents — but they take different approaches:
+
+| | astro-inline-review | astro-annotate |
+|---|---|---|
+| **Selection model** | Text selection — highlight exact words or sentences | Element selection — annotate whole HTML elements |
+| **Location tracking** | XPath ranges with surrounding context | CSS selectors (IDs, data-testid, tag+class) |
+| **Export formats** | Markdown (clipboard) + JSON file | JSON file |
+| **Status tracking** | No — annotations are transient review feedback | Yes — open/resolved status per annotation |
+| **Device tagging** | No | Yes — desktop/mobile/tablet with viewport dimensions |
+| **Deployment model** | Dev-only by design | Dev-only now, deployed mode planned (Cloudflare Pages) |
+
+**Choose astro-inline-review** if you're doing copy review or content editing — you need to point at specific text ("this sentence is awkward") and the Markdown export is designed for pasting straight into a coding agent chat.
+
+**Choose astro-annotate** if you're collecting UI/layout feedback from clients or stakeholders — element-level selection maps well to "make this section wider" or "change this button colour", and the status tracking helps manage a backlog of feedback.
+
 ## Licence
 
 [MIT](LICENSE)
