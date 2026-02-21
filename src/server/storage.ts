@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import type { ReviewStore } from '../types.js';
+import type { ReviewStore, Annotation } from '../types.js';
 import { createEmptyStore } from '../types.js';
 
 /**
@@ -31,6 +31,14 @@ export class ReviewStorage {
       if (data.version !== 1 || !Array.isArray(data.annotations) || !Array.isArray(data.pageNotes)) {
         return createEmptyStore();
       }
+
+      // Migration: annotations without a `type` field are legacy text annotations
+      data.annotations = data.annotations.map((a: Record<string, unknown>) => {
+        if (!a.type) {
+          return { ...a, type: 'text' } as Annotation;
+        }
+        return a as Annotation;
+      });
 
       return data;
     } catch {

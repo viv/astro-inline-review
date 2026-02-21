@@ -1,25 +1,42 @@
 /**
  * Core annotation orchestrator.
  *
- * Coordinates text selection detection, popup display, highlight injection,
- * and API persistence. This is the central "controller" that ties together
- * selection.ts, highlights.ts, popup.ts, and api.ts.
+ * Coordinates text selection detection, element annotation (Alt+click),
+ * inspector overlay, popup display, highlight injection, and API persistence.
+ * This is the central "controller" that ties together selection.ts,
+ * element-selector.ts, highlights.ts, popup.ts, and api.ts.
  */
 
 import { serializeRange, deserializeRange, findRangeByContext } from './selection.js';
-import { applyHighlight, removeHighlight, pulseHighlight, getHighlightMarks, HIGHLIGHT_ATTR } from './highlights.js';
+import {
+  applyHighlight,
+  removeHighlight,
+  pulseHighlight,
+  getHighlightMarks,
+  HIGHLIGHT_ATTR,
+  applyElementHighlight,
+  removeElementHighlight,
+  pulseElementHighlight,
+  getElementByAnnotationId,
+  removeAllElementHighlights,
+  ELEMENT_HIGHLIGHT_ATTR,
+} from './highlights.js';
 import {
   createPopup,
   showPopup,
   showEditPopup,
+  showElementPopup,
+  showEditElementPopup,
   hidePopup,
   isPopupVisible,
   type PopupElements,
 } from './ui/popup.js';
+import { buildElementSelector, resolveElement } from './element-selector.js';
 import { api } from './api.js';
 import { writeCache, readCache } from './cache.js';
 import { updateBadge } from './ui/fab.js';
-import type { Annotation, ReviewStore } from './types.js';
+import type { Annotation } from './types.js';
+import { isTextAnnotation, isElementAnnotation } from './types.js';
 
 export interface AnnotatorDeps {
   shadowRoot: ShadowRoot;
@@ -34,26 +51,46 @@ export interface AnnotatorInstance {
 }
 
 /**
- * Initialise the annotator — sets up selection detection, popup, and highlight management.
+ * Initialise the annotator — sets up selection detection, element annotation,
+ * inspector overlay, popup, and highlight management.
  */
 export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
   const { shadowRoot, badge } = deps;
   const popup: PopupElements = createPopup(shadowRoot);
 
-  // Track current selection for creating new annotations
+  // Track current selection for creating new text annotations
   let currentRange: Range | null = null;
 
-  // --- Selection Detection ---
+  // Inspector mode state (Alt+hover)
+  let inspectorActive = false;
+  let inspectedElement: Element | null = null;
+  let inspectorOverlay: HTMLDivElement | null = null;
+  let inspectorLabel: HTMLDivElement | null = null;
+
+  // Track element target for element annotation save flow
+  let currentElementTarget: Element | null = null;
+
+  // --- Text Selection Detection ---
 
   function onMouseUp(e: MouseEvent): void {
+    // Alt+click is handled by onClickCapture — skip here
+    if (e.altKey) return;
+
     // Ignore clicks inside the Shadow DOM host
     const host = shadowRoot.host;
-    if (host.contains(e.target as Node)) return;
+    if (host.contains(e.target as Node) || e.target === host) return;
 
-    // Check if user clicked on an existing highlight
+    // Check if user clicked on an existing text highlight
     const target = e.target as HTMLElement;
     if (target.tagName === 'MARK' && target.hasAttribute(HIGHLIGHT_ATTR)) {
       handleHighlightClick(target);
+      return;
+    }
+
+    // Check if user clicked on an annotated element (element highlight)
+    const annotatedEl = findAnnotatedAncestor(target);
+    if (annotatedEl) {
+      handleElementHighlightClick(annotatedEl);
       return;
     }
 
@@ -89,20 +126,167 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     if (isPopupVisible(popup)) {
       hidePopup(popup);
       currentRange = null;
+      currentElementTarget = null;
     }
   }
 
-  // Attach listeners
-  document.addEventListener('mouseup', onMouseUp);
-  document.addEventListener('scroll', onScroll, { passive: true });
+  // --- Inspector Mode (Alt+hover) ---
 
-  // --- Save New Annotation ---
+  function onKeyDown(e: KeyboardEvent): void {
+    if (e.key !== 'Alt') return;
+    inspectorActive = true;
+  }
+
+  function onKeyUp(e: KeyboardEvent): void {
+    if (e.key !== 'Alt') return;
+    inspectorActive = false;
+    inspectedElement = null;
+    destroyInspector();
+  }
+
+  function onMouseMove(e: MouseEvent): void {
+    if (!inspectorActive) return;
+
+    const target = e.target as Element;
+    const host = shadowRoot.host;
+
+    // Don't inspect the shadow DOM host or its contents
+    if (target === host || host.contains(target)) {
+      if (inspectedElement) {
+        inspectedElement = null;
+        destroyInspector();
+      }
+      return;
+    }
+
+    // Don't inspect body/html
+    if (target === document.body || target === document.documentElement) {
+      if (inspectedElement) {
+        inspectedElement = null;
+        destroyInspector();
+      }
+      return;
+    }
+
+    // Don't inspect the inspector overlay itself
+    if (inspectorOverlay?.contains(target)) return;
+
+    // Same element — no update needed
+    if (target === inspectedElement) return;
+
+    inspectedElement = target;
+    updateInspector(target);
+  }
+
+  function createInspectorElements(): void {
+    inspectorOverlay = document.createElement('div');
+    inspectorOverlay.setAttribute('data-air-el', 'inspector-overlay');
+    inspectorOverlay.style.cssText = [
+      'position: fixed',
+      'pointer-events: none',
+      'background: rgba(66, 133, 244, 0.15)',
+      'border: 2px solid rgba(66, 133, 244, 0.6)',
+      'border-radius: 2px',
+      'z-index: 10003',
+      'transition: all 0.1s ease',
+    ].join('; ');
+
+    inspectorLabel = document.createElement('div');
+    inspectorLabel.setAttribute('data-air-el', 'inspector-label');
+    inspectorLabel.style.cssText = [
+      'position: absolute',
+      'top: -22px',
+      'left: -2px',
+      'background: rgba(66, 133, 244, 0.9)',
+      'color: white',
+      'font-size: 11px',
+      'font-family: monospace',
+      'padding: 1px 6px',
+      'border-radius: 2px 2px 0 0',
+      'white-space: nowrap',
+      'pointer-events: none',
+    ].join('; ');
+
+    inspectorOverlay.appendChild(inspectorLabel);
+    document.body.appendChild(inspectorOverlay);
+  }
+
+  function updateInspector(element: Element): void {
+    if (!inspectorOverlay) createInspectorElements();
+
+    const rect = element.getBoundingClientRect();
+    inspectorOverlay!.style.top = `${rect.top}px`;
+    inspectorOverlay!.style.left = `${rect.left}px`;
+    inspectorOverlay!.style.width = `${rect.width}px`;
+    inspectorOverlay!.style.height = `${rect.height}px`;
+
+    // Generate label text
+    const tag = element.tagName.toLowerCase();
+    let label = tag;
+    if (element.id) {
+      label = `${tag}#${element.id}`;
+    } else if (element.classList.length > 0) {
+      label = `${tag}.${element.classList[0]}`;
+    }
+    inspectorLabel!.textContent = label;
+  }
+
+  function destroyInspector(): void {
+    if (inspectorOverlay) {
+      inspectorOverlay.remove();
+      inspectorOverlay = null;
+      inspectorLabel = null;
+    }
+  }
+
+  // --- Alt+Click (Element Annotation) ---
+
+  function onClickCapture(e: MouseEvent): void {
+    if (!e.altKey) return;
+
+    // Prevent default (e.g. macOS Alt+click downloads links)
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Ignore if popup is already visible
+    if (isPopupVisible(popup)) return;
+
+    const target = e.target as Element;
+    const host = shadowRoot.host;
+
+    // Ignore clicks on shadow DOM host
+    if (target === host || host.contains(target)) return;
+
+    // Ignore clicks on body/html
+    if (target === document.body || target === document.documentElement) return;
+
+    // Clean up inspector
+    inspectorActive = false;
+    inspectedElement = null;
+    destroyInspector();
+
+    // Store element target for save flow
+    currentElementTarget = target;
+
+    // Build element description for popup
+    const selector = buildElementSelector(target);
+    const rect = target.getBoundingClientRect();
+
+    showElementPopup(popup, selector.description, rect, {
+      onSave: (note) => handleElementSave(note),
+      onCancel: () => {
+        hidePopup(popup);
+        currentElementTarget = null;
+      },
+    });
+  }
+
+  // --- Save New Text Annotation ---
 
   async function handleSave(note: string): Promise<void> {
     if (!currentRange) return;
 
-    // Capture range locally before any async work — onMouseUp can overwrite
-    // the module-level currentRange during the API await
+    // Capture range locally before any async work
     const range = currentRange;
     currentRange = null;
 
@@ -113,6 +297,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
 
     try {
       const annotation = await api.createAnnotation({
+        type: 'text',
         pageUrl: window.location.pathname,
         pageTitle: document.title,
         selectedText,
@@ -120,9 +305,6 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         range: serialized,
       });
 
-      // Apply highlight — use the captured Range, falling back to
-      // context-based matching if the Range was invalidated (e.g. during
-      // the async API call the browser may detach text nodes).
       applyHighlight(range, annotation.id);
 
       if (getHighlightMarks(annotation.id).length === 0) {
@@ -136,7 +318,6 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         }
       }
 
-      // Update cache and badge
       await refreshCacheAndBadge();
     } catch (err) {
       console.error('[astro-inline-review] Failed to save annotation:', err);
@@ -145,7 +326,35 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     window.getSelection()?.removeAllRanges();
   }
 
-  // --- Edit Existing Annotation ---
+  // --- Save New Element Annotation ---
+
+  async function handleElementSave(note: string): Promise<void> {
+    if (!currentElementTarget) return;
+
+    const element = currentElementTarget;
+    currentElementTarget = null;
+
+    const elementSelector = buildElementSelector(element);
+
+    hidePopup(popup);
+
+    try {
+      const annotation = await api.createAnnotation({
+        type: 'element',
+        pageUrl: window.location.pathname,
+        pageTitle: document.title,
+        note,
+        elementSelector,
+      });
+
+      applyElementHighlight(element, annotation.id);
+      await refreshCacheAndBadge();
+    } catch (err) {
+      console.error('[astro-inline-review] Failed to save element annotation:', err);
+    }
+  }
+
+  // --- Edit Existing Text Annotation ---
 
   async function handleHighlightClick(mark: HTMLElement): Promise<void> {
     const annotationId = mark.getAttribute(HIGHLIGHT_ATTR);
@@ -154,7 +363,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     // Fetch current annotation data
     const store = readCache() ?? await api.getStore(window.location.pathname);
     const annotation = store.annotations.find(a => a.id === annotationId);
-    if (!annotation) return;
+    if (!annotation || !isTextAnnotation(annotation)) return;
 
     const rect = mark.getBoundingClientRect();
     showEditPopup(popup, annotation.selectedText, annotation.note, rect, {
@@ -181,15 +390,68 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     });
   }
 
+  // --- Edit Existing Element Annotation ---
+
+  async function handleElementHighlightClick(element: HTMLElement): Promise<void> {
+    const annotationId = element.getAttribute(ELEMENT_HIGHLIGHT_ATTR);
+    if (!annotationId) return;
+
+    const store = readCache() ?? await api.getStore(window.location.pathname);
+    const annotation = store.annotations.find(a => a.id === annotationId);
+    if (!annotation || !isElementAnnotation(annotation)) return;
+
+    const rect = element.getBoundingClientRect();
+    showEditElementPopup(popup, annotation.elementSelector.description, annotation.note, rect, {
+      onSave: async (newNote) => {
+        hidePopup(popup);
+        try {
+          await api.updateAnnotation(annotationId, { note: newNote });
+          await refreshCacheAndBadge();
+        } catch (err) {
+          console.error('[astro-inline-review] Failed to update element annotation:', err);
+        }
+      },
+      onCancel: () => hidePopup(popup),
+      onDelete: async () => {
+        hidePopup(popup);
+        removeElementHighlight(annotationId);
+        try {
+          await api.deleteAnnotation(annotationId);
+          await refreshCacheAndBadge();
+        } catch (err) {
+          console.error('[astro-inline-review] Failed to delete element annotation:', err);
+        }
+      },
+    });
+  }
+
+  // --- Helpers ---
+
+  /**
+   * Walk up from an element to find the closest ancestor with
+   * a data-air-element-id attribute (annotated element).
+   */
+  function findAnnotatedAncestor(el: HTMLElement): HTMLElement | null {
+    let current: HTMLElement | null = el;
+    while (current && current !== document.body && current !== document.documentElement) {
+      if (current.hasAttribute(ELEMENT_HIGHLIGHT_ATTR)) return current;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
   // --- Restore Highlights ---
 
   async function restoreHighlights(): Promise<void> {
-    // Remove existing highlights first (e.g. on page transition)
+    // Remove existing text highlights
     const existingMarks = document.querySelectorAll(`mark[${HIGHLIGHT_ATTR}]`);
     for (const mark of existingMarks) {
       const id = mark.getAttribute(HIGHLIGHT_ATTR)!;
       removeHighlight(id);
     }
+
+    // Remove existing element highlights
+    removeAllElementHighlights();
 
     try {
       const store = await api.getStore(window.location.pathname);
@@ -199,7 +461,9 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         a => a.pageUrl === window.location.pathname,
       );
 
-      for (const annotation of pageAnnotations) {
+      // Restore text highlights
+      const textAnnotations = pageAnnotations.filter(isTextAnnotation);
+      for (const annotation of textAnnotations) {
         // Tier 1: Try XPath + offset
         let range = deserializeRange(annotation.range);
 
@@ -215,6 +479,15 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         // Tier 3: Orphaned — no highlight, visible only in panel
         if (range) {
           applyHighlight(range, annotation.id);
+        }
+      }
+
+      // Restore element highlights
+      const elementAnnotations = pageAnnotations.filter(isElementAnnotation);
+      for (const annotation of elementAnnotations) {
+        const element = resolveElement(annotation.elementSelector);
+        if (element) {
+          applyElementHighlight(element, annotation.id);
         }
       }
 
@@ -237,18 +510,27 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
 
   /**
    * Scroll to a highlight and pulse it. Called from the panel.
-   * Exported via the annotator instance for the panel to use.
    */
   function scrollToAnnotation(annotationId: string): void {
+    // Try text highlight first
     const marks = getHighlightMarks(annotationId);
-    if (marks.length === 0) return;
+    if (marks.length > 0) {
+      marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pulseHighlight(annotationId);
+      return;
+    }
 
-    marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    pulseHighlight(annotationId);
+    // Try element highlight
+    const element = getElementByAnnotationId(annotationId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pulseElementHighlight(annotationId);
+    }
   }
 
   // Store on the shadow root for panel access
   (shadowRoot as any).__scrollToAnnotation = scrollToAnnotation;
+  (shadowRoot as any).__restoreHighlights = restoreHighlights;
 
   // --- Badge Refresh ---
 
@@ -265,11 +547,25 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     }
   }
 
+  // --- Event Listeners ---
+
+  document.addEventListener('mouseup', onMouseUp);
+  document.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('click', onClickCapture, true); // Capture phase
+
   // --- Cleanup ---
 
   function destroy(): void {
     document.removeEventListener('mouseup', onMouseUp);
     document.removeEventListener('scroll', onScroll);
+    document.removeEventListener('keydown', onKeyDown);
+    document.removeEventListener('keyup', onKeyUp);
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('click', onClickCapture, true);
+    destroyInspector();
   }
 
   return { restoreHighlights, destroy };

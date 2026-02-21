@@ -96,6 +96,69 @@ export function pulseHighlight(id: string): void {
   }
 }
 
+// --- Element Highlights ---
+
+export const ELEMENT_HIGHLIGHT_ATTR = 'data-air-element-id';
+
+/**
+ * Apply a visual highlight to an element (dashed amber outline).
+ */
+export function applyElementHighlight(element: Element, id: string): void {
+  const el = element as HTMLElement;
+  el.setAttribute(ELEMENT_HIGHLIGHT_ATTR, id);
+  el.style.outline = '2px dashed rgba(217,119,6,0.8)';
+  el.style.outlineOffset = '2px';
+  el.style.cursor = 'pointer';
+}
+
+/**
+ * Remove the visual highlight from an annotated element.
+ */
+export function removeElementHighlight(id: string): void {
+  const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${id}"]`) as HTMLElement | null;
+  if (!el) return;
+  el.removeAttribute(ELEMENT_HIGHLIGHT_ATTR);
+  el.style.outline = '';
+  el.style.outlineOffset = '';
+  el.style.cursor = '';
+}
+
+/**
+ * Add a pulse animation to an element highlight.
+ */
+export function pulseElementHighlight(id: string): void {
+  const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${id}"]`) as HTMLElement | null;
+  if (!el) return;
+  el.setAttribute('data-air-pulse', '');
+  el.style.transition = 'outline-color 0.3s ease';
+  el.style.outlineColor = 'rgba(217,119,6,1)';
+  setTimeout(() => {
+    el.style.outlineColor = 'rgba(217,119,6,0.8)';
+  }, 600);
+  setTimeout(() => {
+    el.style.transition = '';
+    el.removeAttribute('data-air-pulse');
+  }, 900);
+}
+
+/**
+ * Get the element with a specific annotation ID.
+ */
+export function getElementByAnnotationId(id: string): Element | null {
+  return document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${id}"]`);
+}
+
+/**
+ * Remove all element highlights from the DOM.
+ */
+export function removeAllElementHighlights(): void {
+  const elements = document.querySelectorAll(`[${ELEMENT_HIGHLIGHT_ATTR}]`);
+  for (const el of elements) {
+    const id = el.getAttribute(ELEMENT_HIGHLIGHT_ATTR)!;
+    removeElementHighlight(id);
+  }
+}
+
 // --- Helpers ---
 
 function createMark(id: string): HTMLElement {

@@ -1,6 +1,7 @@
 import type http from 'node:http';
 import type { Connect } from 'vite';
-import type { Annotation, PageNote, ReviewStore } from '../types.js';
+import type { Annotation, TextAnnotation, ElementAnnotation, PageNote, ReviewStore } from '../types.js';
+import { isTextAnnotation, isElementAnnotation } from '../types.js';
 import { ReviewStorage } from './storage.js';
 
 const API_PREFIX = '/__inline-review/api';
@@ -45,18 +46,35 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       }
 
       if (routePath === '/annotations' && method === 'POST') {
-        const body = await readBody<Partial<Annotation>>(req);
+        const body = await readBody<Record<string, unknown>>(req);
         const store = await storage.read();
-        const annotation: Annotation = {
+
+        const now = new Date().toISOString();
+        const base = {
           id: generateId(),
-          pageUrl: body.pageUrl ?? '',
-          pageTitle: body.pageTitle ?? '',
-          selectedText: body.selectedText ?? '',
-          note: body.note ?? '',
-          range: body.range ?? { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          pageUrl: (body.pageUrl as string) ?? '',
+          pageTitle: (body.pageTitle as string) ?? '',
+          note: (body.note as string) ?? '',
+          createdAt: now,
+          updatedAt: now,
         };
+
+        let annotation: Annotation;
+        if (body.type === 'element') {
+          annotation = {
+            ...base,
+            type: 'element',
+            elementSelector: body.elementSelector as ElementAnnotation['elementSelector'],
+          };
+        } else {
+          annotation = {
+            ...base,
+            type: 'text',
+            selectedText: (body.selectedText as string) ?? '',
+            range: (body.range as TextAnnotation['range']) ?? { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+          };
+        }
+
         store.annotations.push(annotation);
         await storage.write(store);
         return sendJson(res, annotation, 201);
@@ -247,11 +265,27 @@ function generateExport(store: ReviewStore): string {
       lines.push('');
     }
 
-    if (page.annotations.length > 0) {
+    const textAnnotations = page.annotations.filter(isTextAnnotation);
+    const elementAnnotations = page.annotations.filter(isElementAnnotation);
+
+    if (textAnnotations.length > 0) {
       lines.push('### Text Annotations');
       let i = 1;
-      for (const a of page.annotations) {
+      for (const a of textAnnotations) {
         lines.push(`${i}. **"${a.selectedText}"**`);
+        if (a.note) {
+          lines.push(`   > ${a.note}`);
+        }
+        lines.push('');
+        i++;
+      }
+    }
+
+    if (elementAnnotations.length > 0) {
+      lines.push('### Element Annotations');
+      let i = 1;
+      for (const a of elementAnnotations) {
+        lines.push(`${i}. **\`${a.elementSelector.cssSelector}\`** (\`${a.elementSelector.outerHtmlPreview}\`)`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
         }

@@ -1,4 +1,4 @@
-import type { Annotation, PageNote, ReviewStore } from './types.js';
+import type { Annotation, TextAnnotation, ElementAnnotation, PageNote, ReviewStore } from './types.js';
 
 const API_BASE = '/__inline-review/api';
 
@@ -23,7 +23,7 @@ export const api = {
     return request<ReviewStore>(`/annotations${query}`);
   },
 
-  async createAnnotation(data: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>): Promise<Annotation> {
+  async createAnnotation(data: Omit<TextAnnotation, 'id' | 'createdAt' | 'updatedAt'> | Omit<ElementAnnotation, 'id' | 'createdAt' | 'updatedAt'>): Promise<Annotation> {
     return request<Annotation>('/annotations', {
       method: 'POST',
       body: JSON.stringify(data),

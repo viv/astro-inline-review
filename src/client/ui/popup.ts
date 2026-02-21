@@ -116,6 +116,58 @@ export function showEditPopup(
 }
 
 /**
+ * Show the popup near an element in create mode (for element annotations).
+ * Shows element description without quotes.
+ */
+export function showElementPopup(
+  popup: PopupElements,
+  description: string,
+  rect: DOMRect,
+  callbacks: PopupCallbacks,
+): void {
+  const { container, textarea, selectedTextPreview } = popup;
+
+  const truncated = description.length > MAX_PREVIEW_LENGTH
+    ? description.slice(0, MAX_PREVIEW_LENGTH) + '…'
+    : description;
+  selectedTextPreview.textContent = truncated;
+
+  positionPopup(container, rect);
+  textarea.value = '';
+  rebuildFooter(container, textarea, callbacks);
+
+  container.classList.add('air-popup--visible');
+  container.setAttribute('data-air-state', 'visible');
+  requestAnimationFrame(() => textarea.focus());
+}
+
+/**
+ * Show the popup in edit mode for element annotations.
+ */
+export function showEditElementPopup(
+  popup: PopupElements,
+  description: string,
+  existingNote: string,
+  rect: DOMRect,
+  callbacks: PopupCallbacks,
+): void {
+  const { container, textarea, selectedTextPreview } = popup;
+
+  const truncated = description.length > MAX_PREVIEW_LENGTH
+    ? description.slice(0, MAX_PREVIEW_LENGTH) + '…'
+    : description;
+  selectedTextPreview.textContent = truncated;
+
+  positionPopup(container, rect);
+  textarea.value = existingNote;
+  rebuildFooter(container, textarea, callbacks);
+
+  container.classList.add('air-popup--visible');
+  container.setAttribute('data-air-state', 'visible');
+  requestAnimationFrame(() => textarea.focus());
+}
+
+/**
  * Hide the popup.
  */
 export function hidePopup(popup: PopupElements): void {

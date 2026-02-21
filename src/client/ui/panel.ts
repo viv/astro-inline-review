@@ -8,7 +8,8 @@
 
 import { api } from '../api.js';
 import { writeCache, readCache } from '../cache.js';
-import type { Annotation, PageNote, ReviewStore } from '../types.js';
+import type { Annotation, TextAnnotation, PageNote, ReviewStore } from '../types.js';
+import { isTextAnnotation } from '../types.js';
 
 export interface PanelElements {
   container: HTMLDivElement;
@@ -260,6 +261,13 @@ function renderAllPages(
 }
 
 function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks): HTMLDivElement {
+  if (isTextAnnotation(annotation)) {
+    return createTextAnnotationItem(annotation, callbacks);
+  }
+  return createElementAnnotationItem(annotation, callbacks);
+}
+
+function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
   item.className = 'air-annotation-item';
   item.setAttribute('data-air-el', 'annotation-item');
@@ -271,6 +279,30 @@ function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks)
     : annotation.selectedText;
   text.textContent = `"${truncated}"`;
   item.appendChild(text);
+
+  if (annotation.note) {
+    const note = document.createElement('div');
+    note.className = 'air-annotation-item__note';
+    note.textContent = annotation.note;
+    item.appendChild(note);
+  }
+
+  item.addEventListener('click', () => {
+    callbacks.onAnnotationClick(annotation.id);
+  });
+
+  return item;
+}
+
+function createElementAnnotationItem(annotation: Annotation & { type: 'element' }, callbacks: PanelCallbacks): HTMLDivElement {
+  const item = document.createElement('div');
+  item.className = 'air-annotation-item';
+  item.setAttribute('data-air-el', 'element-annotation-item');
+
+  const desc = document.createElement('div');
+  desc.className = 'air-annotation-item__text';
+  desc.textContent = annotation.elementSelector.description;
+  item.appendChild(desc);
 
   if (annotation.note) {
     const note = document.createElement('div');
@@ -478,8 +510,12 @@ function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks): 
       writeCache({ version: 1, annotations: [], pageNotes: [] });
       await callbacks.onRefreshBadge();
 
-      // Refresh panel content
+      // Clean up DOM highlights (text marks + element outlines)
       const shadowRoot = clearBtn.getRootNode() as ShadowRoot;
+      const restoreFn = (shadowRoot as any).__restoreHighlights;
+      if (restoreFn) await restoreFn();
+
+      // Refresh panel content
       const refreshFn = (shadowRoot as any).__refreshPanel;
       if (refreshFn) refreshFn();
     } catch (err) {

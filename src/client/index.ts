@@ -14,7 +14,7 @@ import { exportToClipboard } from './export.js';
 import { showToast } from './ui/toast.js';
 import { api } from './api.js';
 import { writeCache, readCache } from './cache.js';
-import { pulseHighlight, getHighlightMarks } from './highlights.js';
+import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByAnnotationId } from './highlights.js';
 
 // Idempotency guard
 const INIT_FLAG = '__astro_inline_review_init';
@@ -47,10 +47,18 @@ function init(): void {
   // Panel
   const panel: PanelElements = createPanel(shadowRoot, {
     onAnnotationClick: (id) => {
+      // Try text highlight first
       const marks = getHighlightMarks(id);
       if (marks.length > 0) {
         marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
         pulseHighlight(id);
+        return;
+      }
+      // Try element highlight
+      const element = getElementByAnnotationId(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pulseElementHighlight(id);
       }
     },
     onRefreshBadge: refreshBadge,
@@ -67,7 +75,7 @@ function init(): void {
     const tooltip = document.createElement('div');
     tooltip.className = 'air-tooltip';
     tooltip.setAttribute('data-air-el', 'first-use-tooltip');
-    tooltip.textContent = 'Select any text on the page to annotate it';
+    tooltip.textContent = 'Select text to annotate it, or Alt+click any element';
     shadowRoot.appendChild(tooltip);
 
     let dismissed = false;

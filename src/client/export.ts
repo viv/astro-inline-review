@@ -8,6 +8,7 @@
  */
 
 import type { ReviewStore, Annotation, PageNote } from './types.js';
+import { isTextAnnotation, isElementAnnotation } from './types.js';
 
 /**
  * Generate markdown export from a ReviewStore.
@@ -55,11 +56,27 @@ export function generateExportMarkdown(store: ReviewStore): string {
       lines.push('');
     }
 
-    if (page.annotations.length > 0) {
+    const textAnnotations = page.annotations.filter(isTextAnnotation);
+    const elementAnnotations = page.annotations.filter(isElementAnnotation);
+
+    if (textAnnotations.length > 0) {
       lines.push('### Text Annotations');
       let i = 1;
-      for (const a of page.annotations) {
+      for (const a of textAnnotations) {
         lines.push(`${i}. **"${a.selectedText}"**`);
+        if (a.note) {
+          lines.push(`   > ${a.note}`);
+        }
+        lines.push('');
+        i++;
+      }
+    }
+
+    if (elementAnnotations.length > 0) {
+      lines.push('### Element Annotations');
+      let i = 1;
+      for (const a of elementAnnotations) {
+        lines.push(`${i}. **\`${a.elementSelector.cssSelector}\`** (\`${a.elementSelector.outerHtmlPreview}\`)`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
         }
