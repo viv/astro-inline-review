@@ -187,7 +187,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       'background: rgba(66, 133, 244, 0.15)',
       'border: 2px solid rgba(66, 133, 244, 0.6)',
       'border-radius: 2px',
-      'z-index: 10003',
+      'z-index: 9999',
       'transition: all 0.1s ease',
     ].join('; ');
 

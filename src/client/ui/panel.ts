@@ -213,7 +213,7 @@ function renderThisPage(
   }
 
   if (pageAnnotations.length === 0 && pageNotes.length === 0) {
-    content.innerHTML = '<div class="air-panel__empty"><span class="air-panel__empty-arrow" data-air-el="empty-arrow">\u2190</span><br>No annotations on this page yet.<br>Select text to get started.</div>';
+    content.innerHTML = '<div class="air-panel__empty"><span class="air-panel__empty-arrow" data-air-el="empty-arrow">\u2190</span><br>No annotations on this page yet.<br>Select text or Alt+click elements to get started.</div>';
   }
 }
 
