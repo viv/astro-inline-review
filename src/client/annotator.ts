@@ -37,10 +37,12 @@ import { writeCache, readCache } from './cache.js';
 import { updateBadge } from './ui/fab.js';
 import type { Annotation } from './types.js';
 import { isTextAnnotation, isElementAnnotation } from './types.js';
+import type { ReviewMediator } from './mediator.js';
 
 export interface AnnotatorDeps {
   shadowRoot: ShadowRoot;
   badge: HTMLSpanElement;
+  mediator: ReviewMediator;
 }
 
 export interface AnnotatorInstance {
@@ -48,6 +50,8 @@ export interface AnnotatorInstance {
   restoreHighlights: () => Promise<void>;
   /** Clean up event listeners */
   destroy: () => void;
+  /** Popup elements for external hide/visibility checks */
+  popup: PopupElements;
 }
 
 /**
@@ -568,5 +572,5 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     destroyInspector();
   }
 
-  return { restoreHighlights, destroy };
+  return { restoreHighlights, destroy, popup };
 }

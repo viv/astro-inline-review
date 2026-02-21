@@ -107,10 +107,8 @@ function init(): void {
     togglePanel: () => togglePanel(panel),
     closeActive: () => {
       // Popup takes precedence over panel
-      const popupEl = shadowRoot.querySelector('.air-popup--visible');
-      if (popupEl) {
-        popupEl.classList.remove('air-popup--visible');
-        popupEl.setAttribute('data-air-state', 'hidden');
+      if (isPopupVisible(annotator.popup)) {
+        hidePopup(annotator.popup);
         return;
       }
       if (isPanelOpen(panel)) {
