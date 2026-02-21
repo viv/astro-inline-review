@@ -88,6 +88,7 @@ export function createPanel(
   // Content area
   const content = document.createElement('div');
   content.className = 'air-panel__content';
+  content.setAttribute('data-air-el', 'panel-content');
   container.appendChild(content);
 
   shadowRoot.appendChild(container);
