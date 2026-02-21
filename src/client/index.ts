@@ -61,6 +61,33 @@ function init(): void {
     togglePanel(panel);
   });
 
+  // First-use tooltip
+  const TOOLTIP_KEY = 'air-tooltip-dismissed';
+  if (!localStorage.getItem(TOOLTIP_KEY)) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'air-tooltip';
+    tooltip.setAttribute('data-air-el', 'first-use-tooltip');
+    tooltip.textContent = 'Select any text on the page to annotate it';
+    shadowRoot.appendChild(tooltip);
+
+    let dismissed = false;
+    const dismissTooltip = () => {
+      if (dismissed) return;
+      dismissed = true;
+      tooltip.classList.add('air-tooltip--hidden');
+      localStorage.setItem(TOOLTIP_KEY, '1');
+      // Remove from DOM after fade-out transition
+      setTimeout(() => tooltip.remove(), 300);
+    };
+
+    // Auto-dismiss after 8 seconds
+    setTimeout(dismissTooltip, 8000);
+
+    // Dismiss on click anywhere
+    document.addEventListener('click', dismissTooltip, { once: true });
+    shadowRoot.addEventListener('click', dismissTooltip, { once: true });
+  }
+
   // Annotator — selection, highlights, popup
   const annotator: AnnotatorInstance = createAnnotator({
     shadowRoot,

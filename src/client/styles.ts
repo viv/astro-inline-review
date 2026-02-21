@@ -188,6 +188,19 @@ export const PANEL_STYLES = /* css */ `
     font-size: 13px;
   }
 
+  .air-panel__empty-arrow {
+    display: inline-block;
+    font-size: 28px;
+    color: #D97706;
+    margin-bottom: 8px;
+    animation: air-nudge 1.5s ease-in-out infinite;
+  }
+
+  @keyframes air-nudge {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-8px); }
+  }
+
   .air-annotation-item {
     padding: 12px;
     margin-bottom: 8px;
@@ -349,7 +362,34 @@ export const TOAST_STYLES = /* css */ `
   }
 `;
 
+export const TOOLTIP_STYLES = /* css */ `
+  .air-tooltip {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    background: #1a1a1a;
+    border: 1px solid #D97706;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #e5e5e5;
+    font-size: 13px;
+    z-index: 10002;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: auto;
+    max-width: 240px;
+  }
+
+  .air-tooltip--hidden {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+  }
+`;
+
 /** Combine all styles for the shadow root stylesheet */
 export function getAllStyles(): string {
-  return [HOST_STYLES, FAB_STYLES, PANEL_STYLES, POPUP_STYLES, TOAST_STYLES].join('\n');
+  return [HOST_STYLES, FAB_STYLES, PANEL_STYLES, POPUP_STYLES, TOAST_STYLES, TOOLTIP_STYLES].join('\n');
 }

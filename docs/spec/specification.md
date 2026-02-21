@@ -391,7 +391,7 @@ Shortcuts → call togglePanel/closeActive/export/addPageNote → affect Panel/P
 **Appearance**:
 - 48px circle
 - Background: `#D97706` (amber/orange), hover: `#B45309`
-- Icon: Pencil SVG (closed state) / Plus SVG rotated 45deg (open state, looks like X)
+- Icon: Clipboard/notes SVG (closed state) / Plus SVG rotated 45deg (open state, looks like X)
 - Box shadow for elevation
 - `z-index: 10000`
 
@@ -403,7 +403,7 @@ Shortcuts → call togglePanel/closeActive/export/addPageNote → affect Panel/P
 
 **Behaviour**:
 - Click toggles the review panel open/closed
-- Icon swaps between pencil and close (X) based on panel state
+- Icon swaps between clipboard and close (X) based on panel state
 - The `data-air-el="fab"` attribute is the stable automation contract
 - The `data-air-state` attribute reflects `"open"` or `"closed"`
 
@@ -1003,6 +1003,49 @@ The following accessibility features are explicitly **out of scope** for this de
 - High contrast mode support
 
 These may be added in future if the tool gains broader adoption.
+
+
+## 19. UX Improvements
+
+**Status**: Implemented (2026-02-21)
+
+### 19.1 FAB Icon — Clipboard Instead of Pencil
+
+**Problem**: The pencil icon creates a false affordance — it suggests "click to start annotating" when annotation mode is always active via text selection. The FAB actually toggles the review sidebar.
+
+**Solution**: Replace the pencil icon with a clipboard/notes icon that better communicates "view your review notes".
+
+**Implementation** (done):
+- Replaced `PENCIL_ICON` with `CLIPBOARD_ICON` in `fab.ts` — Material Design clipboard SVG
+- `aria-label` and `title` unchanged (already correct: "Toggle inline review panel" / "Inline Review")
+- Plus/X icon (open state) unchanged
+
+### 19.2 First-Use Tooltip
+
+**Problem**: New users don't know that text selection triggers annotation — they click the FAB expecting to "start annotating" and see an empty panel.
+
+**Solution**: Show a one-time tooltip near the FAB on first visit that says "Select any text on the page to annotate it". Dismissed on click or after a timeout, and never shown again.
+
+**Implementation** (done):
+- On `init()`, checks `localStorage` for `air-tooltip-dismissed` key
+- Creates tooltip element inside the shadow root, positioned above the FAB (bottom-right, 80px from bottom)
+- Tooltip text: "Select any text on the page to annotate it"
+- `data-air-el="first-use-tooltip"` for test automation
+- Dismissed on: click anywhere (document or shadow root), or after 8 seconds auto-fade
+- On dismiss, sets `localStorage.setItem('air-tooltip-dismissed', '1')`
+- Idempotent — guarded against double-dismiss via `dismissed` boolean
+- Styled consistently with existing dark theme, amber border to match FAB
+
+### 19.3 Empty State Enhancement — Directional Arrow
+
+**Problem**: When the panel is open with no annotations, the empty state text says "No annotations on this page yet. Select text to get started." but there's no visual cue directing the user toward the page content.
+
+**Solution**: Add a small left-pointing arrow (←) to the empty state message, visually guiding the user toward the page content outside the panel.
+
+**Implementation** (done):
+- Added `<span class="air-panel__empty-arrow" data-air-el="empty-arrow">←</span>` before the empty state text in `renderThisPage()`
+- Arrow is amber (`#D97706`), 28px, with `air-nudge` CSS animation (gentle horizontal bounce, 1.5s infinite)
+- "All Pages" empty state unchanged (different context)
 
 
 ---
