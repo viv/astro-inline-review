@@ -274,6 +274,10 @@ The client entry point runs on every page during dev. The bootstrap sequence is:
 
 The bootstrap runs when `DOMContentLoaded` fires, or immediately if the document is already loaded.
 
+**Notes**:
+- `restoreHighlights()` is async but called without `await` (fire-and-forget). The `init()` function is synchronous; highlights appear asynchronously after the API response arrives.
+- The annotator also exposes a `destroy()` method that removes event listeners (`mouseup`, `scroll`). This is not called during normal operation — the annotator lives for the entire page lifecycle. The method exists for potential future use (e.g. hot-module replacement cleanup).
+
 **Ordering dependency**: The panel MUST be created before the FAB because the `refreshBadge` closure (defined before both) references `fab.badge`. This works because the closure captures the variable by reference, not by value, and `refreshBadge` is never invoked during construction — it only executes when the user opens the panel, by which time the FAB exists.
 
 ### 5.2 Idempotency
@@ -311,7 +315,7 @@ The integration guards against creating duplicate hosts:
 
 ### 5.5 API Client
 
-The client communicates with the server via fetch requests to `/__inline-review/api/*`. All requests set `Content-Type: application/json`. Error responses throw exceptions with the error message from the server.
+The client communicates with the server via fetch requests to `/__inline-review/api/*`. All requests except `GET /export` set `Content-Type: application/json` via a shared `request()` helper. The `GET /export` call uses a direct `fetch()` since the response is `text/markdown`, not JSON. Error responses throw exceptions with the error message from the server.
 
 **Endpoints used by the client**:
 - `GET /annotations` (with optional `?page=` filter) — primary store fetch
@@ -577,7 +581,7 @@ The 208px threshold is `8px margin + 200px` (approximate popup height including 
 
 ### 7.2 Editing an Annotation
 
-1. User clicks an existing `<mark>` highlight
+1. User clicks an existing `<mark>` highlight (the click detection checks only the direct `mouseup` target — if a child element like `<em>` inside a `<mark>` is clicked, the edit path is not triggered)
 2. Annotator reads the `data-air-id` attribute to find the annotation
 3. Fetches annotation data from cache (or API)
 4. Shows edit popup with pre-filled note and Delete button
@@ -592,9 +596,9 @@ Selections are ignored (no popup shown) if ANY of:
 1. The `mouseup` event target is a descendant of the host element (or the host itself)
 2. The selection is collapsed (cursor click without drag)
 3. The selected text, after trimming, is empty (whitespace-only)
-4. The range's `commonAncestorContainer` is a descendant of the host element
+4. The range's `commonAncestorContainer` is a descendant of the host element OR a descendant of the shadow root
 
-Note: `Element.contains()` does not pierce shadow boundaries. Shadow DOM content is inherently unselectable by standard text selection, so no additional check is needed.
+Note: `Element.contains()` does not pierce shadow boundaries, so both checks are needed. The shadow root check handles the edge case where `commonAncestorContainer` is inside the shadow DOM (e.g. via programmatic selection).
 
 ### 7.4 Scroll Dismissal
 
@@ -725,7 +729,7 @@ Exported: YYYY-MM-DD HH:MM
 
 The client-side export:
 
-1. Generates Markdown from the cached store (or fetches from API)
+1. Fetches the full (unfiltered) store from the server via `GET /annotations` (no `?page=` filter). The client-side cache is not used for export because it only contains the current page's annotations.
 2. Attempts `navigator.clipboard.writeText()` (modern Clipboard API)
 3. Falls back to `textarea.select()` + `document.execCommand('copy')` for older browsers
 4. Shows a toast notification: "Copied to clipboard!" on success, "Export failed — try again" on failure
@@ -838,7 +842,7 @@ This is achieved by the integration hook returning immediately when `command !==
 
 ## 14. Automation Contract (data-air-* Attributes)
 
-The integration exposes stable `data-air-el` and `data-air-state` attributes for automated testing. These attributes form a **stable contract** that tests can rely on, decoupled from CSS class names which may change.
+The integration exposes stable `data-air-el` and `data-air-state` attributes for automated testing. These attributes form a **stable contract** that tests can rely on, decoupled from CSS class names which may change. Internal CSS class names referenced elsewhere in this spec (e.g. `air-panel--open`, `air-popup--visible`, `air-fab--open`) are **not** part of the automation contract and are documented for implementer context only.
 
 ### 14.1 Element Identification (data-air-el)
 
@@ -909,6 +913,8 @@ The context matching algorithm:
 6. Returns the best-scoring match as a Range
 
 **Context length**: Exactly 30 characters are stored (or fewer if insufficient text exists before/after the selection boundary). The `CONTEXT_LENGTH` constant is defined as `30`.
+
+**Context extraction limitation**: `contextBefore` is extracted solely from the text node containing the start of the selection (`range.startContainer`). It does not walk backwards across preceding DOM nodes. Similarly, `contextAfter` is extracted solely from the text node containing the end of the selection. This means if the selection starts at offset 0 in a text node, `contextBefore` will be an empty string even if preceding elements contain text. When both context strings are empty, all candidates score 0 and the first occurrence is selected.
 
 
 ## 16. Error Handling
@@ -1005,7 +1011,7 @@ The following areas are specified above but have **incomplete or missing coverag
    No acceptance test verifies that when XPath restoration fails but context matching succeeds, the highlight is still restored. All persistence tests rely on the DOM being unchanged between save and reload.
 
 3. **Page note edit flow**:
-   The acceptance test `07-page-notes.spec.ts` has a test for editing page notes, but the test relies on `data-air-el="page-note-edit"` and `data-air-el="page-note-save"` buttons. If the edit flow uses an inline form replacement (as the implementation does), the test assertions may need to verify the form appears and the updated text persists.
+   The acceptance test `07-page-notes.spec.ts` tests the edit happy path (click Edit, modify text, click Save, verify updated text persists). It does not test cancelling an edit or editing to empty text.
 
 4. **Toast notification content**:
    The export test (`09-export.spec.ts`) checks that a toast is visible after export, but doesn't verify the exact toast message ("Copied to clipboard!" vs "Export failed"). The `expectToastVisible` helper accepts optional text but most tests don't use it.
