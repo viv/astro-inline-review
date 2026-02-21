@@ -12,6 +12,7 @@ export function showToast(shadowRoot: ShadowRoot, message: string, durationMs = 
   if (!toastEl) {
     toastEl = document.createElement('div');
     toastEl.className = 'air-toast';
+    toastEl.setAttribute('data-air-el', 'toast');
     shadowRoot.appendChild(toastEl);
   }
 

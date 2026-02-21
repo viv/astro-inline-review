@@ -75,6 +75,7 @@ function init(): void {
       const popupEl = shadowRoot.querySelector('.air-popup--visible');
       if (popupEl) {
         popupEl.classList.remove('air-popup--visible');
+        popupEl.setAttribute('data-air-state', 'hidden');
         return;
       }
       if (isPanelOpen(panel)) {
@@ -82,7 +83,8 @@ function init(): void {
       }
     },
     exportToClipboard: async () => {
-      const store = readCache() ?? await api.getStore();
+      // Always fetch from server — cache only has current page's annotations
+      const store = await api.getStore();
       const success = await exportToClipboard(store);
       showToast(shadowRoot, success ? 'Copied to clipboard!' : 'Export failed — try again');
     },

@@ -22,10 +22,13 @@ export function createFab(shadowRoot: ShadowRoot, onToggle: () => void): FabElem
   button.className = 'air-fab';
   button.setAttribute('aria-label', 'Toggle inline review panel');
   button.setAttribute('title', 'Inline Review');
+  button.setAttribute('data-air-el', 'fab');
+  button.setAttribute('data-air-state', 'closed');
   button.innerHTML = PENCIL_ICON;
 
   const badge = document.createElement('span');
   badge.className = 'air-fab__badge air-fab__badge--hidden';
+  badge.setAttribute('data-air-el', 'badge');
   badge.textContent = '0';
   button.appendChild(badge);
 
@@ -36,6 +39,7 @@ export function createFab(shadowRoot: ShadowRoot, onToggle: () => void): FabElem
     button.innerHTML = isOpen ? PLUS_ICON : PENCIL_ICON;
     button.appendChild(badge); // Re-append badge after innerHTML change
     button.classList.toggle('air-fab--open', isOpen);
+    button.setAttribute('data-air-state', isOpen ? 'open' : 'closed');
     onToggle();
   });
 

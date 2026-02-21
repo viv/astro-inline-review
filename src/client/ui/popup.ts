@@ -26,6 +26,8 @@ const MAX_PREVIEW_LENGTH = 100;
 export function createPopup(shadowRoot: ShadowRoot): PopupElements {
   const container = document.createElement('div');
   container.className = 'air-popup';
+  container.setAttribute('data-air-el', 'popup');
+  container.setAttribute('data-air-state', 'hidden');
 
   const selectedTextPreview = document.createElement('div');
   selectedTextPreview.className = 'air-popup__selected';
@@ -33,6 +35,7 @@ export function createPopup(shadowRoot: ShadowRoot): PopupElements {
 
   const textarea = document.createElement('textarea');
   textarea.className = 'air-popup__textarea';
+  textarea.setAttribute('data-air-el', 'popup-textarea');
   textarea.placeholder = 'Add a note (optional)…';
   container.appendChild(textarea);
 
@@ -73,6 +76,7 @@ export function showPopup(
 
   // Show
   container.classList.add('air-popup--visible');
+  container.setAttribute('data-air-state', 'visible');
 
   // Focus textarea after a tick (let the popup render first)
   requestAnimationFrame(() => textarea.focus());
@@ -107,6 +111,7 @@ export function showEditPopup(
 
   // Show
   container.classList.add('air-popup--visible');
+  container.setAttribute('data-air-state', 'visible');
   requestAnimationFrame(() => textarea.focus());
 }
 
@@ -115,6 +120,7 @@ export function showEditPopup(
  */
 export function hidePopup(popup: PopupElements): void {
   popup.container.classList.remove('air-popup--visible');
+  popup.container.setAttribute('data-air-state', 'hidden');
   popup.textarea.value = '';
 }
 
@@ -162,6 +168,7 @@ function rebuildFooter(
   if (callbacks.onDelete) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'air-popup__btn air-popup__btn--delete';
+    deleteBtn.setAttribute('data-air-el', 'popup-delete');
     deleteBtn.textContent = 'Delete';
     deleteBtn.addEventListener('click', () => callbacks.onDelete!());
     footer.appendChild(deleteBtn);
@@ -169,12 +176,14 @@ function rebuildFooter(
 
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'air-popup__btn air-popup__btn--cancel';
+  cancelBtn.setAttribute('data-air-el', 'popup-cancel');
   cancelBtn.textContent = 'Cancel';
   cancelBtn.addEventListener('click', () => callbacks.onCancel());
   footer.appendChild(cancelBtn);
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'air-popup__btn air-popup__btn--save';
+  saveBtn.setAttribute('data-air-el', 'popup-save');
   saveBtn.textContent = 'Save';
   saveBtn.addEventListener('click', () => callbacks.onSave(textarea.value));
   footer.appendChild(saveBtn);

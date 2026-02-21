@@ -89,7 +89,8 @@ export const PANEL_STYLES = /* css */ `
     border-left: 1px solid #333;
     z-index: 10000;
     transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -97,6 +98,7 @@ export const PANEL_STYLES = /* css */ `
 
   .air-panel--open {
     transform: translateX(0);
+    visibility: visible;
   }
 
   @media (max-width: 480px) {

@@ -68,7 +68,9 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     if (!text) return;
 
     // Ignore selections inside the Shadow DOM
-    if (host.contains(range.commonAncestorContainer)) return;
+    // Note: host.contains() doesn't see into the shadow root — need both checks
+    if (host.contains(range.commonAncestorContainer) ||
+        shadowRoot.contains(range.commonAncestorContainer)) return;
 
     currentRange = range.cloneRange();
 
@@ -99,8 +101,13 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
   async function handleSave(note: string): Promise<void> {
     if (!currentRange) return;
 
-    const selectedText = currentRange.toString();
-    const serialized = serializeRange(currentRange);
+    // Capture range locally before any async work — onMouseUp can overwrite
+    // the module-level currentRange during the API await
+    const range = currentRange;
+    currentRange = null;
+
+    const selectedText = range.toString();
+    const serialized = serializeRange(range);
 
     hidePopup(popup);
 
@@ -113,8 +120,21 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         range: serialized,
       });
 
-      // Apply highlight
-      applyHighlight(currentRange, annotation.id);
+      // Apply highlight — use the captured Range, falling back to
+      // context-based matching if the Range was invalidated (e.g. during
+      // the async API call the browser may detach text nodes).
+      applyHighlight(range, annotation.id);
+
+      if (getHighlightMarks(annotation.id).length === 0) {
+        const fallbackRange = findRangeByContext(
+          serialized.selectedText,
+          serialized.contextBefore,
+          serialized.contextAfter,
+        );
+        if (fallbackRange) {
+          applyHighlight(fallbackRange, annotation.id);
+        }
+      }
 
       // Update cache and badge
       await refreshCacheAndBadge();
@@ -122,7 +142,6 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       console.error('[astro-inline-review] Failed to save annotation:', err);
     }
 
-    currentRange = null;
     window.getSelection()?.removeAllRanges();
   }
 

@@ -34,6 +34,8 @@ export function createPanel(
 ): PanelElements {
   const container = document.createElement('div');
   container.className = 'air-panel';
+  container.setAttribute('data-air-el', 'panel');
+  container.setAttribute('data-air-state', 'closed');
 
   // Header
   const header = document.createElement('div');
@@ -49,15 +51,17 @@ export function createPanel(
 
   const addNoteBtn = document.createElement('button');
   addNoteBtn.className = 'air-panel__btn';
+  addNoteBtn.setAttribute('data-air-el', 'page-note-add');
   addNoteBtn.textContent = '+ Note';
   addNoteBtn.title = 'Add page note';
   actions.appendChild(addNoteBtn);
 
   const clearBtn = document.createElement('button');
   clearBtn.className = 'air-panel__btn air-panel__btn--danger';
+  clearBtn.setAttribute('data-air-el', 'clear-all');
   clearBtn.textContent = 'Clear All';
-  clearBtn.addEventListener('click', () => handleClearAll(callbacks));
   actions.appendChild(clearBtn);
+  setupClearAll(clearBtn, callbacks);
 
   header.appendChild(actions);
   container.appendChild(header);
@@ -68,11 +72,13 @@ export function createPanel(
 
   const thisPageTab = document.createElement('button');
   thisPageTab.className = 'air-panel__tab air-panel__tab--active';
+  thisPageTab.setAttribute('data-air-el', 'tab-this-page');
   thisPageTab.textContent = 'This Page (0)';
   tabs.appendChild(thisPageTab);
 
   const allPagesTab = document.createElement('button');
   allPagesTab.className = 'air-panel__tab';
+  allPagesTab.setAttribute('data-air-el', 'tab-all-pages');
   allPagesTab.textContent = 'All Pages (0)';
   tabs.appendChild(allPagesTab);
 
@@ -123,6 +129,7 @@ export function createPanel(
  */
 export function togglePanel(panel: PanelElements): boolean {
   const isOpen = panel.container.classList.toggle('air-panel--open');
+  panel.container.setAttribute('data-air-state', isOpen ? 'open' : 'closed');
   if (isOpen) {
     const shadowRoot = panel.container.getRootNode() as ShadowRoot;
     const refreshFn = (shadowRoot as any).__refreshPanel;
@@ -143,6 +150,7 @@ export function isPanelOpen(panel: PanelElements): boolean {
  */
 export function closePanel(panel: PanelElements): void {
   panel.container.classList.remove('air-panel--open');
+  panel.container.setAttribute('data-air-state', 'closed');
 }
 
 // --- Internal ---
@@ -155,7 +163,11 @@ async function refreshPanel(
   content.innerHTML = '';
 
   try {
-    const store = readCache() ?? await api.getStore();
+    // "All Pages" must always fetch from the server — the cache only holds
+    // the current page's annotations (written by restoreHighlights).
+    const store = activeTab === 'all-pages'
+      ? await api.getStore()
+      : (readCache() ?? await api.getStore());
     if (activeTab === 'this-page') {
       renderThisPage(content, store, callbacks);
     } else {
@@ -250,6 +262,7 @@ function renderAllPages(
 function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
   item.className = 'air-annotation-item';
+  item.setAttribute('data-air-el', 'annotation-item');
 
   const text = document.createElement('div');
   text.className = 'air-annotation-item__text';
@@ -276,6 +289,7 @@ function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks)
 function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
   item.className = 'air-annotation-item';
+  item.setAttribute('data-air-el', 'page-note-item');
 
   const noteText = document.createElement('div');
   noteText.className = 'air-annotation-item__note';
@@ -288,6 +302,7 @@ function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks): HTMLDivE
 
   const editBtn = document.createElement('button');
   editBtn.className = 'air-popup__btn air-popup__btn--cancel';
+  editBtn.setAttribute('data-air-el', 'page-note-edit');
   editBtn.textContent = 'Edit';
   editBtn.style.fontSize = '11px';
   editBtn.addEventListener('click', (e) => {
@@ -298,6 +313,7 @@ function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks): HTMLDivE
 
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'air-popup__btn air-popup__btn--delete';
+  deleteBtn.setAttribute('data-air-el', 'page-note-delete');
   deleteBtn.textContent = 'Delete';
   deleteBtn.style.fontSize = '11px';
   deleteBtn.addEventListener('click', async (e) => {
@@ -395,6 +411,7 @@ function createNoteForm(
 
   const textarea = document.createElement('textarea');
   textarea.className = 'air-popup__textarea';
+  textarea.setAttribute('data-air-el', 'page-note-textarea');
   textarea.value = initialValue;
   textarea.placeholder = 'Add a page-level note…';
   textarea.style.minHeight = '60px';
@@ -405,12 +422,14 @@ function createNoteForm(
 
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'air-popup__btn air-popup__btn--cancel';
+  cancelBtn.setAttribute('data-air-el', 'page-note-cancel');
   cancelBtn.textContent = 'Cancel';
   cancelBtn.addEventListener('click', onCancel);
   footer.appendChild(cancelBtn);
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'air-popup__btn air-popup__btn--save';
+  saveBtn.setAttribute('data-air-el', 'page-note-save');
   saveBtn.textContent = 'Save';
   saveBtn.addEventListener('click', () => onSave(textarea.value));
   footer.appendChild(saveBtn);
@@ -419,28 +438,54 @@ function createNoteForm(
   return form;
 }
 
-async function handleClearAll(callbacks: PanelCallbacks): Promise<void> {
-  // Simple confirmation — in browser this would be window.confirm
-  const confirmed = window.confirm('Delete all annotations and page notes? This cannot be undone.');
-  if (!confirmed) return;
+/** Two-click clear: first click shows confirmation, second click deletes. */
+function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks): void {
+  let confirming = false;
+  let resetTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  try {
-    // Fetch all and delete each
-    const store = await api.getStore();
+  clearBtn.addEventListener('click', async () => {
+    if (!confirming) {
+      // First click — enter confirmation state
+      confirming = true;
+      clearBtn.textContent = 'Confirm Delete';
+      clearBtn.setAttribute('data-air-state', 'confirming');
 
-    for (const a of store.annotations) {
-      await api.deleteAnnotation(a.id);
+      // Auto-reset after 3 seconds if user doesn't confirm
+      resetTimeout = setTimeout(() => {
+        confirming = false;
+        clearBtn.textContent = 'Clear All';
+        clearBtn.removeAttribute('data-air-state');
+      }, 3000);
+      return;
     }
-    for (const n of store.pageNotes) {
-      await api.deletePageNote(n.id);
-    }
 
-    // Clear local cache
-    writeCache({ version: 1, annotations: [], pageNotes: [] });
-    await callbacks.onRefreshBadge();
-  } catch (err) {
-    console.error('[astro-inline-review] Failed to clear all:', err);
-  }
+    // Second click — actually clear
+    if (resetTimeout) clearTimeout(resetTimeout);
+    confirming = false;
+    clearBtn.textContent = 'Clear All';
+    clearBtn.removeAttribute('data-air-state');
+
+    try {
+      const store = await api.getStore();
+
+      for (const a of store.annotations) {
+        await api.deleteAnnotation(a.id);
+      }
+      for (const n of store.pageNotes) {
+        await api.deletePageNote(n.id);
+      }
+
+      writeCache({ version: 1, annotations: [], pageNotes: [] });
+      await callbacks.onRefreshBadge();
+
+      // Refresh panel content
+      const shadowRoot = clearBtn.getRootNode() as ShadowRoot;
+      const refreshFn = (shadowRoot as any).__refreshPanel;
+      if (refreshFn) refreshFn();
+    } catch (err) {
+      console.error('[astro-inline-review] Failed to clear all:', err);
+    }
+  });
 }
 
 async function updateTabCounts(
@@ -448,7 +493,8 @@ async function updateTabCounts(
   allPagesTab: HTMLButtonElement,
 ): Promise<void> {
   try {
-    const store = readCache() ?? await api.getStore();
+    // Always fetch from server for accurate All Pages count
+    const store = await api.getStore();
     const currentPage = window.location.pathname;
     const thisPageCount = store.annotations.filter(a => a.pageUrl === currentPage).length +
                           store.pageNotes.filter(n => n.pageUrl === currentPage).length;

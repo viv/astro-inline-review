@@ -73,8 +73,14 @@ export function unregisterShortcuts(): void {
 }
 
 function isInputFocused(): boolean {
-  const el = document.activeElement;
+  let el: Element | null = document.activeElement;
   if (!el) return false;
+
+  // Traverse into shadow roots to find the actual focused element
+  while (el?.shadowRoot?.activeElement) {
+    el = el.shadowRoot.activeElement;
+  }
+
   const tag = el.tagName.toLowerCase();
   return tag === 'input' || tag === 'textarea' || (el as HTMLElement).isContentEditable;
 }

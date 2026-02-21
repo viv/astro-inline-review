@@ -83,6 +83,7 @@ export function pulseHighlight(id: string): void {
   const marks = getHighlightMarks(id);
   for (const mark of marks) {
     const el = mark as HTMLElement;
+    el.setAttribute('data-air-pulse', '');
     el.style.transition = 'background-color 0.3s ease';
     el.style.backgroundColor = 'rgba(217,119,6,0.6)';
     setTimeout(() => {
@@ -90,6 +91,7 @@ export function pulseHighlight(id: string): void {
     }, 600);
     setTimeout(() => {
       el.style.transition = '';
+      el.removeAttribute('data-air-pulse');
     }, 900);
   }
 }
@@ -111,6 +113,9 @@ interface TextNodeSegment {
 
 /**
  * Collect all text nodes within a Range, along with the offsets within each node.
+ *
+ * Uses Range.intersectsNode for robust detection — avoids identity comparison
+ * which can fail if the Range was cloned across async boundaries.
  */
 function getTextNodesInRange(range: Range): TextNodeSegment[] {
   const segments: TextNodeSegment[] = [];
@@ -126,41 +131,33 @@ function getTextNodesInRange(range: Range): TextNodeSegment[] {
     return segments;
   }
 
-  // Walk all text nodes between start and end
+  // Walk all text nodes under the common ancestor and test intersection
   const walker = document.createTreeWalker(
     range.commonAncestorContainer,
     NodeFilter.SHOW_TEXT,
   );
 
   let node: Text | null;
-  let inRange = false;
+  let foundFirst = false;
 
   while ((node = walker.nextNode() as Text | null)) {
-    if (node === range.startContainer) {
-      inRange = true;
-      segments.push({
-        node,
-        startOffset: range.startOffset,
-        endOffset: node.textContent?.length ?? 0,
-      });
+    if (!range.intersectsNode(node)) {
+      // Once we've found intersecting nodes and then stop intersecting, we're done
+      if (foundFirst) break;
       continue;
     }
 
-    if (inRange) {
-      if (node === range.endContainer) {
-        segments.push({
-          node,
-          startOffset: 0,
-          endOffset: range.endOffset,
-        });
-        break;
-      }
+    foundFirst = true;
+    const nodeLen = node.textContent?.length ?? 0;
 
-      segments.push({
-        node,
-        startOffset: 0,
-        endOffset: node.textContent?.length ?? 0,
-      });
+    // Determine start offset: use range.startOffset only for the range's start container
+    const startOffset = (node === range.startContainer) ? range.startOffset : 0;
+
+    // Determine end offset: use range.endOffset only for the range's end container
+    const endOffset = (node === range.endContainer) ? range.endOffset : nodeLen;
+
+    if (startOffset < endOffset) {
+      segments.push({ node, startOffset, endOffset });
     }
   }
 
