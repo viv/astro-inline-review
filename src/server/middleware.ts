@@ -21,6 +21,10 @@ const API_PREFIX = '/__inline-review/api';
  *   GET    /export             — markdown export
  */
 export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunction {
+  // CORS note: This API inherits Vite's CORS configuration, which is permissive
+  // by default in dev mode (server.cors: true). Any website open in the same browser
+  // could potentially access these endpoints. The impact is limited to annotation
+  // data on a dev-only tool — no credentials or secrets are exposed.
   return async (req, res, next) => {
     const url = req.url ?? '';
     if (!url.startsWith(API_PREFIX)) {
@@ -285,7 +289,9 @@ function generateExport(store: ReviewStore): string {
       lines.push('### Element Annotations');
       let i = 1;
       for (const a of elementAnnotations) {
-        lines.push(`${i}. **\`${a.elementSelector.cssSelector}\`** (\`${a.elementSelector.outerHtmlPreview}\`)`);
+        const safeSelector = a.elementSelector.cssSelector.replace(/`/g, '\\`');
+        const safePreview = a.elementSelector.outerHtmlPreview.replace(/`/g, '\\`');
+        lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
         }

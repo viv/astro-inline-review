@@ -76,7 +76,9 @@ export function generateExportMarkdown(store: ReviewStore): string {
       lines.push('### Element Annotations');
       let i = 1;
       for (const a of elementAnnotations) {
-        lines.push(`${i}. **\`${a.elementSelector.cssSelector}\`** (\`${a.elementSelector.outerHtmlPreview}\`)`);
+        const safeSelector = a.elementSelector.cssSelector.replace(/`/g, '\\`');
+        const safePreview = a.elementSelector.outerHtmlPreview.replace(/`/g, '\\`');
+        lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
         }

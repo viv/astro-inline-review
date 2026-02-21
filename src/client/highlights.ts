@@ -73,7 +73,7 @@ export function removeHighlight(id: string): void {
  * Get all <mark> elements for a given annotation ID.
  */
 export function getHighlightMarks(id: string): Element[] {
-  return Array.from(document.querySelectorAll(`mark[${HIGHLIGHT_ATTR}="${id}"]`));
+  return Array.from(document.querySelectorAll(`mark[${HIGHLIGHT_ATTR}="${CSS.escape(id)}"]`));
 }
 
 /**
@@ -115,7 +115,7 @@ export function applyElementHighlight(element: Element, id: string): void {
  * Remove the visual highlight from an annotated element.
  */
 export function removeElementHighlight(id: string): void {
-  const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${id}"]`) as HTMLElement | null;
+  const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${CSS.escape(id)}"]`) as HTMLElement | null;
   if (!el) return;
   el.removeAttribute(ELEMENT_HIGHLIGHT_ATTR);
   el.style.outline = '';
@@ -127,7 +127,7 @@ export function removeElementHighlight(id: string): void {
  * Add a pulse animation to an element highlight.
  */
 export function pulseElementHighlight(id: string): void {
-  const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${id}"]`) as HTMLElement | null;
+  const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${CSS.escape(id)}"]`) as HTMLElement | null;
   if (!el) return;
   el.setAttribute('data-air-pulse', '');
   el.style.transition = 'outline-color 0.3s ease';
@@ -145,7 +145,7 @@ export function pulseElementHighlight(id: string): void {
  * Get the element with a specific annotation ID.
  */
 export function getElementByAnnotationId(id: string): Element | null {
-  return document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${id}"]`);
+  return document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${CSS.escape(id)}"]`);
 }
 
 /**

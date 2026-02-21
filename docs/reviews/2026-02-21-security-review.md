@@ -3,7 +3,7 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-21
 model_version: claude-opus-4-6
 purpose: security_review
-status: draft
+status: resolved
 scope: [astro-inline-review, astro-inline-review-tests]
 tags: [security, npm, supply-chain, code-review]
 ---
@@ -320,3 +320,13 @@ The integration guard in `src/index.ts` line 20 (`if (command !== 'dev') return;
 ## Conclusion
 
 The codebase is well-structured, cleanly separated between server and client concerns, and demonstrates good security awareness (textContent over innerHTML, Shadow DOM isolation, production guards, write queue serialisation). The two medium-severity findings (body size limit and PATCH field allowlisting) are straightforward fixes that would close the remaining gaps. For a dev-only tool running on localhost, the overall risk profile is low.
+
+## Resolution
+
+Both medium-severity "Should Fix" findings were addressed and verified with tests. See the follow-up review for details: `docs/reviews/2026-02-21-security-review-round-2.md`
+
+| # | Finding | Action |
+|---|---------|--------|
+| 1 | No request body size limit | **Fixed.** `readBody()` enforces 1 MB limit with `req.destroy()` on overflow. Tested at `middleware.test.ts:294-322`. |
+| 2 | PATCH field injection via spread | **Fixed.** Both PATCH handlers use explicit allowlisting — only `note` is mutable. Tested at `middleware.test.ts:324-382`. |
+| 3–10 | Low/Informational findings | **Unchanged.** Acceptable for dev-only tool. |
