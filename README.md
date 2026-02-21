@@ -7,7 +7,7 @@
 
 A bridge between human reviewers and coding agents for [Astro](https://astro.build) sites.
 
-Browse your rendered site, select text, attach notes, and export location-aware Markdown that a coding agent (Claude, Cursor, Copilot, etc.) can act on immediately. No hunting through source files to explain *where* the problem is.
+Browse your rendered site, select text, attach notes, and export location-aware Markdown that a coding agent (Claude Code, Codex, Cursor, etc.) can act on immediately. No hunting through source files to explain *where* the problem is.
 
 <!-- TODO: Add screenshot/GIF here -->
 
@@ -30,7 +30,7 @@ Reviewing a live site and turning that into actionable code changes is tedious. 
    > Typo — should be "Lorem"
 ```
 
-Paste that into Claude, Cursor, or any agent and it knows exactly what to fix and where.
+Paste that into any coding agent (Claude Code, Codex, Cursor, etc.) and it knows exactly what to fix and where.
 
 Ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during `astro dev`.
 
