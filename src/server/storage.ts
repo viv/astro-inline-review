@@ -33,11 +33,12 @@ export class ReviewStorage {
       }
 
       // Migration: annotations without a `type` field are legacy text annotations
-      data.annotations = data.annotations.map((a: Record<string, unknown>) => {
+      data.annotations = (data.annotations as unknown[]).map((raw) => {
+        const a = raw as Record<string, unknown>;
         if (!a.type) {
-          return { ...a, type: 'text' } as Annotation;
+          return { ...a, type: 'text' } as unknown as Annotation;
         }
-        return a as Annotation;
+        return a as unknown as Annotation;
       });
 
       return data;

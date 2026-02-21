@@ -31,13 +31,13 @@ describe('generateExportMarkdown', () => {
     const store = makeStore({
       annotations: [
         {
-          id: '1', pageUrl: '/', pageTitle: 'Home',
+          id: '1', type: 'text', pageUrl: '/', pageTitle: 'Home',
           selectedText: 'hello', note: 'note1',
           range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello', contextBefore: '', contextAfter: '' },
           createdAt: '', updatedAt: '',
         },
         {
-          id: '2', pageUrl: '/about', pageTitle: 'About',
+          id: '2', type: 'text', pageUrl: '/about', pageTitle: 'About',
           selectedText: 'world', note: 'note2',
           range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'world', contextBefore: '', contextAfter: '' },
           createdAt: '', updatedAt: '',
@@ -54,7 +54,7 @@ describe('generateExportMarkdown', () => {
   it('renders selected text in bold quotes', () => {
     const store = makeStore({
       annotations: [{
-        id: '1', pageUrl: '/', pageTitle: '',
+        id: '1', type: 'text', pageUrl: '/', pageTitle: '',
         selectedText: 'important text', note: 'fix this',
         range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
         createdAt: '', updatedAt: '',
@@ -69,7 +69,7 @@ describe('generateExportMarkdown', () => {
   it('renders notes as blockquotes', () => {
     const store = makeStore({
       annotations: [{
-        id: '1', pageUrl: '/', pageTitle: '',
+        id: '1', type: 'text', pageUrl: '/', pageTitle: '',
         selectedText: 'text', note: 'This needs fixing',
         range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
         createdAt: '', updatedAt: '',
@@ -84,8 +84,8 @@ describe('generateExportMarkdown', () => {
   it('numbers annotations within each page', () => {
     const store = makeStore({
       annotations: [
-        { id: '1', pageUrl: '/', pageTitle: '', selectedText: 'first', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
-        { id: '2', pageUrl: '/', pageTitle: '', selectedText: 'second', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+        { id: '1', type: 'text', pageUrl: '/', pageTitle: '', selectedText: 'first', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+        { id: '2', type: 'text', pageUrl: '/', pageTitle: '', selectedText: 'second', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
       ],
     });
 
@@ -113,8 +113,8 @@ describe('generateExportMarkdown', () => {
   it('separates pages with horizontal rules', () => {
     const store = makeStore({
       annotations: [
-        { id: '1', pageUrl: '/', pageTitle: '', selectedText: 'a', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
-        { id: '2', pageUrl: '/about', pageTitle: '', selectedText: 'b', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+        { id: '1', type: 'text', pageUrl: '/', pageTitle: '', selectedText: 'a', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
+        { id: '2', type: 'text', pageUrl: '/about', pageTitle: '', selectedText: 'b', note: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '', updatedAt: '' },
       ],
     });
 
@@ -126,7 +126,7 @@ describe('generateExportMarkdown', () => {
   it('omits annotation note blockquote when note is empty', () => {
     const store = makeStore({
       annotations: [{
-        id: '1', pageUrl: '/', pageTitle: '',
+        id: '1', type: 'text', pageUrl: '/', pageTitle: '',
         selectedText: 'text', note: '',
         range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
         createdAt: '', updatedAt: '',
