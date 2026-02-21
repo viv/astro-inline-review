@@ -1,7 +1,7 @@
 {
   "name": "astro-inline-review",
   "version": "0.1.0",
-  "description": "Dev-only text annotation overlay for Astro sites — select text, add notes, export markdown",
+  "description": "Bridge between human reviewers and coding agents for Astro sites — annotate rendered pages and export location-aware feedback",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,10 +20,20 @@
     "annotation",
     "review",
     "developer-tools",
-    "copy-review"
+    "copy-review",
+    "ai-agents",
+    "code-review"
   ],
   "author": "Matthew Vivian",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/viv/astro-inline-review.git"
+  },
+  "homepage": "https://github.com/viv/astro-inline-review#readme",
+  "bugs": {
+    "url": "https://github.com/viv/astro-inline-review/issues"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

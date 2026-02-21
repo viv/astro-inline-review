@@ -12,7 +12,12 @@ tags: [astro, integration, annotation, dev-tools, specification]
 
 ## 1. Overview
 
-**astro-inline-review** is a dev-only text annotation overlay for Astro projects. It enables users to select text on any rendered page, attach notes, and export structured Markdown for editorial review or AI-assisted copy editing.
+**astro-inline-review** is a dev-only text annotation overlay for Astro projects. It bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback.
+
+A reviewer browses the live dev site, selects text, and attaches notes describing what needs changing. Each annotation captures the page URL, the exact selected text, and the reviewer's instruction — providing both the *what* and the *where*. The result can be consumed by coding agents (Claude Code, Codex, Cursor, etc.) in two ways:
+
+- **Markdown export** — one-click copy to clipboard, designed for pasting into chat-based agent interfaces
+- **JSON storage file** (`inline-review.json`) — machine-readable with richer location data (XPath ranges, character offsets, surrounding context), designed for file-aware agents that can read it directly from the project root
 
 The integration ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during `astro dev`.
 
@@ -23,7 +28,7 @@ The integration ships **zero bytes** in production builds. All UI, storage, and 
 3. **Non-invasive**: Shadow DOM isolates all UI from site styles; highlights use inline styles
 4. **Persistent**: Annotations survive page reloads, navigation, and dev server restarts
 5. **Multi-page**: Annotations are scoped by URL but viewable across all pages
-6. **Exportable**: One-click Markdown export for actionable editorial feedback
+6. **Agent-ready**: Both export formats (Markdown and JSON) carry location-aware context so coding agents know exactly where to act
 
 
 ## 2. Integration Lifecycle
@@ -678,7 +683,12 @@ Highlights must not break the page layout:
 - Before restoring, all existing marks with `data-air-id` are removed to prevent duplicates
 
 
-## 9. Markdown Export
+## 9. Export and Agent Consumption
+
+The integration provides two complementary formats for feeding review feedback to coding agents:
+
+- **Markdown export** (section 9.1–9.3): Human-readable, designed for pasting into chat-based interfaces (Claude Code, Codex, Cursor). Each annotation includes the page URL and selected text, giving the agent enough context to locate and act on the feedback.
+- **JSON storage file** (section 4.1): Machine-readable, designed for file-aware agents that can read `inline-review.json` directly from the project root. Contains richer location data — XPath ranges, character offsets, and 30-character context windows before and after each selection — enabling more precise source-text matching.
 
 ### 9.1 Export Format
 
