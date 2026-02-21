@@ -10,6 +10,7 @@ import { api } from '../api.js';
 import { writeCache, readCache } from '../cache.js';
 import type { Annotation, TextAnnotation, PageNote, ReviewStore } from '../types.js';
 import { isTextAnnotation } from '../types.js';
+import type { ReviewMediator } from '../mediator.js';
 
 export interface PanelElements {
   container: HTMLDivElement;
@@ -17,6 +18,7 @@ export interface PanelElements {
   allPagesTab: HTMLButtonElement;
   content: HTMLDivElement;
   addNoteBtn: HTMLButtonElement;
+  mediator: ReviewMediator;
 }
 
 export interface PanelCallbacks {
@@ -32,6 +34,7 @@ type ActiveTab = 'this-page' | 'all-pages';
 export function createPanel(
   shadowRoot: ShadowRoot,
   callbacks: PanelCallbacks,
+  mediator: ReviewMediator,
 ): PanelElements {
   const container = document.createElement('div');
   container.className = 'air-panel';
@@ -62,7 +65,7 @@ export function createPanel(
   clearBtn.setAttribute('data-air-el', 'clear-all');
   clearBtn.textContent = 'Clear All';
   actions.appendChild(clearBtn);
-  setupClearAll(clearBtn, callbacks);
+  setupClearAll(clearBtn, callbacks, mediator);
 
   header.appendChild(actions);
   container.appendChild(header);
@@ -100,27 +103,34 @@ export function createPanel(
     activeTab = 'this-page';
     thisPageTab.classList.add('air-panel__tab--active');
     allPagesTab.classList.remove('air-panel__tab--active');
-    refreshPanel(content, activeTab, callbacks);
+    refreshPanel(content, activeTab, callbacks, mediator);
   });
 
   allPagesTab.addEventListener('click', () => {
     activeTab = 'all-pages';
     allPagesTab.classList.add('air-panel__tab--active');
     thisPageTab.classList.remove('air-panel__tab--active');
-    refreshPanel(content, activeTab, callbacks);
+    refreshPanel(content, activeTab, callbacks, mediator);
   });
 
   // Add page note handler
   addNoteBtn.addEventListener('click', () => {
-    showAddNoteForm(content, callbacks);
+    showAddNoteForm(content, callbacks, mediator);
   });
 
-  const elements: PanelElements = { container, thisPageTab, allPagesTab, content, addNoteBtn };
+  const elements: PanelElements = { container, thisPageTab, allPagesTab, content, addNoteBtn, mediator };
 
-  // Store refresh function on shadow root for external access
-  (shadowRoot as any).__refreshPanel = () => {
-    refreshPanel(content, activeTab, callbacks);
-    updateTabCounts(thisPageTab, allPagesTab);
+  // Wire up mediator so other modules can trigger a panel refresh
+  mediator.refreshPanel = async () => {
+    try {
+      const store = await api.getStore();
+      refreshPanel(content, activeTab, callbacks, mediator, store);
+      updateTabCounts(thisPageTab, allPagesTab, store);
+    } catch {
+      // Fall back to independent fetches
+      refreshPanel(content, activeTab, callbacks, mediator);
+      updateTabCounts(thisPageTab, allPagesTab);
+    }
   };
 
   return elements;
@@ -133,9 +143,7 @@ export function togglePanel(panel: PanelElements): boolean {
   const isOpen = panel.container.classList.toggle('air-panel--open');
   panel.container.setAttribute('data-air-state', isOpen ? 'open' : 'closed');
   if (isOpen) {
-    const shadowRoot = panel.container.getRootNode() as ShadowRoot;
-    const refreshFn = (shadowRoot as any).__refreshPanel;
-    if (refreshFn) refreshFn();
+    panel.mediator.refreshPanel();
   }
   return isOpen;
 }
@@ -161,19 +169,22 @@ async function refreshPanel(
   content: HTMLDivElement,
   activeTab: ActiveTab,
   callbacks: PanelCallbacks,
+  mediator: ReviewMediator,
+  prefetchedStore?: ReviewStore,
 ): Promise<void> {
   content.innerHTML = '';
 
   try {
     // "All Pages" must always fetch from the server — the cache only holds
     // the current page's annotations (written by restoreHighlights).
-    const store = activeTab === 'all-pages'
-      ? await api.getStore()
-      : (readCache() ?? await api.getStore());
+    const store = prefetchedStore
+      ?? (activeTab === 'all-pages'
+        ? await api.getStore()
+        : (readCache() ?? await api.getStore()));
     if (activeTab === 'this-page') {
-      renderThisPage(content, store, callbacks);
+      renderThisPage(content, store, callbacks, mediator);
     } else {
-      renderAllPages(content, store, callbacks);
+      renderAllPages(content, store, callbacks, mediator);
     }
   } catch {
     content.innerHTML = '<div class="air-panel__empty">Failed to load annotations</div>';
@@ -184,6 +195,7 @@ function renderThisPage(
   content: HTMLDivElement,
   store: ReviewStore,
   callbacks: PanelCallbacks,
+  mediator: ReviewMediator,
 ): void {
   const currentPage = window.location.pathname;
   const pageAnnotations = store.annotations.filter(a => a.pageUrl === currentPage);
@@ -197,7 +209,7 @@ function renderThisPage(
     content.appendChild(notesHeader);
 
     for (const note of pageNotes) {
-      content.appendChild(createPageNoteItem(note, callbacks));
+      content.appendChild(createPageNoteItem(note, callbacks, mediator));
     }
   }
 
@@ -222,6 +234,7 @@ function renderAllPages(
   content: HTMLDivElement,
   store: ReviewStore,
   callbacks: PanelCallbacks,
+  mediator: ReviewMediator,
 ): void {
   // Group by page URL
   const pages = new Map<string, { title: string; annotations: Annotation[]; notes: PageNote[] }>();
@@ -252,7 +265,7 @@ function renderAllPages(
     content.appendChild(pageTitle);
 
     for (const note of page.notes) {
-      content.appendChild(createPageNoteItem(note, callbacks));
+      content.appendChild(createPageNoteItem(note, callbacks, mediator));
     }
 
     for (const annotation of page.annotations) {
@@ -319,7 +332,7 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
   return item;
 }
 
-function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks): HTMLDivElement {
+function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks, mediator: ReviewMediator): HTMLDivElement {
   const item = document.createElement('div');
   item.className = 'air-annotation-item';
   item.setAttribute('data-air-el', 'page-note-item');
@@ -340,7 +353,7 @@ function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks): HTMLDivE
   editBtn.style.fontSize = '11px';
   editBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    showEditNoteForm(item, note, callbacks);
+    showEditNoteForm(item, note, callbacks, mediator);
   });
   actions.appendChild(editBtn);
 
@@ -354,9 +367,7 @@ function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks): HTMLDivE
     try {
       await api.deletePageNote(note.id);
       await callbacks.onRefreshBadge();
-      const shadowRoot = item.getRootNode() as ShadowRoot;
-      const refreshFn = (shadowRoot as any).__refreshPanel;
-      if (refreshFn) refreshFn();
+      mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to delete page note:', err);
     }
@@ -368,7 +379,7 @@ function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks): HTMLDivE
   return item;
 }
 
-function showAddNoteForm(content: HTMLDivElement, callbacks: PanelCallbacks): void {
+function showAddNoteForm(content: HTMLDivElement, callbacks: PanelCallbacks, mediator: ReviewMediator): void {
   // Insert a form at the top of the content area
   const existing = content.querySelector('.air-note-form');
   if (existing) {
@@ -390,9 +401,7 @@ function showAddNoteForm(content: HTMLDivElement, callbacks: PanelCallbacks): vo
       });
       form.remove();
       await callbacks.onRefreshBadge();
-      const shadowRoot = content.getRootNode() as ShadowRoot;
-      const refreshFn = (shadowRoot as any).__refreshPanel;
-      if (refreshFn) refreshFn();
+      mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to create page note:', err);
     }
@@ -408,6 +417,7 @@ function showEditNoteForm(
   item: HTMLDivElement,
   note: PageNote,
   callbacks: PanelCallbacks,
+  mediator: ReviewMediator,
 ): void {
   const form = createNoteForm(note.note, async (noteText) => {
     if (!noteText.trim()) return;
@@ -415,17 +425,13 @@ function showEditNoteForm(
     try {
       await api.updatePageNote(note.id, { note: noteText.trim() });
       await callbacks.onRefreshBadge();
-      const shadowRoot = item.getRootNode() as ShadowRoot;
-      const refreshFn = (shadowRoot as any).__refreshPanel;
-      if (refreshFn) refreshFn();
+      mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to update page note:', err);
     }
   }, () => {
     // Cancel — just restore the item
-    const shadowRoot = item.getRootNode() as ShadowRoot;
-    const refreshFn = (shadowRoot as any).__refreshPanel;
-    if (refreshFn) refreshFn();
+    mediator.refreshPanel();
   });
 
   item.innerHTML = '';
@@ -472,7 +478,7 @@ function createNoteForm(
 }
 
 /** Two-click clear: first click shows confirmation, second click deletes. */
-function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks): void {
+function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks, mediator: ReviewMediator): void {
   let confirming = false;
   let resetTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -512,13 +518,10 @@ function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks): 
       await callbacks.onRefreshBadge();
 
       // Clean up DOM highlights (text marks + element outlines)
-      const shadowRoot = clearBtn.getRootNode() as ShadowRoot;
-      const restoreFn = (shadowRoot as any).__restoreHighlights;
-      if (restoreFn) await restoreFn();
+      await mediator.restoreHighlights();
 
       // Refresh panel content
-      const refreshFn = (shadowRoot as any).__refreshPanel;
-      if (refreshFn) refreshFn();
+      mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to clear all:', err);
     }
@@ -528,10 +531,11 @@ function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks): 
 async function updateTabCounts(
   thisPageTab: HTMLButtonElement,
   allPagesTab: HTMLButtonElement,
+  prefetchedStore?: ReviewStore,
 ): Promise<void> {
   try {
     // Always fetch from server for accurate All Pages count
-    const store = await api.getStore();
+    const store = prefetchedStore ?? await api.getStore();
     const currentPage = window.location.pathname;
     const thisPageCount = store.annotations.filter(a => a.pageUrl === currentPage).length +
                           store.pageNotes.filter(n => n.pageUrl === currentPage).length;

@@ -8,6 +8,7 @@ import { createHost } from './ui/host.js';
 import { createFab, updateBadge, resetFab, type FabElements } from './ui/fab.js';
 import { createPanel, togglePanel, closePanel, isPanelOpen, type PanelElements } from './ui/panel.js';
 import { createAnnotator, type AnnotatorInstance } from './annotator.js';
+import type { ReviewMediator } from './mediator.js';
 import { isPopupVisible, hidePopup } from './ui/popup.js';
 import { registerShortcuts } from './shortcuts.js';
 import { exportToClipboard } from './export.js';
@@ -44,6 +45,13 @@ function init(): void {
     }
   };
 
+  // Typed mediator — createPanel and createAnnotator wire up their
+  // implementations; stubs here are replaced before first use.
+  const mediator: ReviewMediator = {
+    refreshPanel: () => {},
+    restoreHighlights: async () => {},
+  };
+
   // Panel
   const panel: PanelElements = createPanel(shadowRoot, {
     onAnnotationClick: (id) => {
@@ -62,7 +70,7 @@ function init(): void {
       }
     },
     onRefreshBadge: refreshBadge,
-  });
+  }, mediator);
 
   // FAB
   const fab: FabElements = createFab(shadowRoot, () => {
@@ -100,6 +108,7 @@ function init(): void {
   const annotator: AnnotatorInstance = createAnnotator({
     shadowRoot,
     badge: fab.badge,
+    mediator,
   });
 
   // Keyboard shortcuts

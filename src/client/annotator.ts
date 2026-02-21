@@ -59,7 +59,7 @@ export interface AnnotatorInstance {
  * inspector overlay, popup, and highlight management.
  */
 export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
-  const { shadowRoot, badge } = deps;
+  const { shadowRoot, badge, mediator } = deps;
   const popup: PopupElements = createPopup(shadowRoot);
 
   // Track current selection for creating new text annotations
@@ -532,9 +532,8 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     }
   }
 
-  // Store on the shadow root for panel access
-  (shadowRoot as any).__scrollToAnnotation = scrollToAnnotation;
-  (shadowRoot as any).__restoreHighlights = restoreHighlights;
+  // Wire up mediator so the panel can trigger highlight restoration
+  mediator.restoreHighlights = restoreHighlights;
 
   // --- Badge Refresh ---
 
