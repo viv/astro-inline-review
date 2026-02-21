@@ -290,4 +290,94 @@ describe('middleware', () => {
       expect(res._status).toBe(404);
     });
   });
+
+  describe('request body size limit', () => {
+    it('rejects request bodies over 1 MB with 413', async () => {
+      // Create a body larger than 1 MB (1_048_576 bytes)
+      const oversizedPayload = 'x'.repeat(1_048_577);
+      const chunks = [Buffer.from(oversizedPayload)];
+      let destroyed = false;
+
+      const req = {
+        method: 'POST',
+        url: '/__inline-review/api/annotations',
+        headers: { 'content-type': 'application/json' },
+        on(event: string, cb: (...args: any[]) => void) {
+          if (event === 'data') {
+            for (const chunk of chunks) cb(chunk);
+          }
+          if (event === 'end') cb();
+          return req;
+        },
+        destroy() { destroyed = true; },
+      } as unknown as IncomingMessage;
+
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(413);
+      expect(JSON.parse(res._body).error).toBe('Request body too large');
+      expect(destroyed).toBe(true);
+    });
+  });
+
+  describe('PATCH field allowlist', () => {
+    it('PATCH /annotations/:id only applies allowlisted fields', async () => {
+      // Create an annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        pageUrl: '/test',
+        pageTitle: 'Test Page',
+        selectedText: 'original text',
+        note: 'original note',
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 5, selectedText: 'original text', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // PATCH with allowlisted field (note) and non-allowlisted fields (id, selectedText, pageUrl)
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        note: 'updated note',
+        id: 'evil-id',
+        selectedText: 'injected text',
+        pageUrl: '/injected',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.note).toBe('updated note');
+      expect(patched.id).toBe(created.id); // ID must not change
+      expect(patched.selectedText).toBe('original text'); // Must not be overwritten
+      expect(patched.pageUrl).toBe('/test'); // Must not be overwritten
+    });
+
+    it('PATCH /page-notes/:id only applies allowlisted fields', async () => {
+      // Create a page note
+      const createReq = mockRequest('POST', '/__inline-review/api/page-notes', {
+        pageUrl: '/test',
+        pageTitle: 'Test Page',
+        note: 'original note',
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // PATCH with allowlisted field (note) and non-allowlisted fields (id, pageUrl)
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/page-notes/${created.id}`, {
+        note: 'updated note',
+        id: 'evil-id',
+        pageUrl: '/injected',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.note).toBe('updated note');
+      expect(patched.id).toBe(created.id); // ID must not change
+      expect(patched.pageUrl).toBe('/test'); // Must not be overwritten
+    });
+  });
 });

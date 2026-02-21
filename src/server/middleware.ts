@@ -70,8 +70,7 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
         if (idx === -1) return sendError(res, 404, 'Annotation not found');
         store.annotations[idx] = {
           ...store.annotations[idx],
-          ...body,
-          id: store.annotations[idx].id, // Prevent ID change
+          note: body.note ?? store.annotations[idx].note, // Allowlist: only 'note' is mutable
           updatedAt: new Date().toISOString(),
         };
         await storage.write(store);
@@ -123,8 +122,7 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
         if (idx === -1) return sendError(res, 404, 'Page note not found');
         store.pageNotes[idx] = {
           ...store.pageNotes[idx],
-          ...body,
-          id: store.pageNotes[idx].id,
+          note: body.note ?? store.pageNotes[idx].note, // Allowlist: only 'note' is mutable
           updatedAt: new Date().toISOString(),
         };
         await storage.write(store);
@@ -153,6 +151,9 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       // Unknown API route
       return sendError(res, 404, 'Not found');
     } catch (err) {
+      if (err instanceof Error && err.message === 'Request body too large') {
+        return sendError(res, 413, 'Request body too large');
+      }
       const message = err instanceof Error ? err.message : 'Internal server error';
       return sendError(res, 500, message);
     }
@@ -175,11 +176,23 @@ function sendError(res: Connect.ServerResponse, status: number, message: string)
   res.end(JSON.stringify({ error: message }));
 }
 
+const MAX_BODY_SIZE = 1_048_576; // 1 MB
+
 function readBody<T>(req: Connect.IncomingMessage): Promise<T> {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    let aborted = false;
+    req.on('data', (chunk: Buffer) => {
+      if (aborted) return;
+      body += chunk.toString();
+      if (body.length > MAX_BODY_SIZE) {
+        aborted = true;
+        req.destroy();
+        reject(new Error('Request body too large'));
+      }
+    });
     req.on('end', () => {
+      if (aborted) return;
       try {
         resolve(JSON.parse(body) as T);
       } catch {
