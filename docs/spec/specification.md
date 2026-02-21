@@ -183,20 +183,9 @@ The CSS selector is generated with the following priority cascade:
 
 #### 3.4.2 Captured Attributes
 
-The `attributes` record captures a snapshot of key attributes for display and future matching:
+The `attributes` record captures a snapshot of key attributes for display and future matching. The following attributes are captured **if present on the element** (regardless of tag name):
 
-| Attribute | Captured if present |
-|-----------|-------------------|
-| `id` | Always |
-| `class` | Always |
-| `src` | On `img`, `video`, `audio`, `source`, `iframe` |
-| `alt` | On `img` |
-| `href` | On `a`, `link` |
-| `data-testid` | Always |
-| `type` | On `input`, `button` |
-| `name` | On `input`, `select`, `textarea` |
-| `role` | Always |
-| `aria-label` | Always |
+`id`, `class`, `data-testid`, `src`, `alt`, `href`, `role`, `aria-label`, `type`, `name`
 
 Other attributes are not captured. The set is intentionally small to keep the stored data concise.
 
@@ -205,25 +194,31 @@ Other attributes are not captured. The set is intentionally small to keep the st
 The `description` field is formatted as:
 
 ```
-tagName (attr1=value1, attr2=value2)
+base (attr1=value1, attr2=value2)
 ```
 
-Examples:
-- `img (class=hero-image, src=hero.jpg, alt=Hero banner)`
-- `button (class=btn-primary, type=submit)`
-- `section (id=expertise, class=py-20)`
-- `div (data-testid=card-container)`
+Where `base` is:
+- `tag#id` if the element has an `id`
+- `tag.firstClassName` if the element has classes (uses only the first class)
+- `tag` if neither
 
-If no attributes are present: just the tag name, e.g. `div`.
+The parenthetical part lists captured attributes **excluding `id` and `class`** (which are already represented in the base). Attribute values longer than 40 characters are truncated with `...`.
+
+Examples:
+- `img.hero-image (src=hero.jpg, alt=Hero banner)`
+- `section#expertise` (no attributes beyond id)
+- `button.btn-primary (type=submit)`
+- `div (data-testid=card-container)`
+- If no attributes are present beyond id/class: just the base, e.g. `div`
 
 #### 3.4.4 Element Resolution (Three-Tier)
 
 When restoring element annotations on page load:
 
 **Tier 1 — CSS Selector** (primary):
-- `document.querySelector(cssSelector)` — fast and usually stable
-- Verify it returns exactly one element: `document.querySelectorAll(cssSelector).length === 1`
-- If multiple matches, fall through to Tier 2
+- `document.querySelector(cssSelector)` — returns the first matching element
+- If the selector matches any element, it is used (no uniqueness re-verification at resolution time)
+- Note: uniqueness is verified at *generation* time but not re-checked at *resolution* time. If the DOM has changed, a formerly-unique selector may match multiple elements, and the first is used.
 
 **Tier 2 — XPath** (fallback):
 - Resolve using `document.evaluate()` with `FIRST_ORDERED_NODE_TYPE`
@@ -352,19 +347,20 @@ Note: The GET response returns the full store shape (including `pageNotes`), wit
 
 The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields default to empty strings/objects. If `type` is not provided, it defaults to `'text'` (backward compatibility).
 
-**PATCH /annotations/:id** request body: Any subset of annotation fields.
+**PATCH /annotations/:id** request body: `{ "note": "new value" }`
 
-**Field mutability on PATCH**:
+**Field mutability on PATCH**: The server uses an allowlist pattern — only `note` from the request body is applied; all other fields in the request body are ignored.
 
-| Field | Mutable? | Notes |
-|-------|----------|-------|
+| Field | Mutable via PATCH? | Notes |
+|-------|-------------------|-------|
 | `id` | No | Server-enforced, always preserved |
-| `pageUrl` | Yes | Allows moving annotation to different page |
-| `pageTitle` | Yes | |
-| `selectedText` | Yes | Not typically changed by the client |
-| `note` | Yes | Primary use case for PATCH |
-| `range` | Yes | Not typically changed by the client |
-| `createdAt` | Yes* | *Not protected — considered a minor issue |
+| `pageUrl` | No | Preserved from original |
+| `pageTitle` | No | Preserved from original |
+| `selectedText` | No | Preserved from original |
+| `note` | **Yes** | Only mutable field — primary use case |
+| `range` | No | Preserved from original |
+| `elementSelector` | No | Preserved from original |
+| `createdAt` | No | Preserved from original |
 | `updatedAt` | No | Server-generated on every PATCH |
 
 **Minimum validation**: `POST /annotations` does not enforce required fields. An empty body creates an annotation with all empty-string fields. The client always provides `pageUrl`, `selectedText`, `note`, and `range`. Server-side validation is not enforced — the server trusts the client as this is a dev-only tool.
@@ -430,7 +426,7 @@ The bootstrap runs when `DOMContentLoaded` fires, or immediately if the document
 
 **Notes**:
 - `restoreHighlights()` is async but called without `await` (fire-and-forget). The `init()` function is synchronous; highlights appear asynchronously after the API response arrives.
-- The annotator also exposes a `destroy()` method that removes event listeners (`mouseup`, `scroll`, `keydown`, `click` for Alt+click detection). This is not called during normal operation — the annotator lives for the entire page lifecycle. The method exists for potential future use (e.g. hot-module replacement cleanup).
+- The annotator also exposes a `destroy()` method that removes event listeners (`mouseup`, `scroll`, `keydown`, `keyup`, `mousemove`, `click` for Alt+click detection) and destroys any active inspector overlay. This is not called during normal operation — the annotator lives for the entire page lifecycle. The method exists for potential future use (e.g. hot-module replacement cleanup).
 
 **Ordering dependency**: The panel MUST be created before the FAB because the `refreshBadge` closure (defined before both) references `fab.badge`. This works because the closure captures the variable by reference, not by value, and `refreshBadge` is never invoked during construction — it only executes when the user opens the panel, by which time the FAB exists.
 
@@ -512,8 +508,11 @@ Two functions are stashed as untyped properties on the `ShadowRoot` object to en
 |----------|--------|---------|---------|
 | `__refreshPanel()` | Panel (`createPanel`) | Panel note CRUD, Clear All | Re-render panel content and update tab counts |
 | `__scrollToAnnotation(id)` | Annotator (`createAnnotator`) | Panel annotation click | Scroll to text highlight or element and pulse |
+| `__restoreHighlights()` | Annotator (`createAnnotator`) | Clear All | Remove all DOM highlights and re-apply from store |
 
 These are cast via `(shadowRoot as any)` — there is no TypeScript interface for them. This is a known architectural shortcut. A future improvement could introduce a typed event bus or mediator pattern.
+
+**Note**: The `onAnnotationClick` callback wired during bootstrap contains scroll-to logic inline (via directly imported highlight functions) rather than calling `__scrollToAnnotation`. The bridge function exists as a redundant alternative path. Both produce identical behaviour.
 
 #### 5.6.3 Dependency Graph
 
@@ -530,6 +529,7 @@ Panel annotation click → call onAnnotationClick → scrollToAnnotation (via sh
 Panel note CRUD → call __refreshPanel (via shadowRoot bridge)
 Annotator save/delete → call refreshCacheAndBadge → update FAB badge
 Shortcuts → call togglePanel/closeActive/export/addPageNote → affect Panel/Popup
+Clear All → call __restoreHighlights (via shadowRoot bridge) → clean up marks/outlines
 ```
 
 
@@ -670,7 +670,7 @@ Edit mode replaces the item content with a textarea form.
 
 **Implementation**: Clear All deletes each annotation and page note individually via separate `DELETE` requests. There is no bulk delete endpoint. For a store with N annotations and M page notes, this sends N+M sequential HTTP requests, each performing a full file read-modify-write cycle. After all deletions complete, the cache is cleared to an empty store and the badge is refreshed.
 
-**Highlight cleanup**: Light DOM `<mark>` elements are not removed during the Clear All operation itself. They are removed on the next call to `restoreHighlights()` (which clears all existing marks before re-applying from the now-empty store). In practice, opening the panel triggers a badge refresh which calls `restoreHighlights()`, so marks are cleaned up shortly after Clear All completes.
+**Highlight cleanup**: After all individual deletions complete, the Clear All handler explicitly calls `restoreHighlights()` (via the `__restoreHighlights` shadow root bridge). This clears all existing text marks and element outlines from the DOM. The empty store means no highlights are re-applied, leaving the page clean.
 
 ### 6.3 Selection Popup
 
@@ -743,7 +743,7 @@ The 208px threshold is `8px margin + 200px` (approximate popup height including 
 
 **Visual feedback while Alt is held**:
 - As the user moves the mouse over elements, an **inspector overlay** highlights the element under the cursor
-- The overlay is a semi-transparent blue box (`rgba(59, 130, 246, 0.15)`) with a 2px solid blue border (`#3B82F6`) placed over the hovered element using its `getBoundingClientRect()`
+- The overlay is a semi-transparent blue box (`rgba(66, 133, 244, 0.15)`) with a 2px solid border (`rgba(66, 133, 244, 0.6)`) placed over the hovered element using its `getBoundingClientRect()`
 - A **tag label** appears at the top-left corner of the overlay showing the element's tag name and key identifier (e.g. `img.hero-image`, `section#expertise`, `div`)
 - The overlay and label are injected into the **light DOM** (not shadow DOM) so they can position over any element
 - The overlay updates on `mousemove` events while Alt is held
@@ -773,7 +773,11 @@ The 208px threshold is `8px margin + 200px` (approximate popup height including 
 - The overlay is a single `<div>` element that is repositioned on each `mousemove`, not one-per-element
 - The label is a child of the overlay
 - Both are removed from the DOM when Alt is released or after the click is processed
-- Inspector mode listeners (`mousemove`, `keyup`) are only attached while Alt is held (attached on `keydown`, removed on `keyup` or click)
+- All inspector-related event listeners (`keydown`, `keyup`, `mousemove`, `click`) are registered once during annotator creation and remain attached for the page lifetime
+- The `mousemove` handler short-circuits with an early return when `inspectorActive` is `false`
+- The `keyup` handler only acts when `e.key === 'Alt'`
+- The `click` capture handler only acts when `e.altKey` is `true`
+- This avoids the overhead of dynamic listener attachment/detachment on every Alt key press
 
 
 ## 7. Annotation Workflow
@@ -835,7 +839,7 @@ When the page scrolls while the popup is visible, the popup is hidden and the cu
 
 ### 7.6 Editing an Element Annotation
 
-1. User clicks an element that has a `data-air-element-id` attribute (existing element annotation highlight)
+1. User clicks an element that has a `data-air-element-id` attribute, **or any descendant of such an element** (existing element annotation highlight). The annotator walks up the DOM tree from the click target to find the closest ancestor with the attribute. This means clicking a child element (e.g. text inside an annotated section) triggers the edit popup for the parent annotation.
 2. Annotator reads the annotation ID from the attribute
 3. Fetches annotation data from cache (or API)
 4. Shows edit popup with pre-filled note and Delete button, showing element description
@@ -918,7 +922,7 @@ Element annotations use **CSS outline** (not background colour or border) to avo
 #### 8.5.1 Element Highlight Style
 
 ```css
-outline: 2px dashed rgba(217,119,6,0.7);
+outline: 2px dashed rgba(217,119,6,0.8);
 outline-offset: 2px;
 ```
 
@@ -942,8 +946,8 @@ When scrolling to an element annotation from the panel:
 
 1. Set `data-air-pulse` attribute on the element (same test hook as text highlights)
 2. Set `transition: outline-color 0.3s ease`
-3. Change outline to `rgba(217,119,6,1.0)` (fully opaque)
-4. After 600ms: revert to `rgba(217,119,6,0.7)` (normal)
+3. Change outline to `rgba(217,119,6,1)` (fully opaque)
+4. After 600ms: revert to `rgba(217,119,6,0.8)` (normal)
 5. After 900ms: remove the transition and `data-air-pulse` attribute
 
 #### 8.5.4 Element Highlight Restoration
@@ -1044,7 +1048,7 @@ Element annotations are listed under `### Element Annotations` within each page 
 ```
 
 - CSS selector is bold and in backticks: `` **`cssSelector`** ``
-- Outer HTML preview (truncated to 100 chars) in parentheses and backticks: `` (`preview`) ``
+- Outer HTML preview (up to 200 chars, as stored) in parentheses and backticks: `` (`preview`) ``
 - Note as blockquote (same as text annotations)
 
 ### 9.3 Clipboard Export
@@ -1287,12 +1291,12 @@ Errors are logged with the prefix `[astro-inline-review]` for easy filtering. No
 | Danger text | `#fca5a5` | Delete buttons, danger actions |
 | Danger background | `#7f1d1d` | Delete button background |
 | Orphan warning | `#F87171` | Orphaned annotation indicator |
-| Inspector overlay background | `rgba(59,130,246,0.15)` | Blue tint on hovered element during Alt+hover |
-| Inspector overlay border | `#3B82F6` | Blue border around hovered element |
-| Inspector label background | `#3B82F6` | Blue background for tag label |
+| Inspector overlay background | `rgba(66,133,244,0.15)` | Blue tint on hovered element during Alt+hover |
+| Inspector overlay border | `rgba(66,133,244,0.6)` | Blue border around hovered element |
+| Inspector label background | `rgba(66,133,244,0.9)` | Blue background for tag label |
 | Inspector label text | `white` | White text on tag label |
-| Element highlight outline | `rgba(217,119,6,0.7)` | Dashed amber outline on annotated elements |
-| Element highlight pulse | `rgba(217,119,6,1.0)` | Fully opaque amber outline during pulse |
+| Element highlight outline | `rgba(217,119,6,0.8)` | Dashed amber outline on annotated elements |
+| Element highlight pulse | `rgba(217,119,6,1)` | Fully opaque amber outline during pulse |
 
 ### 17.2 Z-Index Stack
 
@@ -1355,7 +1359,7 @@ These may be added in future if the tool gains broader adoption.
 **Implementation** (done):
 - On `init()`, checks `localStorage` for `air-tooltip-dismissed` key
 - Creates tooltip element inside the shadow root, positioned above the FAB (bottom-right, 80px from bottom)
-- Tooltip text: "Select text or Alt+click any element to annotate"
+- Tooltip text: "Select text to annotate it, or Alt+click any element"
 - `data-air-el="first-use-tooltip"` for test automation
 - Dismissed on: click anywhere (document or shadow root), or after 8 seconds auto-fade
 - On dismiss, sets `localStorage.setItem('air-tooltip-dismissed', '1')`
@@ -1379,7 +1383,7 @@ These may be added in future if the tool gains broader adoption.
 
 ## Appendix A: Acceptance Test Coverage Gaps (for test authors, not implementers)
 
-The following areas are specified above but have **incomplete or missing coverage** in the acceptance test suite (110 scenarios across 12 spec files):
+The following areas are specified above but have **incomplete or missing coverage** in the acceptance test suite (12 spec files):
 
 ### A.1 Gaps in Existing Tests
 
