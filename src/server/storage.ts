@@ -1,5 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { readFile, writeFile, rename } from 'node:fs/promises';
 import type { ReviewStore, Annotation } from '../types.js';
 import { createEmptyStore } from '../types.js';
 
@@ -19,10 +18,6 @@ export class ReviewStorage {
   }
 
   async read(): Promise<ReviewStore> {
-    if (!existsSync(this.filePath)) {
-      return createEmptyStore();
-    }
-
     try {
       const raw = await readFile(this.filePath, 'utf-8');
       const data = JSON.parse(raw) as ReviewStore;
@@ -33,16 +28,36 @@ export class ReviewStorage {
       }
 
       // Migration: annotations without a `type` field are legacy text annotations
-      data.annotations = (data.annotations as unknown[]).map((raw) => {
-        const a = raw as Record<string, unknown>;
-        if (!a.type) {
-          return { ...a, type: 'text' } as unknown as Annotation;
-        }
-        return a as unknown as Annotation;
-      });
+      // Also validate required fields and filter out corrupt entries
+      data.annotations = (data.annotations as unknown[])
+        .map((raw) => {
+          const a = raw as Record<string, unknown>;
+          if (!a.type) {
+            return { ...a, type: 'text' } as Record<string, unknown>;
+          }
+          return a as Record<string, unknown>;
+        })
+        .filter((a) => {
+          if (typeof a.id === 'string' && typeof a.pageUrl === 'string' && typeof a.note === 'string') {
+            return true;
+          }
+          console.warn(
+            `[astro-inline-review] Filtering invalid annotation (missing id, pageUrl, or note):`,
+            JSON.stringify(a),
+          );
+          return false;
+        }) as unknown as Annotation[];
 
       return data;
-    } catch {
+    } catch (err) {
+      // ENOENT is expected when the file doesn't exist yet
+      if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return createEmptyStore();
+      }
+      // Parse errors or other I/O failures — warn so data loss is debuggable
+      console.warn(
+        `[astro-inline-review] Failed to read ${this.filePath}: ${err instanceof Error ? err.message : err}`,
+      );
       return createEmptyStore();
     }
   }
@@ -51,7 +66,9 @@ export class ReviewStorage {
     // Queue writes to prevent concurrent file corruption
     this.writeQueue = this.writeQueue.then(async () => {
       const json = JSON.stringify(store, null, 2) + '\n';
-      await writeFile(this.filePath, json, 'utf-8');
+      const tmpPath = this.filePath + '.tmp';
+      await writeFile(tmpPath, json, 'utf-8');
+      await rename(tmpPath, this.filePath);
     });
     return this.writeQueue;
   }
@@ -72,7 +89,9 @@ export class ReviewStorage {
         const store = await this.read();
         const modified = await fn(store);
         const json = JSON.stringify(modified, null, 2) + '\n';
-        await writeFile(this.filePath, json, 'utf-8');
+        const tmpPath = this.filePath + '.tmp';
+        await writeFile(tmpPath, json, 'utf-8');
+        await rename(tmpPath, this.filePath);
         result = modified;
       })
       .catch((err) => {

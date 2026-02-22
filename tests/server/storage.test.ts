@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ReviewStorage } from '../../src/server/storage.js';
 import { createEmptyStore } from '../../src/types.js';
 import type { TextAnnotation } from '../../src/types.js';
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
+import { writeFileSync, unlinkSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -34,8 +34,10 @@ describe('ReviewStorage', () => {
   });
 
   afterEach(() => {
-    if (existsSync(TEST_FILE)) {
-      unlinkSync(TEST_FILE);
+    for (const f of [TEST_FILE, TEST_FILE + '.tmp']) {
+      if (existsSync(f)) {
+        unlinkSync(f);
+      }
     }
   });
 
@@ -74,13 +76,41 @@ describe('ReviewStorage', () => {
       expect(store.annotations[0].id).toBe('test-1');
     });
 
-    it('returns empty store on corrupted JSON', async () => {
+    it('returns empty store on corrupted JSON and warns', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       writeFileSync(TEST_FILE, 'not valid json!!!', 'utf-8');
 
       const storage = new ReviewStorage(TEST_FILE);
       const store = await storage.read();
 
       expect(store).toEqual(createEmptyStore());
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0][0]).toContain('[astro-inline-review] Failed to read');
+      expect(warnSpy.mock.calls[0][0]).toContain(TEST_FILE);
+      warnSpy.mockRestore();
+    });
+
+    it('filters out annotations missing required fields and warns', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const data = {
+        version: 1,
+        annotations: [
+          { id: 'valid-1', type: 'text', pageUrl: '/', note: 'good', pageTitle: '', selectedText: '', range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' }, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+          { id: 'missing-note', type: 'text', pageUrl: '/' },
+          { type: 'text', pageUrl: '/', note: 'no-id' },
+          { id: 'missing-url', note: 'no url' },
+        ],
+        pageNotes: [],
+      };
+      writeFileSync(TEST_FILE, JSON.stringify(data), 'utf-8');
+
+      const storage = new ReviewStorage(TEST_FILE);
+      const store = await storage.read();
+
+      expect(store.annotations.length).toBe(1);
+      expect(store.annotations[0].id).toBe('valid-1');
+      expect(warnSpy).toHaveBeenCalledTimes(3);
+      warnSpy.mockRestore();
     });
 
     it('returns empty store on invalid schema (missing version)', async () => {
@@ -131,6 +161,19 @@ describe('ReviewStorage', () => {
       const read = await storage.read();
       expect(read.annotations.length).toBe(1);
       expect(read.annotations[0].id).toBe('w-1');
+    });
+
+    it('uses atomic write via temp file and rename', async () => {
+      const storage = new ReviewStorage(TEST_FILE);
+      await storage.write(createEmptyStore());
+
+      // After a successful write, the temp file should not linger
+      // (it was renamed to the target)
+      expect(existsSync(TEST_FILE + '.tmp')).toBe(false);
+
+      // The target file should contain valid JSON
+      const content = readFileSync(TEST_FILE, 'utf-8');
+      expect(JSON.parse(content)).toEqual(createEmptyStore());
     });
 
     it('serialises concurrent writes without corruption', async () => {

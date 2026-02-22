@@ -28,13 +28,13 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 |--------|---------------|------|-------------------|-----------|
 | Spec Review (2026-02-22) | 21 | 11 (H1-3, M1-8) | — | 10 (L1-6, I1-4) |
 | Spec Review Round 3 (2026-02-21) | 15 | 0 | Marked resolved but content unverified | 15 (needs verification) |
-| Implementation Review (2026-02-22) | 30 | 6 (C1-3, H3, M1, M10) | — | 24 |
+| Implementation Review (2026-02-22) | 30 | 9 (C1-3, H3-4, M1, M9-10) | — | 21 |
 | Documentation Review (2026-02-22) | 16 | 6 (H1, M1, L3-4, L6) | — | 10 |
 | Test Coverage Review (2026-02-22) | 17 | 2 (annotator, element-selector) | — | 15 |
 | CI/CD Review (2026-02-22) | 17 | 9 (H1, M1, M3-4, L10, L12, L15, L17) | — | 8 |
 | Design & Accessibility Review (2026-02-22) | 27 | 13 (C1-2, H1-7, scroll, badge, toast) | — | 14 |
-| Architecture Review (2026-02-22) | 16 | 1 (M1) | — | 15 (mostly Info/Low) |
-| Comprehensive Review Priority 7 | 4 | 1 (7.4 delete confirm) | — | 3 (7.1-7.3) |
+| Architecture Review (2026-02-22) | 16 | 2 (M1, M4) | — | 14 (mostly Info/Low) |
+| Comprehensive Review Priority 7 | 4 | 2 (7.3 atomic writes, 7.4 delete confirm) | — | 2 (7.1-7.2) |
 | Comprehensive Review Priority 3 | 4 | 2 (3.1-3.2) | — | 2 (3.3-3.4) |
 | Spec Reviews Rounds 1-2 (2026-02-21) | 39 | — | All resolved | 0 |
 | Security Reviews 1-2 (2026-02-21) | 18 | — | All resolved | 0 |
@@ -54,15 +54,15 @@ These are concrete code improvements from the implementation and architecture re
 |----|--------|----------|---------|--------|
 | REM-01 | IMPL-H1 | High | Dead code: `scrollToAnnotation` in annotator.ts:530 — never called | **Resolved** (Session 1) |
 | REM-02 | IMPL-H2, ARCH-M3 | High | Client export.ts duplicates shared/export.ts (~100 lines identical logic) | **Resolved** (Session 1) |
-| REM-03 | IMPL-H4 | High | `existsSync` then async `readFile` is a TOCTOU race in storage.ts:22-24 | Confirmed still present |
+| REM-03 | IMPL-H4 | High | `existsSync` then async `readFile` is a TOCTOU race in storage.ts:22-24 | **Resolved** (Session 2) |
 | REM-04 | IMPL-H5 | High | No size limit on MCP tool string inputs (message param) | Still present |
 | REM-05 | IMPL-M4 | Medium | Escape handler doesn't call stopPropagation when handling event | Partially — shortcuts.ts has preventDefault on Cmd shortcuts but not on Escape |
 | REM-06 | IMPL-M5 | Medium | Clear All sends N sequential DELETE API calls (no bulk endpoint) | Still present |
 | REM-07 | IMPL-M7 | Medium | `SerializedSelection` in selection.ts duplicates `SerializedRange` in shared/types.ts | **Resolved** (Session 1) |
 | REM-08 | IMPL-M8 | Medium | `generateId()` uses `Math.random()` not `crypto.randomUUID()` | **Resolved** (Session 1) |
-| REM-09 | IMPL-M9 | Medium | Storage migration silently converts unknown shapes without validation | Still present |
+| REM-09 | IMPL-M9 | Medium | Storage migration silently converts unknown shapes without validation | **Resolved** (Session 2) |
 | REM-10 | IMPL-M6 | Medium | Inspector overlay is in light DOM, inconsistent with shadow DOM pattern | Still present |
-| REM-11 | Comp-7.3 | Medium | No atomic writes — storage.write() should use temp file + rename | Still present |
+| REM-11 | Comp-7.3 | Medium | No atomic writes — storage.write() should use temp file + rename | **Resolved** (Session 2) |
 | REM-12 | ARCH-M2 | Medium | localStorage cache has no invalidation strategy | Still present |
 | REM-13 | SYS-4 | Medium | FAB state desync — FAB's internal `isOpen` can desync from panel state | Still present |
 | REM-14 | SYS-5 | Medium | Escape handler bypasses `hidePopup()` — stale textarea content possible | Still present |
@@ -70,7 +70,7 @@ These are concrete code improvements from the implementation and architecture re
 | REM-16 | IMPL-L1 | Low | `readBody` with empty body returns 500 instead of 400 | **Resolved** (Session 1) |
 | REM-17 | IMPL-L7 | Low | Client API `getExport()` doesn't check `res.ok` | **Resolved** (Session 1) |
 | REM-18 | MCP-L1 | Low | `src/mcp/index.ts` barrel re-export is unused dead code | **Resolved** (Session 1) |
-| REM-19 | ARCH-M4 | Low | JSON storage: silent data loss on parse errors (returns empty store) | Still present |
+| REM-19 | ARCH-M4 | Low | JSON storage: silent data loss on parse errors (returns empty store) | **Resolved** (Session 2) |
 
 ### Priority 2: Specification Accuracy (Medium)
 
