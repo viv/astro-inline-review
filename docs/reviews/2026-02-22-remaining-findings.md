@@ -3,7 +3,7 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: remaining_review_findings
-status: draft
+status: in_progress
 human_reviewer: matthewvivian
 scope: [specification, implementation, tests, cicd, design, architecture, documentation]
 tags: [review, remaining-findings, second-wave, quality-assurance]
@@ -29,7 +29,7 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 | Spec Review (2026-02-22) | 21 | 16 (H1-3, M1-8, L1, L3-6) | — | 5 (L2, I1-4) |
 | Spec Review Round 3 (2026-02-21) | 15 | 15 | Verified and fixed (Session 3) | 0 |
 | Implementation Review (2026-02-22) | 30 | 11 (C1-3, H3-4, M1, M4-5, M9-10) | — | 19 |
-| Documentation Review (2026-02-22) | 16 | 6 (H1, M1, L3-4, L6) | — | 10 |
+| Documentation Review (2026-02-22) | 16 | 10 (H1, M1, M3-4, L2-4, L5-6) | — | 6 |
 | Test Coverage Review (2026-02-22) | 17 | 8 (annotator, element-selector, + Session 5: deserializeRange, popup, export, api, coverage, MCP helpers) | — | 9 |
 | CI/CD Review (2026-02-22) | 17 | 13 (H1, M1-2, M3-5, L5, L10, L12, L15-16, L17-18) | — | 4 |
 | Design & Accessibility Review (2026-02-22) | 27 | 18 (C1-2, H1-7, scroll, badge, toast, + Session 6: error toasts, unsaved changes, inspector overflow, aria-live, load guidance) | — | 9 |
@@ -158,12 +158,12 @@ Remaining from the design review that weren't addressed by Prompts 4 and 10.
 
 ### Priority 6: Documentation (Low)
 
-| ID | Source | Severity | Finding |
-|----|--------|----------|---------|
-| REM-73 | DOCS-M3 | Medium | Outstanding tech debt has no tracking mechanism — needs backlog document |
-| REM-74 | DOCS-M4 | Medium | Test quality review P0 recommendations not tracked (external test repo) |
-| REM-75 | DOCS-L2 | Low | MCP Server plan Session 7 status says `complete` not `completed` |
-| REM-76 | DOCS-L5 | Low | README has stale TODO comment for screenshot (`<!-- TODO: Add screenshot/GIF here -->`) |
+| ID | Source | Severity | Finding | Status |
+|----|--------|----------|---------|--------|
+| REM-73 | DOCS-M3 | Medium | Outstanding tech debt has no tracking mechanism — needs backlog document | **Resolved** (Session 8) |
+| REM-74 | DOCS-M4 | Medium | Test quality review P0 recommendations not tracked (external test repo) | **Resolved** (Session 8) |
+| REM-75 | DOCS-L2 | Low | MCP Server plan Session 7 status says `complete` not `completed` | **Resolved** (Session 8) |
+| REM-76 | DOCS-L5 | Low | README has stale TODO comment for screenshot (`<!-- TODO: Add screenshot/GIF here -->`) | **Resolved** (Session 8) |
 
 ---
 

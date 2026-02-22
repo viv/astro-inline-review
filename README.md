@@ -9,8 +9,6 @@ A bridge between human reviewers and coding agents for [Astro](https://astro.bui
 
 Browse your rendered site, select text, attach notes, and export location-aware Markdown that a coding agent (Claude Code, Codex, Cursor, etc.) can act on immediately. No hunting through source files to explain *where* the problem is.
 
-<!-- TODO: Add screenshot/GIF here -->
-
 ## The Problem
 
 Reviewing a live site and turning that into actionable code changes is tedious. You spot a typo, an awkward heading, a paragraph that needs rewriting, but translating "that bit on the homepage, third section down" into a precise instruction for a coding agent means switching context, finding the right file, identifying the right line, and describing what you saw.
