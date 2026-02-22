@@ -603,7 +603,7 @@ The `resetFab()` function sets the icon back to the clipboard SVG, removes the `
 - `z-index: 10000`
 
 **Structure**:
-- **Header**: Title "Inline Review" + action buttons ("+ Note", "Clear All")
+- **Header**: Title "Inline Review" + action buttons ("+ Note", "Copy All", "Clear All")
 - **Tabs**: "This Page" / "All Pages" with active indicator
 - **Content**: Scrollable area showing annotations and page notes
 
@@ -612,6 +612,7 @@ The `resetFab()` function sets the icon back to the clipboard SVG, removes the `
 - `data-air-state="open"` or `"closed"`
 - `data-air-el="tab-this-page"` and `data-air-el="tab-all-pages"` on tab buttons
 - `data-air-el="page-note-add"` on the add note button
+- `data-air-el="export"` on the Copy All button
 - `data-air-el="clear-all"` on the clear all button
 - `data-air-el="annotation-item"` on each annotation list item
 - `data-air-el="page-note-item"` on each page note list item
@@ -1070,12 +1071,18 @@ Element annotations are listed under `### Element Annotations` within each page 
 
 ### 9.3 Clipboard Export
 
-The client-side export:
+Export can be triggered by either:
+- The **"Copy All"** button in the panel header
+- The keyboard shortcut `Cmd/Ctrl + Shift + E`
+
+Both use the same underlying logic:
 
 1. Fetches the full (unfiltered) store from the server via `GET /annotations` (no `?page=` filter). The client-side cache is not used for export because it only contains the current page's annotations.
 2. Attempts `navigator.clipboard.writeText()` (modern Clipboard API)
 3. Falls back to `textarea.select()` + `document.execCommand('copy')` for older browsers
 4. Shows a toast notification: "Copied to clipboard!" on success, "Export failed — try again" on failure
+
+The "Copy All" button is styled with an orange accent (`border-color: #D97706`, `color: #FCD34D`) to visually distinguish it from the neutral "+ Note" button, while the destructive "Clear All" button uses a red accent. Button order in the header is: "+ Note" | "Copy All" | "Clear All".
 
 
 ## 10. Keyboard Shortcuts
@@ -1204,6 +1211,7 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `annotation-item` | Annotation list item in panel | Shadow DOM | Present when panel is open and annotations exist |
 | `page-note-item` | Page note list item in panel | Shadow DOM | Present when panel is open and page notes exist |
 | `page-note-add` | "Add Note" button in panel header | Shadow DOM | Always present (child of panel header) |
+| `export` | "Copy All" button in panel header | Shadow DOM | Always present (child of panel header) |
 | `page-note-textarea` | Page note textarea (add/edit form) | Shadow DOM | Present when add/edit note form is open |
 | `page-note-edit` | Page note edit button | Shadow DOM | Present on each page note item when panel shows notes |
 | `page-note-delete` | Page note delete button | Shadow DOM | Present on each page note item when panel shows notes |
@@ -1416,6 +1424,7 @@ These may be added in future if the tool gains broader adoption.
 | Click text annotation in panel | Page scrolls to highlight, highlight pulses | 6.2.3, 8.3 |
 | Click element annotation in panel | Page scrolls to element, outline pulses | 6.2.3a, 8.5.3 |
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
+| Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |
 | Press Escape | Dismiss popup (priority) or close panel | 10.4 |
 | Press Cmd/Ctrl+Shift+. | Toggle panel | 10.1 |
