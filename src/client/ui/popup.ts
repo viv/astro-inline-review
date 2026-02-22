@@ -214,7 +214,7 @@ function rebuildFooter(
   callbacks: PopupCallbacks,
 ): void {
   const footer = container.querySelector('.air-popup__footer')!;
-  footer.innerHTML = '';
+  while (footer.firstChild) footer.removeChild(footer.firstChild);
 
   // Delete button (only in edit mode)
   if (callbacks.onDelete) {

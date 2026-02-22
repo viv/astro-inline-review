@@ -183,7 +183,7 @@ async function refreshPanel(
   mediator: ReviewMediator,
   prefetchedStore?: ReviewStore,
 ): Promise<void> {
-  content.innerHTML = '';
+  while (content.firstChild) content.removeChild(content.firstChild);
 
   try {
     // "All Pages" must always fetch from the server — the cache only holds
@@ -198,7 +198,10 @@ async function refreshPanel(
       renderAllPages(content, store, callbacks, mediator);
     }
   } catch {
-    content.innerHTML = '<div class="air-panel__empty">Failed to load annotations</div>';
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'air-panel__empty';
+    errorDiv.textContent = 'Failed to load annotations';
+    content.appendChild(errorDiv);
   }
 }
 
@@ -237,7 +240,21 @@ function renderThisPage(
   }
 
   if (pageAnnotations.length === 0 && pageNotes.length === 0) {
-    content.innerHTML = '<div class="air-panel__empty"><span class="air-panel__empty-arrow" data-air-el="empty-arrow">\u2190</span><br>No annotations on this page yet.<br>Select text or Alt+click elements to get started.</div>';
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'air-panel__empty';
+
+    const arrow = document.createElement('span');
+    arrow.className = 'air-panel__empty-arrow';
+    arrow.setAttribute('data-air-el', 'empty-arrow');
+    arrow.textContent = '\u2190';
+    emptyDiv.appendChild(arrow);
+
+    emptyDiv.appendChild(document.createElement('br'));
+    emptyDiv.appendChild(document.createTextNode('No annotations on this page yet.'));
+    emptyDiv.appendChild(document.createElement('br'));
+    emptyDiv.appendChild(document.createTextNode('Select text or Alt+click elements to get started.'));
+
+    content.appendChild(emptyDiv);
   }
 }
 
@@ -265,7 +282,10 @@ function renderAllPages(
   }
 
   if (pages.size === 0) {
-    content.innerHTML = '<div class="air-panel__empty">No annotations across any pages.</div>';
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'air-panel__empty';
+    emptyDiv.textContent = 'No annotations across any pages.';
+    content.appendChild(emptyDiv);
     return;
   }
 
@@ -519,7 +539,7 @@ function showEditNoteForm(
     mediator.refreshPanel();
   });
 
-  item.innerHTML = '';
+  while (item.firstChild) item.removeChild(item.firstChild);
   item.appendChild(form);
   form.querySelector('textarea')?.focus();
 }

@@ -158,7 +158,7 @@ function init(): void {
     addPageNote: async () => {
       // Open panel and ensure content is loaded before adding the form.
       // togglePanel fires mediator.refreshPanel() without awaiting it,
-      // so the async refresh would wipe the form via innerHTML = ''.
+      // so the async refresh would wipe the form by clearing children.
       // Instead, open the panel manually and await the refresh.
       if (!isPanelOpen(panel)) {
         panel.container.classList.add('air-panel--open');

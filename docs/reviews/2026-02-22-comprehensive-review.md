@@ -458,7 +458,7 @@ files are updated (CLAUDE.md, docs/spec/specification.md, engineering
 plans in docs/). Commit all changes and push.
 ```
 
-### Prompt 2: Replace innerHTML with DOM API
+### Prompt 2: Replace innerHTML with DOM API — ✅ Implemented
 
 ```
 Read src/client/ui/panel.ts in the astro-inline-review repository.

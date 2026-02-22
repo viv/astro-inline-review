@@ -1,12 +1,27 @@
-/** Clipboard/notes icon SVG */
-const CLIPBOARD_ICON = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 16H5V5h2v3h10V5h2v14z"/>
-</svg>`;
+/** SVG path data for the clipboard/notes icon */
+const CLIPBOARD_PATH = 'M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 16H5V5h2v3h10V5h2v14z';
 
-/** Close/plus icon (rotated 45° via CSS to become X) */
-const PLUS_ICON = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-</svg>`;
+/** SVG path data for the close/plus icon (rotated 45 via CSS to become X) */
+const PLUS_PATH = 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Create an SVG element from path data */
+function createSvgIcon(pathData: string): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', pathData);
+  svg.appendChild(path);
+  return svg;
+}
+
+/** Swap the icon inside a container, preserving other children */
+function setIcon(container: HTMLElement, pathData: string): void {
+  const oldSvg = container.querySelector('svg');
+  if (oldSvg) oldSvg.remove();
+  container.insertBefore(createSvgIcon(pathData), container.firstChild);
+}
 
 export interface FabElements {
   button: HTMLButtonElement;
@@ -24,7 +39,7 @@ export function createFab(shadowRoot: ShadowRoot, onToggle: () => void): FabElem
   button.setAttribute('title', 'Inline Review');
   button.setAttribute('data-air-el', 'fab');
   button.setAttribute('data-air-state', 'closed');
-  button.innerHTML = CLIPBOARD_ICON;
+  button.appendChild(createSvgIcon(CLIPBOARD_PATH));
 
   const badge = document.createElement('span');
   badge.className = 'air-fab__badge air-fab__badge--hidden';
@@ -35,8 +50,7 @@ export function createFab(shadowRoot: ShadowRoot, onToggle: () => void): FabElem
   button.addEventListener('click', () => {
     const wasOpen = button.getAttribute('data-air-state') === 'open';
     const isOpen = !wasOpen;
-    button.innerHTML = isOpen ? PLUS_ICON : CLIPBOARD_ICON;
-    button.appendChild(badge); // Re-append badge after innerHTML change
+    setIcon(button, isOpen ? PLUS_PATH : CLIPBOARD_PATH);
     button.classList.toggle('air-fab--open', isOpen);
     button.setAttribute('data-air-state', isOpen ? 'open' : 'closed');
     onToggle();
@@ -49,8 +63,7 @@ export function createFab(shadowRoot: ShadowRoot, onToggle: () => void): FabElem
 
 /** Reset the FAB to its closed visual state (used when panel is closed externally). */
 export function resetFab(fab: FabElements): void {
-  fab.button.innerHTML = CLIPBOARD_ICON;
-  fab.button.appendChild(fab.badge);
+  setIcon(fab.button, CLIPBOARD_PATH);
   fab.button.classList.remove('air-fab--open');
   fab.button.setAttribute('data-air-state', 'closed');
 }
