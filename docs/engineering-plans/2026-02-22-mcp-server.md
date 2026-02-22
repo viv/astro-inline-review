@@ -408,7 +408,7 @@ Add an "MCP Server" section explaining:
 Run full test suite + build. Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
-**Status**: `not_started`
+**Status**: `completed` (85260ac)
 
 ---
 
@@ -492,9 +492,61 @@ Commit using conventional commit format. Focus the message on WHY, not WHAT — 
 
 ---
 
+### Session 7: End-User MCP Documentation
+
+**Goal**: Create comprehensive end-user documentation for the MCP feature so consumers of the package know how to set it up and use it with their coding agents.
+
+**Entry state**: Session 6 committed. All engineering work complete, reviews done, internal docs updated.
+
+**Exit state**: User-facing MCP documentation published. README updated. Committed.
+
+**Prompt**:
+
+```
+Read docs/engineering-plans/2026-02-22-mcp-server.md for full context. This is Session 7: End-User MCP Documentation.
+
+Goal: Create comprehensive end-user documentation for the MCP feature so package consumers know how to set it up and use it with coding agents.
+
+Entry state: Session 6 committed. All engineering work and internal reviews complete.
+
+Part A — README updates:
+
+Update `README.md` to include an MCP section covering:
+1. What the MCP server does and why it's useful (reviewer annotates in browser → agent reads and responds via MCP tools)
+2. Quick setup: how `.mcp.json` auto-discovery works with Claude Code (just build and it works)
+3. Manual setup: how to configure other MCP-compatible agents using the stdio transport
+4. Available tools with descriptions and example usage patterns
+5. The `--storage` flag for custom storage paths
+6. Relationship between browser UI, REST API, and MCP server (all read/write the same JSON file)
+
+Part B — Usage guide:
+
+Create `docs/guides/mcp-setup.md` as a step-by-step guide:
+1. Prerequisites (build the package, have annotations in inline-review.json)
+2. Claude Code setup (automatic via .mcp.json — explain what happens)
+3. Other MCP clients (manual stdio configuration — show the JSON config)
+4. Typical workflow: reviewer annotates → agent lists annotations → agent resolves/replies → reviewer sees responses in browser
+5. Troubleshooting: common issues (server not found, empty results, storage path wrong)
+
+Part C — Tool reference:
+
+Create `docs/guides/mcp-tools.md` as a detailed tool reference:
+1. Each tool: name, description, parameters (required/optional), return shape, example request/response
+2. Error handling: what errors each tool can return and when
+3. Workflow examples: common sequences of tool calls for typical tasks
+
+Keep the tone practical and concise — these are docs for developers who want to get set up quickly.
+
+Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
+```
+
+**Status**: `not_started`
+
+---
+
 ## Success Criteria
 
-1. All six sessions completed and committed.
+1. All seven sessions completed and committed.
 2. All tests pass with 90%+ coverage on new MCP code.
 3. Build and type-check pass.
 4. Security review: no unresolved Critical/High findings.
@@ -504,3 +556,4 @@ Commit using conventional commit format. Focus the message on WHY, not WHAT — 
 8. Markdown export includes resolved status and replies.
 9. `.mcp.json` enables auto-discovery for Claude Code.
 10. All documentation (CLAUDE.md, spec, plans, reviews) up to date.
+11. End-user MCP documentation: README updated, setup guide, and tool reference published.
