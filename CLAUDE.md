@@ -78,6 +78,29 @@ Base: `http://localhost:4321/__inline-review/api`
 | DELETE | `/page-notes/:id` | Delete page note |
 | GET | `/export` | Markdown export (text/markdown) |
 
+## MCP Server — Structured Agent Access
+
+The `.mcp.json` file at the project root enables auto-discovery for Claude Code and other MCP-compatible agents. The MCP server reads the same `inline-review.json` as the browser UI — no dev server required.
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_annotations` | List all annotations, optionally filtered by `pageUrl` |
+| `list_page_notes` | List all page-level notes, optionally filtered by `pageUrl` |
+| `get_annotation` | Get a single annotation by ID with full detail |
+| `get_export` | Get a markdown export of all annotations and page notes |
+| `resolve_annotation` | Mark an annotation as resolved (sets `resolvedAt` timestamp) |
+| `add_agent_reply` | Add a reply to an annotation explaining what action was taken |
+
+### Running manually
+
+```sh
+node ./dist/mcp/server.js --storage ./inline-review.json
+```
+
+The `--storage` flag is optional and defaults to `./inline-review.json` relative to the working directory.
+
 ## Development
 
 - **Build**: `npm run build` (tsup — server ESM + client browser bundle)
@@ -93,4 +116,7 @@ Base: `http://localhost:4321/__inline-review/api`
 - `src/server/middleware.ts` — REST API middleware + server-side export
 - `src/client/export.ts` — client-side markdown export
 - `src/index.ts` — Astro integration entry point
+- `src/mcp/server.ts` — MCP server entry point (CLI argument parsing, tool registration)
+- `src/mcp/tools/` — individual MCP tool handlers
+- `.mcp.json` — MCP auto-discovery configuration
 - `docs/spec/specification.md` — full component specification

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "astro-inline-review": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]
+    }
+  }
+}
