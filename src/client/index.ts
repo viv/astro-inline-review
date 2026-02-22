@@ -70,6 +70,11 @@ function init(): void {
       }
     },
     onRefreshBadge: refreshBadge,
+    onExport: async () => {
+      const store = await api.getStore();
+      const success = await exportToClipboard(store);
+      showToast(shadowRoot, success ? 'Copied to clipboard!' : 'Export failed — try again');
+    },
   }, mediator);
 
   // FAB

@@ -143,6 +143,15 @@ export const PANEL_STYLES = /* css */ `
     background: #3a3a3a;
   }
 
+  .air-panel__btn--export {
+    border-color: #D97706;
+    color: #FCD34D;
+  }
+
+  .air-panel__btn--export:hover {
+    background: #78350F;
+  }
+
   .air-panel__btn--danger {
     border-color: #7f1d1d;
     color: #fca5a5;

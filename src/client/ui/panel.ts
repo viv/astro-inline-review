@@ -24,6 +24,7 @@ export interface PanelElements {
 export interface PanelCallbacks {
   onAnnotationClick: (annotationId: string) => void;
   onRefreshBadge: () => Promise<void>;
+  onExport: () => Promise<void>;
 }
 
 type ActiveTab = 'this-page' | 'all-pages';
@@ -59,6 +60,14 @@ export function createPanel(
   addNoteBtn.textContent = '+ Note';
   addNoteBtn.title = 'Add page note';
   actions.appendChild(addNoteBtn);
+
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'air-panel__btn air-panel__btn--export';
+  exportBtn.setAttribute('data-air-el', 'export');
+  exportBtn.textContent = 'Copy All';
+  exportBtn.title = 'Copy all annotations to clipboard as Markdown';
+  exportBtn.addEventListener('click', () => callbacks.onExport());
+  actions.appendChild(exportBtn);
 
   const clearBtn = document.createElement('button');
   clearBtn.className = 'air-panel__btn air-panel__btn--danger';
