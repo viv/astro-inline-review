@@ -49,8 +49,24 @@ jobs:
           name: coverage-node-${{ matrix.node-version }}
           path: coverage/
 
-      - name: Security audit (production deps)
-        if: matrix.node-version == 22
+  security-audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Audit production dependencies
         run: npm audit --audit-level=high --omit=dev
 
   pack-check:

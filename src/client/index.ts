@@ -115,7 +115,10 @@ function init(): void {
     const tooltip = document.createElement('div');
     tooltip.className = 'air-tooltip';
     tooltip.setAttribute('data-air-el', 'first-use-tooltip');
+    tooltip.id = 'air-tooltip';
+    tooltip.setAttribute('role', 'tooltip');
     tooltip.textContent = 'Select text to annotate it, or Alt+click any element';
+    fab.button.setAttribute('aria-describedby', 'air-tooltip');
     shadowRoot.appendChild(tooltip);
 
     let dismissed = false;
@@ -124,6 +127,7 @@ function init(): void {
       dismissed = true;
       tooltip.classList.add('air-tooltip--hidden');
       localStorage.setItem(TOOLTIP_KEY, '1');
+      fab.button.removeAttribute('aria-describedby');
       // Remove from DOM after fade-out transition
       setTimeout(() => tooltip.remove(), 300);
     };

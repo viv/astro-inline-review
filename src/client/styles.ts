@@ -1,5 +1,18 @@
 /** All CSS for the Shadow DOM UI — template literal strings for injection */
 
+/**
+ * Centralised z-index constants.
+ * Exported so JS-created elements (inspector overlay, toast) can reference them.
+ */
+export const Z_INDEX = {
+  panel: 9999,
+  fab: 10000,
+  popup: 10001,
+  inspector: 10002,
+  toast: 10003,
+  tooltip: 10002,
+} as const;
+
 export const HOST_STYLES = /* css */ `
   :host {
     all: initial;
@@ -30,7 +43,7 @@ export const FAB_STYLES = /* css */ `
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 10000;
+    z-index: ${Z_INDEX.fab};
     transition: transform 0.2s ease, background 0.2s ease;
     padding: 0;
   }
@@ -87,7 +100,7 @@ export const PANEL_STYLES = /* css */ `
     height: 100vh;
     background: #1a1a1a;
     border-left: 1px solid #333;
-    z-index: 10000;
+    z-index: ${Z_INDEX.panel};
     transform: translateX(100%);
     visibility: hidden;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
@@ -307,12 +320,31 @@ export const PANEL_STYLES = /* css */ `
   .air-page-group__title:first-child {
     margin-top: 0;
   }
+
+  .air-panel__shortcuts {
+    padding: 10px 16px;
+    border-top: 1px solid #333;
+    font-size: 11px;
+    color: #666;
+    line-height: 1.6;
+    flex-shrink: 0;
+  }
+
+  .air-panel__shortcuts kbd {
+    font-family: inherit;
+    font-size: 10px;
+    color: #999;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
 `;
 
 export const POPUP_STYLES = /* css */ `
   .air-popup {
     position: fixed;
-    z-index: 10001;
+    z-index: ${Z_INDEX.popup};
     background: #1a1a1a;
     border: 1px solid #444;
     border-radius: 8px;
@@ -410,7 +442,7 @@ export const TOAST_STYLES = /* css */ `
     padding: 10px 16px;
     color: #e5e5e5;
     font-size: 13px;
-    z-index: 10002;
+    z-index: ${Z_INDEX.toast};
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     opacity: 0;
     transform: translateY(10px);
@@ -435,7 +467,7 @@ export const TOOLTIP_STYLES = /* css */ `
     padding: 10px 16px;
     color: #e5e5e5;
     font-size: 13px;
-    z-index: 10002;
+    z-index: ${Z_INDEX.tooltip};
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     opacity: 1;
     transform: translateY(0);

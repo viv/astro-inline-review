@@ -118,6 +118,21 @@ export function createPanel(
   content.setAttribute('aria-live', 'polite');
   container.appendChild(content);
 
+  // Keyboard shortcuts help footer
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
+  const mod = isMac ? '\u2318' : 'Ctrl';
+  const shortcutsFooter = document.createElement('div');
+  shortcutsFooter.className = 'air-panel__shortcuts';
+  shortcutsFooter.setAttribute('data-air-el', 'shortcuts-help');
+  shortcutsFooter.innerHTML = [
+    `<kbd>${mod}+Shift+.</kbd> Toggle panel`,
+    `<kbd>${mod}+Shift+E</kbd> Export`,
+    `<kbd>${mod}+Shift+N</kbd> Add note`,
+    `<kbd>Esc</kbd> Close`,
+    `<kbd>Alt+hover</kbd> Inspect`,
+  ].join(' &middot; ');
+  container.appendChild(shortcutsFooter);
+
   shadowRoot.appendChild(container);
 
   // State

@@ -3,7 +3,7 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: remaining_review_findings
-status: in_progress
+status: completed
 human_reviewer: matthewvivian
 scope: [specification, implementation, tests, cicd, design, architecture, documentation]
 tags: [review, remaining-findings, second-wave, quality-assurance]
@@ -31,8 +31,8 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 | Implementation Review (2026-02-22) | 30 | 11 (C1-3, H3-4, M1, M4-5, M9-10) | — | 19 |
 | Documentation Review (2026-02-22) | 16 | 10 (H1, M1, M3-4, L2-4, L5-6) | — | 6 |
 | Test Coverage Review (2026-02-22) | 17 | 8 (annotator, element-selector, + Session 5: deserializeRange, popup, export, api, coverage, MCP helpers) | — | 9 |
-| CI/CD Review (2026-02-22) | 17 | 13 (H1, M1-2, M3-5, L5, L10, L12, L15-16, L17-18) | — | 4 |
-| Design & Accessibility Review (2026-02-22) | 27 | 18 (C1-2, H1-7, scroll, badge, toast, + Session 6: error toasts, unsaved changes, inspector overflow, aria-live, load guidance) | — | 9 |
+| CI/CD Review (2026-02-22) | 17 | 14 (H1, M1-2, M3-5, L5, L10, L12, L15-16, L17-18, + Session 9: audit decoupled) | — | 3 |
+| Design & Accessibility Review (2026-02-22) | 27 | 24 (C1-2, H1-7, scroll, badge, toast, + Session 6: error toasts, unsaved changes, inspector overflow, aria-live, load guidance + Session 9: popup panel avoidance, shortcuts help, tooltip ARIA, z-index, FAB/panel z-index) | — | 3 |
 | Architecture Review (2026-02-22) | 16 | 2 (M1, M4) | — | 14 (mostly Info/Low) |
 | Comprehensive Review Priority 7 | 4 | 2 (7.3 atomic writes, 7.4 delete confirm) | — | 2 (7.1-7.2) |
 | Comprehensive Review Priority 3 | 4 | 4 (3.1-3.4) | — | 0 |
@@ -135,14 +135,14 @@ Remaining from the design review that weren't addressed by Prompts 4 and 10.
 | REM-55 | UX | Medium | No unsaved changes warning when popup dismissed with text in textarea | **Resolved** (Session 6) |
 | REM-56 | UX | Medium | Inspector label can overflow (no max-width on long selectors) | **Resolved** (Session 6) |
 | REM-57 | UX | Medium | Dynamic content updates not announced (no aria-live on panel content refresh) | **Resolved** (Session 6) |
-| REM-58 | UX | Medium | FAB and panel share z-index 10000 — FAB occluded on narrow full-width panel | Still present |
+| REM-58 | UX | Medium | FAB and panel share z-index 10000 — FAB occluded on narrow full-width panel | **Resolved** (Session 9 — z-index centralisation gave panel lower z-index) |
 | REM-59 | UX | Medium | Potential keyboard shortcut conflicts with host apps (Cmd+Shift+E = VS Code Explorer) | Still present |
-| REM-60 | UX | Medium | Popup positioning can be obscured by open panel | Still present |
+| REM-60 | UX | Medium | Popup positioning can be obscured by open panel | **Resolved** (Session 9) |
 | REM-61 | UX | Medium | Panel "Failed to load annotations" gives no guidance (e.g. "Is dev server running?") | **Resolved** (Session 6) |
 | REM-62 | UX | Medium | Inspector mode (Alt+hover) is mouse-only — no keyboard equivalent | Still present |
-| REM-63 | UX | Low | Keyboard shortcuts not discoverable in UI (no help dialog or tooltips) | Still present |
-| REM-64 | UX | Low | Tooltip lacks `role="tooltip"` and FAB lacks `aria-describedby` linkage | Still present |
-| REM-65 | UX | Low | Z-index values scattered — no centralised constants | Still present |
+| REM-63 | UX | Low | Keyboard shortcuts not discoverable in UI (no help dialog or tooltips) | **Resolved** (Session 9) |
+| REM-64 | UX | Low | Tooltip lacks `role="tooltip"` and FAB lacks `aria-describedby` linkage | **Resolved** (Session 9) |
+| REM-65 | UX | Low | Z-index values scattered — no centralised constants | **Resolved** (Session 9) |
 
 ### Priority 5: CI/CD (Low)
 
@@ -150,7 +150,7 @@ Remaining from the design review that weren't addressed by Prompts 4 and 10.
 |----|--------|----------|---------|--------|
 | REM-66 | CICD-M2 | Medium | No ESLint or Prettier in CI (no code style enforcement) | **Resolved** (Session 7) |
 | REM-67 | CICD-M5 | Medium | Release workflow doesn't run acceptance tests | **Resolved** (Session 7 — documented) |
-| REM-68 | CICD-L4 | Low | Security audit condition coupled to specific Node version (22) | Still present |
+| REM-68 | CICD-L4 | Low | Security audit condition coupled to specific Node version (22) | **Resolved** (Session 9) |
 | REM-69 | CICD-L13 | Low | No CODEOWNERS file | Still present |
 | REM-70 | CICD-L18 | Low | Playwright browsers not cached in acceptance workflow | **Resolved** (Session 7) |
 | REM-71 | CICD-L16 | Low | Coverage thresholds not enforced in CI | **Resolved** (Session 5) |

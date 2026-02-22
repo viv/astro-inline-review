@@ -61,12 +61,11 @@ Outstanding items identified during reviews but intentionally deferred. Each ite
 
 ---
 
-### 6. FAB/Panel Z-Index Overlap
+### 6. ~~FAB/Panel Z-Index Overlap~~ (Resolved — Session 9)
 
 **Source:** UX / REM-58
 **Severity:** Medium
-**Description:** The FAB and panel both use z-index 10000. When the panel is open at full width on narrow viewports, the FAB is occluded behind the panel. The user cannot click the FAB to close the panel.
-**Suggested approach:** Give the FAB a higher z-index than the panel (e.g., FAB: 10000, panel: 9999) so the FAB always remains clickable. This is partially addressed by centralising z-index values (REM-65 in Session 9).
+**Resolution:** Z-index centralisation (REM-65) gave the FAB z-index 10000 and the panel z-index 9999, ensuring the FAB always renders above the panel.
 
 ---
 

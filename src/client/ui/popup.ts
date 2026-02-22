@@ -235,8 +235,16 @@ function positionPopup(container: HTMLElement, rect: DOMRect): void {
   let top = rect.top - MARGIN;
   let left = rect.left + (rect.width / 2) - (POPUP_WIDTH / 2);
 
-  // Keep within viewport
-  left = Math.max(MARGIN, Math.min(left, window.innerWidth - POPUP_WIDTH - MARGIN));
+  // Determine right-edge boundary — if the panel is open, avoid it
+  let rightBound = window.innerWidth - MARGIN;
+  const root = container.getRootNode() as ShadowRoot;
+  const panelEl = root.querySelector?.('[data-air-el="panel"][data-air-state="open"]') as HTMLElement | null;
+  if (panelEl) {
+    rightBound = Math.min(rightBound, panelEl.offsetLeft - MARGIN);
+  }
+
+  // Keep within viewport (and left of open panel)
+  left = Math.max(MARGIN, Math.min(left, rightBound - POPUP_WIDTH));
 
   // If there's no room above, position below
   if (top < MARGIN + 200) {

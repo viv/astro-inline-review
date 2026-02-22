@@ -612,6 +612,51 @@ describe('createPanel — single fetch per refresh', () => {
   });
 });
 
+describe('createPanel — shortcuts help footer', () => {
+  let shadowRoot: ShadowRoot;
+  let callbacks: PanelCallbacks;
+  let mediator: ReviewMediator;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+
+    callbacks = {
+      onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      onRefreshBadge: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mediator = {
+      refreshPanel: vi.fn(),
+      restoreHighlights: vi.fn().mockResolvedValue(undefined),
+    };
+  });
+
+  it('renders a shortcuts help footer with data-air-el', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const footer = shadowRoot.querySelector('[data-air-el="shortcuts-help"]');
+    expect(footer).not.toBeNull();
+    expect(footer!.classList.contains('air-panel__shortcuts')).toBe(true);
+  });
+
+  it('shortcuts help mentions key shortcuts', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const footer = shadowRoot.querySelector('[data-air-el="shortcuts-help"]');
+    const text = footer!.textContent!;
+    expect(text).toContain('Toggle panel');
+    expect(text).toContain('Export');
+    expect(text).toContain('Close');
+    expect(text).toContain('Inspect');
+  });
+});
+
 describe('createPanel — ARIA semantics', () => {
   let shadowRoot: ShadowRoot;
   let callbacks: PanelCallbacks;

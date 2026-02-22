@@ -33,6 +33,7 @@ import { api } from './api.js';
 import { writeCache, readCache } from './cache.js';
 import { updateBadge } from './ui/fab.js';
 import { showToast } from './ui/toast.js';
+import { Z_INDEX } from './styles.js';
 import { isTextAnnotation, isElementAnnotation } from './types.js';
 import type { ReviewMediator } from './mediator.js';
 
@@ -197,7 +198,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       'background: rgba(66, 133, 244, 0.15)',
       'border: 2px solid rgba(66, 133, 244, 0.6)',
       'border-radius: 2px',
-      'z-index: 9999',
+      `z-index: ${Z_INDEX.inspector}`,
       'transition: all 0.1s ease',
     ].join('; ');
 

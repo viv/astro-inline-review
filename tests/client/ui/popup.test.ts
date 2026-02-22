@@ -56,6 +56,26 @@ describe('popup — positioning', () => {
     expect(left).toBeLessThan(window.innerWidth);
     expect(left).toBeGreaterThanOrEqual(8); // MARGIN
   });
+
+  it('constrains popup left of open panel', () => {
+    // Simulate an open panel in the shadow root
+    const panelEl = document.createElement('div');
+    panelEl.setAttribute('data-air-el', 'panel');
+    panelEl.setAttribute('data-air-state', 'open');
+    // In happy-dom, offsetLeft may not be computed from CSS layout,
+    // so we set it explicitly via style and use a known viewport width.
+    Object.defineProperty(panelEl, 'offsetLeft', { value: 400, configurable: true });
+    shadowRoot.appendChild(panelEl);
+
+    // Rect positioned where the popup would overlap the panel
+    const rect = new DOMRect(350, 400, 100, 20);
+
+    showPopup(popup, 'selected text', rect, callbacks);
+
+    const left = parseFloat(popup.container.style.left);
+    // Popup right edge (left + 300) must not exceed panelEl.offsetLeft - 8
+    expect(left + 300).toBeLessThanOrEqual(400 - 8 + 1); // +1 for float tolerance
+  });
 });
 
 describe('popup — show and hide', () => {
