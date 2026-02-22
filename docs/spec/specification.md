@@ -3,7 +3,7 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-21
 model_version: claude-opus-4-6
 purpose: component_specification
-status: draft
+status: reviewed
 human_reviewer: matthewvivian
 tags: [astro, integration, annotation, dev-tools, specification, element-annotation]
 ---
@@ -415,9 +415,9 @@ The client entry point runs on every page during dev. The bootstrap sequence is:
 1. **Idempotency check**: If `window.__astro_inline_review_init` is truthy, exit immediately
 2. Set `window.__astro_inline_review_init = true`
 3. **Create Shadow DOM host**: `createHost()` returns the shadow root
-4. **Create panel**: `createPanel(shadowRoot, callbacks)` — the slide-in sidebar
+4. **Create panel**: `createPanel(shadowRoot, callbacks, mediator)` — the slide-in sidebar
 5. **Create FAB**: `createFab(shadowRoot, onToggle)` — the floating action button
-6. **Create annotator**: `createAnnotator({ shadowRoot, badge })` — text selection detection, element Alt+click detection, popup, highlights
+6. **Create annotator**: `createAnnotator({ shadowRoot, badge, mediator })` — text selection detection, element Alt+click detection, popup, highlights
 7. **Register shortcuts**: `registerShortcuts(handlers)` — keyboard shortcuts
 8. **Restore highlights**: `annotator.restoreHighlights()` — restore persisted highlights for the current page
 9. **Listen for page transitions**: `document.addEventListener('astro:page-load', ...)` — re-restore highlights on SPA navigation
@@ -426,7 +426,8 @@ The bootstrap runs when `DOMContentLoaded` fires, or immediately if the document
 
 **Notes**:
 - `restoreHighlights()` is async but called without `await` (fire-and-forget). The `init()` function is synchronous; highlights appear asynchronously after the API response arrives.
-- The annotator also exposes a `destroy()` method that removes event listeners (`mouseup`, `scroll`, `keydown`, `keyup`, `mousemove`, `click` for Alt+click detection) and destroys any active inspector overlay. This is not called during normal operation — the annotator lives for the entire page lifecycle. The method exists for potential future use (e.g. hot-module replacement cleanup).
+- The annotator returns an `AnnotatorInstance` with three fields: `restoreHighlights()` (async, restores highlights from store), `destroy()` (removes all event listeners and inspector overlay), and `popup` (the `PopupElements` reference, exposed so the Escape handler can call `isPopupVisible()` and `hidePopup()` directly).
+- `destroy()` is not called during normal operation — the annotator lives for the entire page lifecycle. The method exists for potential future use (e.g. hot-module replacement cleanup).
 
 **Ordering dependency**: The panel MUST be created before the FAB because the `refreshBadge` closure (defined before both) references `fab.badge`. This works because the closure captures the variable by reference, not by value, and `refreshBadge` is never invoked during construction — it only executes when the user opens the panel, by which time the FAB exists.
 
@@ -494,42 +495,53 @@ Components accept callback interfaces during construction:
 |-----------|----------|----------|---------|
 | Panel | `onAnnotationClick(id)` | Client bootstrap | Scroll to highlight and pulse |
 | Panel | `onRefreshBadge()` | Client bootstrap | Update FAB badge count |
+| Panel | `mediator` | Client bootstrap | Typed mediator for cross-module refresh/restore |
+| Annotator | `mediator` | Client bootstrap | Typed mediator — annotator wires up `restoreHighlights` |
 | FAB | `onToggle()` | Client bootstrap | Toggle panel open/closed |
 | Shortcuts | `togglePanel()` | Client bootstrap | Toggle panel |
 | Shortcuts | `closeActive()` | Client bootstrap | Dismiss popup or close panel |
 | Shortcuts | `exportToClipboard()` | Client bootstrap | Export and show toast |
 | Shortcuts | `addPageNote()` | Client bootstrap | Open panel and show add-note form |
 
-#### 5.6.2 Shadow Root Bridge
+#### 5.6.2 Typed Mediator
 
-Two functions are stashed as untyped properties on the `ShadowRoot` object to enable cross-module communication without circular imports:
+Cross-module communication uses a typed `ReviewMediator` interface, avoiding circular imports:
 
-| Property | Set by | Used by | Purpose |
-|----------|--------|---------|---------|
-| `__refreshPanel()` | Panel (`createPanel`) | Panel note CRUD, Clear All | Re-render panel content and update tab counts |
-| `__scrollToAnnotation(id)` | Annotator (`createAnnotator`) | Panel annotation click | Scroll to text highlight or element and pulse |
-| `__restoreHighlights()` | Annotator (`createAnnotator`) | Clear All | Remove all DOM highlights and re-apply from store |
+```typescript
+interface ReviewMediator {
+  refreshPanel: () => void;
+  restoreHighlights: () => Promise<void>;
+}
+```
 
-These are cast via `(shadowRoot as any)` — there is no TypeScript interface for them. This is a known architectural shortcut. A future improvement could introduce a typed event bus or mediator pattern.
+The bootstrap creates a mediator stub object and passes it to both `createPanel` and `createAnnotator`. Each module wires up its own implementation:
 
-**Note**: The `onAnnotationClick` callback wired during bootstrap contains scroll-to logic inline (via directly imported highlight functions) rather than calling `__scrollToAnnotation`. The bridge function exists as a redundant alternative path. Both produce identical behaviour.
+| Method | Wired by | Used by | Purpose |
+|--------|----------|---------|---------|
+| `refreshPanel()` | Panel (`createPanel`) | Panel note CRUD, Clear All | Fetch store, re-render panel content and update tab counts |
+| `restoreHighlights()` | Annotator (`createAnnotator`) | Clear All | Remove all DOM highlights and re-apply from store |
+
+**Performance**: `refreshPanel()` fetches the store once and passes it to both the panel content renderer and tab count updater, avoiding redundant API calls. On fetch error, it falls back to independent fetches.
+
+**Scroll-to-annotation**: The `onAnnotationClick` callback is wired directly in the bootstrap via imported highlight functions (`getHighlightMarks`, `pulseHighlight`, `getElementByAnnotationId`, `pulseElementHighlight`) — it does not go through the mediator.
 
 #### 5.6.3 Dependency Graph
 
 ```
 Client Bootstrap (index.ts)
   ├── creates ShadowRoot
-  ├── creates Panel (receives onAnnotationClick, onRefreshBadge)
+  ├── creates Mediator stub (refreshPanel, restoreHighlights — stubs replaced by modules)
+  ├── creates Panel (receives onAnnotationClick, onRefreshBadge, mediator) → wires mediator.refreshPanel
   ├── creates FAB (receives onToggle → togglePanel)
-  ├── creates Annotator (receives shadowRoot, badge)
+  ├── creates Annotator (receives shadowRoot, badge, mediator) → wires mediator.restoreHighlights
   └── registers Shortcuts (receives togglePanel, closeActive, export, addPageNote)
 
 Panel operations → call onRefreshBadge → update FAB badge
-Panel annotation click → call onAnnotationClick → scrollToAnnotation (via shadowRoot bridge)
-Panel note CRUD → call __refreshPanel (via shadowRoot bridge)
+Panel annotation click → call onAnnotationClick → scroll to highlight (via imported functions)
+Panel note CRUD → call mediator.refreshPanel() → re-render panel content
 Annotator save/delete → call refreshCacheAndBadge → update FAB badge
 Shortcuts → call togglePanel/closeActive/export/addPageNote → affect Panel/Popup
-Clear All → call __restoreHighlights (via shadowRoot bridge) → clean up marks/outlines
+Clear All → call mediator.restoreHighlights() → clean up marks/outlines
 ```
 
 
@@ -560,11 +572,9 @@ Clear All → call __restoreHighlights (via shadowRoot bridge) → clean up mark
 
 **State Synchronisation**:
 
-The FAB maintains its own `isOpen` boolean independently from the panel's CSS class state (`air-panel--open`). When the panel is closed by means other than a FAB click (e.g. Escape key, keyboard shortcut), the FAB's internal state, icon, and `data-air-state` attribute are NOT updated. This causes the FAB to show the X icon (open) when the panel is actually closed.
+The FAB derives its state from the `data-air-state` attribute on each click rather than maintaining an independent boolean. When the panel is closed by means other than a FAB click (e.g. Escape key, keyboard shortcut), the `closeActive()` handler calls `resetFab(fab)` which resets the FAB icon, CSS class, and `data-air-state` to `"closed"`. This keeps the FAB and panel in sync regardless of how the panel is closed.
 
-**Impact**: Clicking the FAB after an Escape-close will toggle the FAB to "closed" state but actually re-open the panel — a one-step desync that self-corrects after one extra click.
-
-**Recommended fix**: The FAB should observe the panel state, or the `closePanel()` / `closeActive()` function should update the FAB. Alternatively, refactor the FAB to derive its state from the panel's `data-air-state` attribute rather than maintaining its own boolean.
+The `resetFab()` function sets the icon back to the clipboard SVG, removes the `air-fab--open` class, and sets `data-air-state` to `"closed"`.
 
 **Accessibility**:
 - `aria-label="Toggle inline review panel"`
@@ -583,6 +593,7 @@ The FAB maintains its own `isOpen` boolean independently from the panel's CSS cl
 - Slides in from the right via `transform: translateX(100%)` to `translateX(0)`
 - Transition: `0.3s cubic-bezier(0.4, 0, 0.2, 1)`
 - Uses `visibility: hidden` / `visibility: visible` alongside transform to prevent interaction with hidden panel
+- **Timing**: `data-air-state` is set immediately when `togglePanel()` is called, before the CSS transition completes. The `visibility` CSS property transitions alongside `transform` over 0.3s. Tests checking `data-air-state` will see the new state immediately; tests checking CSS visibility may need to wait for the transition to complete.
 
 **Theme**: Dark neutral
 - Background: `#1a1a1a`
@@ -670,7 +681,7 @@ Edit mode replaces the item content with a textarea form.
 
 **Implementation**: Clear All deletes each annotation and page note individually via separate `DELETE` requests. There is no bulk delete endpoint. For a store with N annotations and M page notes, this sends N+M sequential HTTP requests, each performing a full file read-modify-write cycle. After all deletions complete, the cache is cleared to an empty store and the badge is refreshed.
 
-**Highlight cleanup**: After all individual deletions complete, the Clear All handler explicitly calls `restoreHighlights()` (via the `__restoreHighlights` shadow root bridge). This clears all existing text marks and element outlines from the DOM. The empty store means no highlights are re-applied, leaving the page clean.
+**Highlight cleanup**: After all individual deletions complete, the Clear All handler explicitly calls `mediator.restoreHighlights()`. This clears all existing text marks and element outlines from the DOM. The empty store means no highlights are re-applied, leaving the page clean.
 
 ### 6.3 Selection Popup
 
@@ -712,6 +723,12 @@ The 208px threshold is `8px margin + 200px` (approximate popup height including 
 - Cancel button
 - Page scroll (scroll event handler hides the popup)
 - Escape key (when popup is visible)
+
+**Visibility mechanism**: The popup's visibility is controlled by two mechanisms in parallel:
+1. The CSS class `air-popup--visible` toggles `display: block` (visible) / `display: none` (hidden)
+2. The `data-air-state` attribute is set to `"visible"` or `"hidden"` in parallel
+
+Tests should use `data-air-state` (the automation contract) rather than CSS display inspection.
 
 **Data attributes**:
 - `data-air-el="popup"` on container
@@ -956,7 +973,7 @@ On page load or SPA navigation, element annotations are restored:
 
 1. Fetch element annotations for the current page
 2. For each element annotation:
-   a. **Tier 1**: `document.querySelector(cssSelector)` — verify uniqueness
+   a. **Tier 1**: `document.querySelector(cssSelector)` — returns first match (no uniqueness re-verification)
    b. **Tier 2**: `document.evaluate(xpath)` — positional fallback
    c. **Tier 3**: Orphaned — no highlight applied, visible only in panel
 3. If resolved: apply outline style and `data-air-element-id` attribute
@@ -1089,11 +1106,11 @@ The client-side export:
 
 When Escape is pressed, `closeActive()` is called. The handler checks state in priority order:
 
-1. If the popup is visible: dismiss the popup. The event SHOULD be stopped from propagating to site handlers.
-2. If the panel is open (and popup is not visible): close the panel. The event SHOULD be stopped from propagating.
-3. If neither is open: the event MUST propagate normally to site handlers.
+1. If the popup is visible (via `isPopupVisible()`): dismiss the popup using `hidePopup()`, which removes the visibility class, sets `data-air-state` to `"hidden"`, and clears the textarea value.
+2. If the panel is open (and popup is not visible): close the panel via `closePanel()` and reset the FAB to closed state via `resetFab()`.
+3. If neither is open: no action taken, the event propagates normally to site handlers.
 
-**Known Technical Debt**: The current implementation achieves correct user-visible behaviour for case 3 (Escape propagates when nothing is handled) by never calling `stopPropagation()` at all. This means the event also propagates to site handlers in cases 1 and 2, which is technically incorrect but has no user-visible impact since the popup/panel dismissal happens first. A future improvement would be to return a boolean from `closeActive()` indicating whether it consumed the event, and call `e.stopPropagation()` only when true.
+**Known Technical Debt**: The handler never calls `stopPropagation()`. This means the Escape event also propagates to site handlers in cases 1 and 2, which is technically incorrect but has no user-visible impact since the popup/panel dismissal happens first. A future improvement would be to return a boolean from `closeActive()` indicating whether it consumed the event, and call `e.stopPropagation()` only when true.
 
 
 ## 11. Page Notes
@@ -1263,7 +1280,7 @@ The context matching algorithm:
 | Concurrent file writes | Queued via promise chain |
 | Highlight application fails | Console error logged, continue with other annotations |
 | CSS selector matches zero elements | Element annotation becomes orphaned (Tier 3) |
-| CSS selector matches multiple elements | Fall through to XPath (Tier 2), then orphaned (Tier 3) |
+| CSS selector matches multiple elements | First match is used (no uniqueness re-verification at resolution time) |
 | Alt+click on excluded element | Silently ignored (no popup shown) |
 | Clipboard API unavailable | Fall back to execCommand, return false on total failure |
 
