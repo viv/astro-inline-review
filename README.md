@@ -43,6 +43,7 @@ Ships **zero bytes** in production builds. All UI, storage, and API infrastructu
 - **Multi-page.** Annotations are scoped by URL but viewable across all pages.
 - **Shadow DOM isolation.** All UI is isolated from your site's styles.
 - **Keyboard shortcuts.** Toggle panel, export, and add notes without touching the mouse.
+- **MCP server.** Coding agents connect via the [Model Context Protocol](https://modelcontextprotocol.io) to read annotations, resolve them, and reply — no copy-paste needed.
 - **Zero-config.** Works with a single line in `astro.config.mjs`.
 
 ## Install
@@ -128,6 +129,48 @@ Exported: 2026-02-21 14:30
 
 Annotations are persisted to `inline-review.json` in your project root (or the configured `storagePath`). This file is meant to be committed alongside your project for shared review, or added to `.gitignore` for personal use.
 
+## MCP Server
+
+The package includes an [MCP](https://modelcontextprotocol.io) server that lets coding agents read and respond to annotations directly — no copy-paste export needed. The reviewer annotates in the browser, the agent reads the annotations via MCP tools, makes changes, and marks them resolved.
+
+### Claude Code (automatic)
+
+The `.mcp.json` file in the project root enables auto-discovery. Build the package and Claude Code picks it up:
+
+```bash
+npm run build
+```
+
+That's it. Claude Code will see six tools for listing, reading, resolving, and replying to annotations.
+
+### Other MCP clients
+
+Configure the stdio transport manually:
+
+```json
+{
+  "command": "node",
+  "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]
+}
+```
+
+The `--storage` flag is optional (defaults to `./inline-review.json`). Paths resolve relative to the working directory.
+
+### Available tools
+
+| Tool | Description |
+|------|-------------|
+| `list_annotations` | List all annotations, optionally filtered by page URL |
+| `list_page_notes` | List page-level notes, optionally filtered by page URL |
+| `get_annotation` | Get a single annotation by ID |
+| `get_export` | Markdown export of all annotations and page notes |
+| `resolve_annotation` | Mark an annotation as resolved |
+| `add_agent_reply` | Add a reply explaining what action was taken |
+
+The browser UI, REST API, and MCP server all read and write the same `inline-review.json` file. Changes made by one are immediately visible to the others.
+
+See [docs/guides/mcp-setup.md](docs/guides/mcp-setup.md) for setup details and [docs/guides/mcp-tools.md](docs/guides/mcp-tools.md) for the full tool reference.
+
 ## How It Works
 
 The integration registers a [Vite dev server middleware](https://vite.dev/guide/api-plugin.html#configureserver) that serves a REST API at `/__inline-review/api/*` and injects a client script on every page. The client uses Shadow DOM for UI isolation and stores annotations via the API to a local JSON file.
@@ -149,7 +192,7 @@ The acceptance test suite lives in a separate repository: [astro-inline-review-t
 | **Selection model** | Text selection (highlight exact words or sentences) | Element selection (annotate whole HTML elements) |
 | **Location tracking** | XPath ranges with surrounding context | CSS selectors (IDs, data-testid, tag+class) |
 | **Export formats** | Markdown (clipboard) + JSON file | JSON file |
-| **Status tracking** | No, annotations are transient review feedback | Yes, open/resolved status per annotation |
+| **Status tracking** | Yes, resolved status + agent replies via MCP | Yes, open/resolved status per annotation |
 | **Device tagging** | No | Yes, desktop/mobile/tablet with viewport dimensions |
 | **Deployment model** | Dev-only by design | Dev-only now, deployed mode planned (Cloudflare Pages) |
 

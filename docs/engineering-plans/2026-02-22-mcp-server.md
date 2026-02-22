@@ -541,7 +541,7 @@ Keep the tone practical and concise — these are docs for developers who want t
 Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
-**Status**: `not_started`
+**Status**: `complete`
 
 ---
 
