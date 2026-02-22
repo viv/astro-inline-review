@@ -6,6 +6,7 @@ import { ReviewStorage } from '../../../src/server/storage.js';
 import { createEmptyStore } from '../../../src/shared/types.js';
 import type { ReviewStore } from '../../../src/shared/types.js';
 import { getExportHandler } from '../../../src/mcp/tools/get-export.js';
+import { makeTextAnnotation, makePageNote } from '../helpers/fixtures.js';
 
 const TEST_DIR = join(tmpdir(), 'air-mcp-get-exp-' + Date.now());
 const TEST_FILE = join(TEST_DIR, 'store.json');
@@ -34,18 +35,8 @@ describe('get_export handler', () => {
     const store: ReviewStore = {
       ...createEmptyStore(),
       annotations: [
-        {
-          id: '1', type: 'text', pageUrl: '/', pageTitle: 'Home',
-          selectedText: 'hello', note: 'fix this',
-          range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello', contextBefore: '', contextAfter: '' },
-          createdAt: '', updatedAt: '',
-        },
-        {
-          id: '2', type: 'text', pageUrl: '/about', pageTitle: 'About',
-          selectedText: 'world', note: 'update this',
-          range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'world', contextBefore: '', contextAfter: '' },
-          createdAt: '', updatedAt: '',
-        },
+        makeTextAnnotation('1', '/', 'hello', 'fix this'),
+        makeTextAnnotation('2', '/about', 'world', 'update this'),
       ],
     };
     await storage.write(store);
@@ -54,8 +45,8 @@ describe('get_export handler', () => {
 
     const text = result.content[0].text;
     expect(text).toContain('# Inline Review');
-    expect(text).toContain('## / — Home');
-    expect(text).toContain('## /about — About');
+    expect(text).toContain('## / — Test Page');
+    expect(text).toContain('## /about — Test Page');
     expect(text).toContain('**"hello"**');
     expect(text).toContain('> fix this');
   });
@@ -63,9 +54,7 @@ describe('get_export handler', () => {
   it('includes page notes in the export', async () => {
     const store: ReviewStore = {
       ...createEmptyStore(),
-      pageNotes: [
-        { id: '1', pageUrl: '/', pageTitle: 'Home', note: 'General feedback', createdAt: '', updatedAt: '' },
-      ],
+      pageNotes: [makePageNote('1', '/', 'General feedback')],
     };
     await storage.write(store);
 

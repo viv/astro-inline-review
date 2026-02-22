@@ -6,23 +6,10 @@ import { ReviewStorage } from '../../../src/server/storage.js';
 import { createEmptyStore } from '../../../src/shared/types.js';
 import type { ReviewStore } from '../../../src/shared/types.js';
 import { listAnnotationsHandler } from '../../../src/mcp/tools/list-annotations.js';
+import { makeTextAnnotation } from '../helpers/fixtures.js';
 
 const TEST_DIR = join(tmpdir(), 'air-mcp-list-ann-' + Date.now());
 const TEST_FILE = join(TEST_DIR, 'store.json');
-
-function makeTextAnnotation(id: string, pageUrl: string, text: string, note: string) {
-  return {
-    id,
-    type: 'text' as const,
-    pageUrl,
-    pageTitle: 'Test Page',
-    selectedText: text,
-    note,
-    range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: text, contextBefore: '', contextAfter: '' },
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  };
-}
 
 describe('list_annotations handler', () => {
   let storage: ReviewStorage;

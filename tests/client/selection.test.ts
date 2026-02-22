@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getXPath,
+  resolveXPath,
   serializeRange,
+  deserializeRange,
   findRangeByContext,
-  type SerializedSelection,
 } from '../../src/client/selection.js';
+import type { SerializedRange } from '../../src/shared/types.js';
 
 describe('getXPath', () => {
   beforeEach(() => {
@@ -216,5 +218,108 @@ describe('findRangeByContext', () => {
 
     expect(result).not.toBeNull();
     expect(result!.toString()).toBe('beautiful');
+  });
+});
+
+describe('deserializeRange', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('resolves a valid XPath to the correct range', () => {
+    document.body.innerHTML = '<p>The quick brown fox</p>';
+    const textNode = document.querySelector('p')!.firstChild!;
+
+    // happy-dom does not implement document.evaluate or XPathResult,
+    // so we polyfill both for this test
+    const xpath = getXPath(textNode);
+    const originalEvaluate = (document as any).evaluate;
+    const originalXPathResult = (globalThis as any).XPathResult;
+
+    (globalThis as any).XPathResult = { FIRST_ORDERED_NODE_TYPE: 9 };
+    (document as any).evaluate = () => ({ singleNodeValue: textNode });
+
+    try {
+      const serialized: SerializedRange = {
+        startXPath: xpath,
+        startOffset: 10,
+        endXPath: xpath,
+        endOffset: 15,
+        selectedText: 'brown',
+        contextBefore: 'The quick ',
+        contextAfter: ' fox',
+      };
+
+      const restored = deserializeRange(serialized);
+
+      expect(restored).not.toBeNull();
+      expect(restored!.toString()).toBe('brown');
+      expect(restored!.startOffset).toBe(10);
+      expect(restored!.endOffset).toBe(15);
+    } finally {
+      if (originalEvaluate) {
+        (document as any).evaluate = originalEvaluate;
+      } else {
+        delete (document as any).evaluate;
+      }
+      if (originalXPathResult) {
+        (globalThis as any).XPathResult = originalXPathResult;
+      } else {
+        delete (globalThis as any).XPathResult;
+      }
+    }
+  });
+
+  it('returns null for an invalid XPath', () => {
+    document.body.innerHTML = '<p>Hello world</p>';
+
+    const serialized: SerializedRange = {
+      startXPath: '/html[1]/body[1]/div[99]/text()[1]',
+      startOffset: 0,
+      endXPath: '/html[1]/body[1]/div[99]/text()[1]',
+      endOffset: 5,
+      selectedText: 'Hello',
+      contextBefore: '',
+      contextAfter: ' world',
+    };
+
+    const result = deserializeRange(serialized);
+    expect(result).toBeNull();
+  });
+
+  it('returns null when offsets do not match the expected text', () => {
+    document.body.innerHTML = '<p>Hello world</p>';
+    const textNode = document.querySelector('p')!.firstChild!;
+    const xpath = getXPath(textNode);
+
+    const serialized: SerializedRange = {
+      startXPath: xpath,
+      startOffset: 0,
+      endXPath: xpath,
+      endOffset: 5,
+      selectedText: 'Wrong', // Text at offset 0-5 is "Hello", not "Wrong"
+      contextBefore: '',
+      contextAfter: ' world',
+    };
+
+    const result = deserializeRange(serialized);
+    expect(result).toBeNull();
+  });
+
+  it('returns null when the target node has been removed', () => {
+    document.body.innerHTML = '<p>Hello world</p>';
+    const textNode = document.querySelector('p')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, 5);
+
+    const serialized = serializeRange(range);
+
+    // Remove the paragraph from the DOM
+    document.body.innerHTML = '<div>Different content</div>';
+
+    const result = deserializeRange(serialized);
+    expect(result).toBeNull();
   });
 });

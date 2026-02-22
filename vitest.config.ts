@@ -4,6 +4,10 @@ export default defineConfig({
   test: {
     globals: true,
     include: ['tests/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      thresholds: { lines: 70, functions: 70, branches: 60 },
+    },
     projects: [
       {
         test: {
@@ -17,6 +21,13 @@ export default defineConfig({
           name: 'server',
           environment: 'node',
           include: ['tests/server/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
+          name: 'shared',
+          environment: 'node',
+          include: ['tests/shared/**/*.test.ts'],
         },
       },
       {

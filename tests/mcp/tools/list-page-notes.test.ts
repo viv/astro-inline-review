@@ -6,20 +6,10 @@ import { ReviewStorage } from '../../../src/server/storage.js';
 import { createEmptyStore } from '../../../src/shared/types.js';
 import type { ReviewStore } from '../../../src/shared/types.js';
 import { listPageNotesHandler } from '../../../src/mcp/tools/list-page-notes.js';
+import { makePageNote } from '../helpers/fixtures.js';
 
 const TEST_DIR = join(tmpdir(), 'air-mcp-list-pn-' + Date.now());
 const TEST_FILE = join(TEST_DIR, 'store.json');
-
-function makePageNote(id: string, pageUrl: string, note: string) {
-  return {
-    id,
-    pageUrl,
-    pageTitle: 'Test Page',
-    note,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  };
-}
 
 describe('list_page_notes handler', () => {
   let storage: ReviewStorage;

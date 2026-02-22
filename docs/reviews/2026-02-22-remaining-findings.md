@@ -30,12 +30,12 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 | Spec Review Round 3 (2026-02-21) | 15 | 15 | Verified and fixed (Session 3) | 0 |
 | Implementation Review (2026-02-22) | 30 | 11 (C1-3, H3-4, M1, M4-5, M9-10) | — | 19 |
 | Documentation Review (2026-02-22) | 16 | 6 (H1, M1, L3-4, L6) | — | 10 |
-| Test Coverage Review (2026-02-22) | 17 | 2 (annotator, element-selector) | — | 15 |
+| Test Coverage Review (2026-02-22) | 17 | 8 (annotator, element-selector, + Session 5: deserializeRange, popup, export, api, coverage, MCP helpers) | — | 9 |
 | CI/CD Review (2026-02-22) | 17 | 9 (H1, M1, M3-4, L10, L12, L15, L17) | — | 8 |
 | Design & Accessibility Review (2026-02-22) | 27 | 13 (C1-2, H1-7, scroll, badge, toast) | — | 14 |
 | Architecture Review (2026-02-22) | 16 | 2 (M1, M4) | — | 14 (mostly Info/Low) |
 | Comprehensive Review Priority 7 | 4 | 2 (7.3 atomic writes, 7.4 delete confirm) | — | 2 (7.1-7.2) |
-| Comprehensive Review Priority 3 | 4 | 2 (3.1-3.2) | — | 2 (3.3-3.4) |
+| Comprehensive Review Priority 3 | 4 | 4 (3.1-3.4) | — | 0 |
 | Spec Reviews Rounds 1-2 (2026-02-21) | 39 | — | All resolved | 0 |
 | Security Reviews 1-2 (2026-02-21) | 18 | — | All resolved | 0 |
 | MCP Reviews (2026-02-22) | 17 | — | All resolved | 0 |
@@ -108,21 +108,21 @@ Plus remaining Low items from the 2026-02-22 spec review:
 
 Remaining from the comprehensive review's Priority 3 (items 3.3 and 3.4) plus the test review's other findings.
 
-| ID | Source | Severity | Finding |
-|----|--------|----------|---------|
-| REM-40 | Comp-3.3 | High | No `deserializeRange` tests (primary highlight restoration path, Tier 1) |
-| REM-41 | Comp-3.4 | High | No vitest coverage thresholds configured |
-| REM-42 | TEST | High | popup.ts untested (243 lines — positioning, show/hide, button management) |
-| REM-43 | TEST | Medium | API test coverage thin — 5 of 8 methods tested (missing page note CRUD + updateAnnotation) |
-| REM-44 | TEST | Medium | shared/export.ts has no direct unit tests |
-| REM-45 | TEST | Medium | Test helpers (`makeTextAnnotation`) duplicated across 5+ MCP test files |
-| REM-46 | TEST | Medium | Resolved highlight styling (green vs amber) untested |
-| REM-47 | TEST | Medium | No Unicode edge case tests for selection (emoji, CJK, RTL) |
-| REM-48 | TEST | Medium | No special character tests for annotation IDs in middleware (path traversal) |
-| REM-49 | TEST | Medium | Orphan detection logic in index.ts only tested via mocks |
-| REM-50 | TEST | Medium | No timeout configuration for MCP integration tests |
-| REM-51 | TEST | Low | host.ts untested (33 lines — shadow DOM creation, idempotency) |
-| REM-52 | TEST | Low | toast.ts untested (31 lines — auto-dismiss timer) |
+| ID | Source | Severity | Finding | Status |
+|----|--------|----------|---------|--------|
+| REM-40 | Comp-3.3 | High | No `deserializeRange` tests (primary highlight restoration path, Tier 1) | **Resolved** (Session 5) |
+| REM-41 | Comp-3.4 | High | No vitest coverage thresholds configured | **Resolved** (Session 5) |
+| REM-42 | TEST | High | popup.ts untested (243 lines — positioning, show/hide, button management) | **Resolved** (Session 5) |
+| REM-43 | TEST | Medium | API test coverage thin — 5 of 8 methods tested (missing page note CRUD + updateAnnotation) | **Resolved** (Session 5) |
+| REM-44 | TEST | Medium | shared/export.ts has no direct unit tests | **Resolved** (Session 5) |
+| REM-45 | TEST | Medium | Test helpers (`makeTextAnnotation`) duplicated across 5+ MCP test files | **Resolved** (Session 5) |
+| REM-46 | TEST | Medium | Resolved highlight styling (green vs amber) untested | Still present |
+| REM-47 | TEST | Medium | No Unicode edge case tests for selection (emoji, CJK, RTL) | Still present |
+| REM-48 | TEST | Medium | No special character tests for annotation IDs in middleware (path traversal) | Still present |
+| REM-49 | TEST | Medium | Orphan detection logic in index.ts only tested via mocks | Still present |
+| REM-50 | TEST | Medium | No timeout configuration for MCP integration tests | Still present |
+| REM-51 | TEST | Low | host.ts untested (33 lines — shadow DOM creation, idempotency) | Still present |
+| REM-52 | TEST | Low | toast.ts untested (31 lines — auto-dismiss timer) | Still present |
 
 ### Priority 4: UX & Design Improvements (Medium-Low)
 

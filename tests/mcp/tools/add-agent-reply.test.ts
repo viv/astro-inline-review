@@ -6,23 +6,10 @@ import { ReviewStorage } from '../../../src/server/storage.js';
 import { createEmptyStore } from '../../../src/shared/types.js';
 import type { ReviewStore } from '../../../src/shared/types.js';
 import { addAgentReplyHandler } from '../../../src/mcp/tools/add-agent-reply.js';
+import { makeTextAnnotation } from '../helpers/fixtures.js';
 
 const TEST_DIR = join(tmpdir(), 'air-mcp-reply-' + Date.now());
 const TEST_FILE = join(TEST_DIR, 'store.json');
-
-function makeTextAnnotation(id: string, pageUrl: string, note: string) {
-  return {
-    id,
-    type: 'text' as const,
-    pageUrl,
-    pageTitle: 'Test Page',
-    selectedText: 'some text',
-    note,
-    range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'some text', contextBefore: '', contextAfter: '' },
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  };
-}
 
 describe('add_agent_reply handler', () => {
   let storage: ReviewStorage;

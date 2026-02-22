@@ -72,4 +72,66 @@ describe('api', () => {
 
     expect(result).toContain('# Inline Review');
   });
+
+  it('updateAnnotation calls PATCH /annotations/:id', async () => {
+    const mockAnnotation = { id: 'upd-1', note: 'updated note' };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockAnnotation), { status: 200 }),
+    );
+
+    const result = await api.updateAnnotation('upd-1', { note: 'updated note' });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/__inline-review/api/annotations/upd-1',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
+    expect(result.note).toBe('updated note');
+  });
+
+  it('createPageNote calls POST /page-notes', async () => {
+    const mockNote = { id: 'pn-1', pageUrl: '/', note: 'page feedback' };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockNote), { status: 201 }),
+    );
+
+    const result = await api.createPageNote({
+      pageUrl: '/',
+      pageTitle: 'Home',
+      note: 'page feedback',
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/__inline-review/api/page-notes',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result.id).toBe('pn-1');
+  });
+
+  it('updatePageNote calls PATCH /page-notes/:id', async () => {
+    const mockNote = { id: 'pn-1', note: 'updated feedback' };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockNote), { status: 200 }),
+    );
+
+    const result = await api.updatePageNote('pn-1', { note: 'updated feedback' });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/__inline-review/api/page-notes/pn-1',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
+    expect(result.note).toBe('updated feedback');
+  });
+
+  it('deletePageNote calls DELETE /page-notes/:id', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+
+    await api.deletePageNote('pn-del-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/__inline-review/api/page-notes/pn-del-1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
 });
