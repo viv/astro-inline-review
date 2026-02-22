@@ -3,10 +3,15 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: implementation_plan
-status: in_progress
+status: implemented
 human_reviewer: matthewvivian
-implementation_tracking: partial
-notes: Approach A (CLAUDE.md + direct JSON access) implemented. Approach B (MCP server) planned — see docs/agent-loop-plans/2026-02-22-mcp-server-implementation.md
+implementation_tracking: completed
+notes: |
+  Approach A (direct JSON file access) implemented — CLAUDE.md documents inline-review.json schema.
+  Approach B (MCP server) implemented — 6 tools over stdio, .mcp.json auto-discovery, CLI args.
+  See: docs/engineering-plans/2026-02-22-mcp-server.md for full implementation plan.
+  Approach C (REST API from agent) available as-is — REST API already documented in CLAUDE.md.
+  Approach D (file watcher) deferred — superseded by MCP.
 tags: [mcp, agent-integration, json, real-time, developer-experience, architecture]
 ---
 

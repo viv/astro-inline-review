@@ -102,8 +102,21 @@ interface BaseAnnotation {
   note: string;         // User's annotation note (may be empty)
   createdAt: string;    // ISO 8601 timestamp, server-generated
   updatedAt: string;    // ISO 8601 timestamp, updated on each edit
+  resolvedAt?: string;  // ISO 8601 — when marked resolved by an agent (optional)
+  replies?: AgentReply[];  // Agent replies to this annotation (optional)
 }
 ```
+
+#### 3.2.1a AgentReply
+
+```typescript
+interface AgentReply {
+  message: string;     // The agent's reply text
+  createdAt: string;   // ISO 8601 timestamp
+}
+```
+
+Agent replies are appended by the MCP `add_agent_reply` tool. The `replies` array is append-only and grows chronologically. Both `resolvedAt` and `replies` are optional — their absence means "not resolved" / "no replies". No migration is needed for existing data.
 
 #### 3.2.2 TextAnnotation
 
@@ -404,6 +417,77 @@ Returns raw Markdown text (not JSON). See [Section 9: Markdown Export](#9-markdo
 - **500**: Returned for internal errors (e.g. JSON parse failure on request body)
 - Error response shape: `{ "error": "message" }`
 - Non-API requests (URLs not starting with `/__inline-review/api`) are passed through to the next middleware via `next()`
+
+
+## 4.3 MCP Server
+
+The MCP (Model Context Protocol) server provides structured agent access to review annotations. It runs as a separate subprocess communicating over stdio, independent of the Vite dev server.
+
+### 4.3.1 Architecture
+
+```
+┌─────────────┐     HTTP API      ┌──────────────────┐
+│   Browser    │ ←──────────────→ │   Vite/Astro      │
+│  (reviewer)  │                  │   Dev Server      │
+└─────────────┘                  │                    │
+                                  │   ReviewStorage    │ ←→ inline-review.json
+                                  │                    │
+┌─────────────┐   MCP (stdio)    │   MCP Server       │
+│ Coding Agent │ ←──────────────→ │   (subprocess)    │
+│ (Claude Code)│                  └──────────────────┘
+└─────────────┘
+```
+
+**Key design decisions:**
+
+1. **stdio transport** — The agent spawns the MCP server as a child process. No HTTP ports, no CORS, no authentication surface. Communication via stdin/stdout pipes.
+2. **Separate process** — Runs independently of Vite. Works even without the dev server running (e.g., reading annotations after a review session).
+3. **Shared `ReviewStorage`** — Reuses the same storage class as the REST API, ensuring identical file I/O behaviour, migration logic, and write queuing.
+
+### 4.3.2 MCP Tools
+
+| Tool | Type | Parameters | Description |
+|------|------|-----------|-------------|
+| `list_annotations` | Read | `pageUrl` (string, optional) | List all annotations, optionally filtered by page URL |
+| `list_page_notes` | Read | `pageUrl` (string, optional) | List all page-level notes, optionally filtered by page URL |
+| `get_annotation` | Read | `id` (string, required) | Get a single annotation by ID with full detail |
+| `get_export` | Read | None | Get a markdown export of all annotations and page notes |
+| `resolve_annotation` | Write | `id` (string, required) | Mark an annotation as resolved (sets `resolvedAt` timestamp) |
+| `add_agent_reply` | Write | `id` (string, required), `message` (string, required) | Add a reply to an annotation explaining what action was taken |
+
+All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters require non-empty strings (`.min(1)`).
+
+**Return format:** All tools return `{ content: [{ type: 'text', text: '...' }] }`. Read tools return JSON-stringified data. `get_export` returns markdown text. Error responses include `isError: true` with a descriptive message.
+
+### 4.3.3 Configuration
+
+**Auto-discovery:** The `.mcp.json` file at the project root enables auto-discovery for Claude Code and other MCP-compatible agents:
+
+```json
+{
+  "mcpServers": {
+    "astro-inline-review": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]
+    }
+  }
+}
+```
+
+**CLI arguments:**
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--storage <path>` | `./inline-review.json` | Path to the JSON storage file (resolved relative to `process.cwd()`) |
+
+### 4.3.4 Process Lifecycle
+
+The MCP server is a single-process, single-connection stdio server. The agent spawns it as a subprocess and communicates via pipes. The server exits when stdin closes (parent process terminates). No explicit shutdown logic is needed.
+
+### 4.3.5 Concurrency Model
+
+The server assumes single-agent use. Write tools perform read-modify-write operations that are not atomic across processes — the `ReviewStorage` write queue serialises writes within a single process, but concurrent access from multiple processes could lose data. This is acceptable because MCP stdio transport is inherently single-connection.
 
 
 ## 5. Client Architecture
@@ -1050,6 +1134,8 @@ Exported: YYYY-MM-DD HH:MM
 - **Notes**: Blockquote: `   > note text` (indented 3 spaces)
 - **Empty notes**: No blockquote line rendered
 - **Empty store**: Shows "No annotations or notes yet." instead of page groups
+- **Resolved annotations**: Appended with ` ✅ [Resolved]` after the selected text or selector
+- **Agent replies**: Shown as blockquotes with `**Agent:**` prefix: `   > **Agent:** reply text`
 - All pages are included in the export, not just the current page
 
 #### 9.2.1 Element Annotation Export Format

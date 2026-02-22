@@ -106,7 +106,7 @@ The `--storage` flag is optional and defaults to `./inline-review.json` relative
 - **Build**: `npm run build` (tsup — server ESM + client browser bundle)
 - **Test**: `npm test` (vitest — client with happy-dom, server with node)
 - **Watch**: `npm run dev` / `npm run test:watch`
-- Zero runtime dependencies; `astro ^5.0.0` peer dependency
+- Runtime dependencies: `@modelcontextprotocol/sdk`, `zod` (for MCP server only); `astro ^5.0.0` peer dependency
 - ESM-only package (`"type": "module"`)
 
 ## Key File Paths
@@ -117,6 +117,7 @@ The `--storage` flag is optional and defaults to `./inline-review.json` relative
 - `src/client/export.ts` — client-side markdown export
 - `src/index.ts` — Astro integration entry point
 - `src/mcp/server.ts` — MCP server entry point (CLI argument parsing, tool registration)
+- `src/mcp/types.ts` — shared MCP tool result types (ToolResult, ErrorResult)
 - `src/mcp/tools/` — individual MCP tool handlers
 - `.mcp.json` — MCP auto-discovery configuration
 - `docs/spec/specification.md` — full component specification
