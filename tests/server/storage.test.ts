@@ -1,9 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ReviewStorage } from '../../src/server/storage.js';
 import { createEmptyStore } from '../../src/types.js';
+import type { TextAnnotation } from '../../src/types.js';
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+
+function makeTextAnnotation(id: string): TextAnnotation {
+  return {
+    id,
+    type: 'text',
+    pageUrl: '/',
+    pageTitle: '',
+    selectedText: '',
+    note: '',
+    range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 const TEST_DIR = join(tmpdir(), 'air-test-' + Date.now());
 const TEST_FILE = join(TEST_DIR, 'test-store.json');
@@ -143,6 +158,88 @@ describe('ReviewStorage', () => {
       const result = await storage.read();
       expect(result.version).toBe(1);
       expect(result.annotations.length).toBe(1);
+    });
+  });
+
+  describe('mutate', () => {
+    it('serialises concurrent mutations (no lost updates)', async () => {
+      const storage = new ReviewStorage(TEST_FILE);
+      await storage.write(createEmptyStore());
+
+      // Fire 5 concurrent mutations, each adding one annotation.
+      // Without serialisation, only the last write would survive.
+      const mutations = Array.from({ length: 5 }, (_, i) =>
+        storage.mutate(store => {
+          store.annotations.push(makeTextAnnotation(`mutate-${i}`));
+          return store;
+        })
+      );
+
+      await Promise.all(mutations);
+
+      const result = await storage.read();
+      expect(result.annotations.length).toBe(5);
+    });
+
+    it('returns the modified store', async () => {
+      const storage = new ReviewStorage(TEST_FILE);
+      await storage.write(createEmptyStore());
+
+      const result = await storage.mutate(store => {
+        store.annotations.push(makeTextAnnotation('returned'));
+        return store;
+      });
+
+      expect(result.annotations.length).toBe(1);
+      expect(result.annotations[0].id).toBe('returned');
+    });
+
+    it('does not write when callback throws', async () => {
+      const storage = new ReviewStorage(TEST_FILE);
+      const initial = createEmptyStore();
+      initial.annotations.push(makeTextAnnotation('keep-me'));
+      await storage.write(initial);
+
+      await expect(storage.mutate(() => {
+        throw new Error('abort');
+      })).rejects.toThrow('abort');
+
+      const result = await storage.read();
+      expect(result.annotations.length).toBe(1);
+      expect(result.annotations[0].id).toBe('keep-me');
+    });
+
+    it('continues processing after a failed mutation', async () => {
+      const storage = new ReviewStorage(TEST_FILE);
+      await storage.write(createEmptyStore());
+
+      // First mutation fails
+      await expect(storage.mutate(() => {
+        throw new Error('fail');
+      })).rejects.toThrow('fail');
+
+      // Second mutation should succeed — queue is not broken
+      const result = await storage.mutate(store => {
+        store.annotations.push(makeTextAnnotation('after-error'));
+        return store;
+      });
+
+      expect(result.annotations.length).toBe(1);
+      expect(result.annotations[0].id).toBe('after-error');
+    });
+
+    it('supports async callbacks', async () => {
+      const storage = new ReviewStorage(TEST_FILE);
+      await storage.write(createEmptyStore());
+
+      const result = await storage.mutate(async store => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        store.annotations.push(makeTextAnnotation('async'));
+        return store;
+      });
+
+      expect(result.annotations.length).toBe(1);
+      expect(result.annotations[0].id).toBe('async');
     });
   });
 });

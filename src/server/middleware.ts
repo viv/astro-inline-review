@@ -6,6 +6,12 @@ import { generateExport } from '../shared/export.js';
 
 const API_PREFIX = '/__inline-review/api';
 
+class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 /**
  * Creates Vite dev server middleware that serves the REST API.
  *
@@ -51,36 +57,38 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
 
       if (routePath === '/annotations' && method === 'POST') {
         const body = await readBody<Record<string, unknown>>(req);
-        const store = await storage.read();
 
-        const now = new Date().toISOString();
-        const base = {
-          id: generateId(),
-          pageUrl: (body.pageUrl as string) ?? '',
-          pageTitle: (body.pageTitle as string) ?? '',
-          note: (body.note as string) ?? '',
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        let annotation: Annotation;
-        if (body.type === 'element') {
-          annotation = {
-            ...base,
-            type: 'element',
-            elementSelector: body.elementSelector as ElementAnnotation['elementSelector'],
+        let annotation!: Annotation;
+        await storage.mutate(store => {
+          const now = new Date().toISOString();
+          const base = {
+            id: generateId(),
+            pageUrl: (body.pageUrl as string) ?? '',
+            pageTitle: (body.pageTitle as string) ?? '',
+            note: (body.note as string) ?? '',
+            createdAt: now,
+            updatedAt: now,
           };
-        } else {
-          annotation = {
-            ...base,
-            type: 'text',
-            selectedText: (body.selectedText as string) ?? '',
-            range: (body.range as TextAnnotation['range']) ?? { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
-          };
-        }
 
-        store.annotations.push(annotation);
-        await storage.write(store);
+          if (body.type === 'element') {
+            annotation = {
+              ...base,
+              type: 'element',
+              elementSelector: body.elementSelector as ElementAnnotation['elementSelector'],
+            };
+          } else {
+            annotation = {
+              ...base,
+              type: 'text',
+              selectedText: (body.selectedText as string) ?? '',
+              range: (body.range as TextAnnotation['range']) ?? { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+            };
+          }
+
+          store.annotations.push(annotation);
+          return store;
+        });
+
         return sendJson(res, annotation, 201);
       }
 
@@ -88,25 +96,33 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       if (annotationMatch && method === 'PATCH') {
         const id = annotationMatch[1];
         const body = await readBody<Partial<Annotation>>(req);
-        const store = await storage.read();
-        const idx = store.annotations.findIndex(a => a.id === id);
-        if (idx === -1) return sendError(res, 404, 'Annotation not found');
-        store.annotations[idx] = {
-          ...store.annotations[idx],
-          note: body.note ?? store.annotations[idx].note, // Allowlist: only 'note' is mutable
-          updatedAt: new Date().toISOString(),
-        };
-        await storage.write(store);
-        return sendJson(res, store.annotations[idx]);
+
+        let updated!: Annotation;
+        await storage.mutate(store => {
+          const idx = store.annotations.findIndex(a => a.id === id);
+          if (idx === -1) throw new NotFoundError('Annotation not found');
+          store.annotations[idx] = {
+            ...store.annotations[idx],
+            note: body.note ?? store.annotations[idx].note, // Allowlist: only 'note' is mutable
+            updatedAt: new Date().toISOString(),
+          };
+          updated = store.annotations[idx];
+          return store;
+        });
+
+        return sendJson(res, updated);
       }
 
       if (annotationMatch && method === 'DELETE') {
         const id = annotationMatch[1];
-        const store = await storage.read();
-        const idx = store.annotations.findIndex(a => a.id === id);
-        if (idx === -1) return sendError(res, 404, 'Annotation not found');
-        store.annotations.splice(idx, 1);
-        await storage.write(store);
+
+        await storage.mutate(store => {
+          const idx = store.annotations.findIndex(a => a.id === id);
+          if (idx === -1) throw new NotFoundError('Annotation not found');
+          store.annotations.splice(idx, 1);
+          return store;
+        });
+
         return sendJson(res, { ok: true });
       }
 
@@ -122,17 +138,21 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
 
       if (routePath === '/page-notes' && method === 'POST') {
         const body = await readBody<Partial<PageNote>>(req);
-        const store = await storage.read();
-        const pageNote: PageNote = {
-          id: generateId(),
-          pageUrl: body.pageUrl ?? '',
-          pageTitle: body.pageTitle ?? '',
-          note: body.note ?? '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        store.pageNotes.push(pageNote);
-        await storage.write(store);
+
+        let pageNote!: PageNote;
+        await storage.mutate(store => {
+          pageNote = {
+            id: generateId(),
+            pageUrl: body.pageUrl ?? '',
+            pageTitle: body.pageTitle ?? '',
+            note: body.note ?? '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          store.pageNotes.push(pageNote);
+          return store;
+        });
+
         return sendJson(res, pageNote, 201);
       }
 
@@ -140,25 +160,33 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       if (pageNoteMatch && method === 'PATCH') {
         const id = pageNoteMatch[1];
         const body = await readBody<Partial<PageNote>>(req);
-        const store = await storage.read();
-        const idx = store.pageNotes.findIndex(n => n.id === id);
-        if (idx === -1) return sendError(res, 404, 'Page note not found');
-        store.pageNotes[idx] = {
-          ...store.pageNotes[idx],
-          note: body.note ?? store.pageNotes[idx].note, // Allowlist: only 'note' is mutable
-          updatedAt: new Date().toISOString(),
-        };
-        await storage.write(store);
-        return sendJson(res, store.pageNotes[idx]);
+
+        let updated!: PageNote;
+        await storage.mutate(store => {
+          const idx = store.pageNotes.findIndex(n => n.id === id);
+          if (idx === -1) throw new NotFoundError('Page note not found');
+          store.pageNotes[idx] = {
+            ...store.pageNotes[idx],
+            note: body.note ?? store.pageNotes[idx].note, // Allowlist: only 'note' is mutable
+            updatedAt: new Date().toISOString(),
+          };
+          updated = store.pageNotes[idx];
+          return store;
+        });
+
+        return sendJson(res, updated);
       }
 
       if (pageNoteMatch && method === 'DELETE') {
         const id = pageNoteMatch[1];
-        const store = await storage.read();
-        const idx = store.pageNotes.findIndex(n => n.id === id);
-        if (idx === -1) return sendError(res, 404, 'Page note not found');
-        store.pageNotes.splice(idx, 1);
-        await storage.write(store);
+
+        await storage.mutate(store => {
+          const idx = store.pageNotes.findIndex(n => n.id === id);
+          if (idx === -1) throw new NotFoundError('Page note not found');
+          store.pageNotes.splice(idx, 1);
+          return store;
+        });
+
         return sendJson(res, { ok: true });
       }
 
@@ -174,6 +202,9 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       // Unknown API route
       return sendError(res, 404, 'Not found');
     } catch (err) {
+      if (err instanceof NotFoundError) {
+        return sendError(res, 404, err.message);
+      }
       if (err instanceof Error && err.message === 'Request body too large') {
         return sendError(res, 413, 'Request body too large');
       }

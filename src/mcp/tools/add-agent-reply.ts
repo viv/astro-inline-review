@@ -14,29 +14,32 @@ export async function addAgentReplyHandler(
     };
   }
 
-  const store = await storage.read();
-  const annotation = store.annotations.find(a => a.id === params.id);
+  try {
+    const store = await storage.mutate(s => {
+      const annotation = s.annotations.find(a => a.id === params.id);
+      if (!annotation) {
+        throw new Error(`Annotation with ID "${params.id}" not found`);
+      }
 
-  if (!annotation) {
+      const now = new Date().toISOString();
+      if (!annotation.replies) {
+        annotation.replies = [];
+      }
+      annotation.replies.push({ message: params.message, createdAt: now });
+      annotation.updatedAt = now;
+      return s;
+    });
+
+    const annotation = store.annotations.find(a => a.id === params.id);
+    return {
+      content: [{ type: 'text', text: JSON.stringify(annotation, null, 2) }],
+    };
+  } catch (err) {
     return {
       isError: true,
-      content: [{ type: 'text', text: `Annotation with ID "${params.id}" not found` }],
+      content: [{ type: 'text', text: (err as Error).message }],
     };
   }
-
-  const now = new Date().toISOString();
-
-  if (!annotation.replies) {
-    annotation.replies = [];
-  }
-  annotation.replies.push({ message: params.message, createdAt: now });
-  annotation.updatedAt = now;
-
-  await storage.write(store);
-
-  return {
-    content: [{ type: 'text', text: JSON.stringify(annotation, null, 2) }],
-  };
 }
 
 export function register(server: McpServer, storage: ReviewStorage): void {

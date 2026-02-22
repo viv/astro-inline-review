@@ -55,4 +55,32 @@ export class ReviewStorage {
     });
     return this.writeQueue;
   }
+
+  /**
+   * Atomically read-modify-write the store.
+   *
+   * Serialises with the write queue so that concurrent mutations
+   * are applied sequentially — no lost updates. If `fn` throws,
+   * the store is not written and the error propagates.
+   */
+  async mutate(fn: (store: ReviewStore) => ReviewStore | Promise<ReviewStore>): Promise<ReviewStore> {
+    let result!: ReviewStore;
+    let error: unknown;
+
+    this.writeQueue = this.writeQueue
+      .then(async () => {
+        const store = await this.read();
+        const modified = await fn(store);
+        const json = JSON.stringify(modified, null, 2) + '\n';
+        await writeFile(this.filePath, json, 'utf-8');
+        result = modified;
+      })
+      .catch((err) => {
+        error = err;
+      });
+
+    await this.writeQueue;
+    if (error !== undefined) throw error;
+    return result;
+  }
 }
