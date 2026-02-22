@@ -158,7 +158,7 @@ Steps:
 7. Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
-**Status**: `not_started`
+**Status**: `completed`
 
 ---
 
@@ -215,7 +215,7 @@ Step 3 — Verify everything:
 Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
-**Status**: `not_started`
+**Status**: `completed`
 
 ---
 
@@ -285,7 +285,7 @@ Use the same frontmatter format as `docs/reviews/2026-02-21-security-review.md`.
 Use conventional commit format for each commit. Focus messages on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
-**Status**: `not_started`
+**Status**: `completed`
 
 ---
 
@@ -414,18 +414,29 @@ Run full test suite + build. Commit using conventional commit format. Focus the 
 
 ### Session 6: Reviews & Final Documentation
 
-**Goal**: Produce security and code review documents. Fix any findings. Update specification and all plan documents. Mark the implementation as complete.
+**Goal**: Address Session 3 design review findings. Produce security and code review documents. Fix any findings. Update specification and all plan documents. Mark the implementation as complete.
 
 **Entry state**: Session 5 committed. Everything working and tested.
 
-**Exit state**: Security review, code review documents produced. Specification updated. All plan documents updated. Implementation complete. Committed.
+**Exit state**: Design review findings addressed. Security review, code review documents produced. Specification updated. All plan documents updated. Implementation complete. Committed.
 
 **Prompt**:
 
 ```
 Read docs/engineering-plans/2026-02-22-mcp-server.md for full context. This is Session 6: Reviews & Final Documentation.
 
-Goal: Produce review documents, fix any Critical/High findings, and update all project documentation.
+Goal: Produce review documents, address design review findings from Session 3, fix any Critical/High findings, and update all project documentation.
+
+Part 0 — Address Session 3 design review findings:
+
+Read `docs/reviews/2026-02-22-mcp-design-review.md` first. Address these findings before producing new reviews:
+
+1. **Finding 1 & 4 (Medium/Low — shared types):** Extract `ToolResult` and `ErrorResult` to `src/mcp/types.ts`. Update all tool files to import from there. Remove the duplicated `ErrorResult` interfaces from get-annotation.ts, resolve-annotation.ts, and add-agent-reply.ts.
+2. **Finding 3 (Low — ID validation):** Add `.min(1)` to Zod schemas for `id` parameters across all tools that accept an ID.
+
+Finding 2 (concurrency) and Finding 5 (return shape consistency) are acceptable as-is — document the single-agent assumption in the code review. Finding 6 (integration test) is covered by Session 5 Part C.
+
+Run tests + build after changes. Commit separately.
 
 Part A — Security review:
 
