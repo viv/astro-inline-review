@@ -14,9 +14,9 @@ Step-by-step guide to connecting a coding agent to your review annotations via t
 
 The MCP server reads directly from this JSON file. The Astro dev server does **not** need to be running.
 
-## Claude Code (automatic)
+## Claude Code
 
-The `.mcp.json` file in the project root enables auto-discovery. When you open the project in Claude Code, it detects the MCP server configuration automatically:
+Add a `.mcp.json` file to your Astro project root (the project that has `astro-inline-review` installed as a dependency):
 
 ```json
 {
@@ -24,51 +24,55 @@ The `.mcp.json` file in the project root enables auto-discovery. When you open t
     "astro-inline-review": {
       "type": "stdio",
       "command": "node",
-      "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]
+      "args": [
+        "./node_modules/astro-inline-review/dist/mcp/server.js",
+        "--storage",
+        "./inline-review.json"
+      ]
     }
   }
 }
 ```
 
-No manual configuration is needed — build the package and start Claude Code.
+No other configuration is needed — Claude Code reads `.mcp.json` on startup.
 
 ### What happens
 
 1. Claude Code reads `.mcp.json` on startup
-2. It spawns `node ./dist/mcp/server.js` as a child process using stdio transport
+2. It spawns `node ./node_modules/astro-inline-review/dist/mcp/server.js` as a child process using stdio transport
 3. The MCP server reads `inline-review.json` from disk on every tool call
 4. Claude Code gains access to six tools for listing, reading, resolving, and replying to annotations
 
-## Other MCP clients (manual)
+### Custom storage path
+
+The `--storage` flag is optional and defaults to `./inline-review.json` relative to the project root. If your annotations file is in a different location:
+
+```json
+{
+  "mcpServers": {
+    "astro-inline-review": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "./node_modules/astro-inline-review/dist/mcp/server.js",
+        "--storage",
+        "./reviews/sprint-42.json"
+      ]
+    }
+  }
+}
+```
+
+## Other MCP clients
 
 For agents that don't support `.mcp.json` auto-discovery, configure the stdio transport manually. The exact format varies by client, but the core configuration is:
 
 - **Command**: `node`
-- **Arguments**: `["./dist/mcp/server.js", "--storage", "./inline-review.json"]`
+- **Arguments**: `["./node_modules/astro-inline-review/dist/mcp/server.js", "--storage", "./inline-review.json"]`
 - **Transport**: stdio
-- **Working directory**: your project root
-
-Example configuration (JSON format used by many MCP clients):
-
-```json
-{
-  "command": "node",
-  "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"],
-  "transport": "stdio"
-}
-```
+- **Working directory**: your Astro project root
 
 The `--storage` flag is optional and defaults to `./inline-review.json` relative to the working directory.
-
-### Custom storage path
-
-If your annotations file is in a non-standard location:
-
-```bash
-node ./dist/mcp/server.js --storage ./reviews/sprint-42.json
-```
-
-Paths are resolved relative to the current working directory.
 
 ## Typical workflow
 

@@ -133,26 +133,36 @@ Annotations are persisted to `inline-review.json` in your project root (or the c
 
 The package includes an [MCP](https://modelcontextprotocol.io) server that lets coding agents read and respond to annotations directly — no copy-paste export needed. The reviewer annotates in the browser, the agent reads the annotations via MCP tools, makes changes, and marks them resolved.
 
-### Claude Code (automatic)
+### Claude Code
 
-The `.mcp.json` file in the project root enables auto-discovery. Build the package and Claude Code picks it up:
-
-```bash
-npm run build
-```
-
-That's it. Claude Code will see six tools for listing, reading, resolving, and replying to annotations.
-
-### Other MCP clients
-
-Configure the stdio transport manually:
+Add a `.mcp.json` file to your Astro project root (the project that has `astro-inline-review` installed as a dependency):
 
 ```json
 {
-  "command": "node",
-  "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]
+  "mcpServers": {
+    "astro-inline-review": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "./node_modules/astro-inline-review/dist/mcp/server.js",
+        "--storage",
+        "./inline-review.json"
+      ]
+    }
+  }
 }
 ```
+
+Claude Code reads `.mcp.json` on startup and will discover the six annotation tools automatically. The `--storage` flag is optional and defaults to `./inline-review.json` relative to the project root.
+
+### Other MCP clients
+
+Configure the stdio transport manually. The core settings are:
+
+- **Command**: `node`
+- **Arguments**: `["./node_modules/astro-inline-review/dist/mcp/server.js", "--storage", "./inline-review.json"]`
+- **Transport**: stdio
+- **Working directory**: your Astro project root
 
 The `--storage` flag is optional (defaults to `./inline-review.json`). Paths resolve relative to the working directory.
 
