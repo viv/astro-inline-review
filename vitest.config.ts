@@ -19,6 +19,13 @@ export default defineConfig({
           include: ['tests/server/**/*.test.ts'],
         },
       },
+      {
+        test: {
+          name: 'mcp',
+          environment: 'node',
+          include: ['tests/mcp/**/*.test.ts'],
+        },
+      },
     ],
   },
 });
