@@ -48,7 +48,7 @@ function init(): void {
   // Typed mediator — createPanel and createAnnotator wire up their
   // implementations; stubs here are replaced before first use.
   const mediator: ReviewMediator = {
-    refreshPanel: () => {},
+    refreshPanel: async () => {},
     restoreHighlights: async () => {},
   };
 
