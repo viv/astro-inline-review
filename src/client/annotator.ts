@@ -74,6 +74,9 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
   // Track element target for element annotation save flow
   let currentElementTarget: Element | null = null;
 
+  // Track scroll position when popup was shown (for scroll-threshold dismissal)
+  let popupScrollY: number | null = null;
+
   // --- Text Selection Detection ---
 
   function onMouseUp(e: MouseEvent): void {
@@ -114,6 +117,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         shadowRoot.contains(range.commonAncestorContainer)) return;
 
     currentRange = range.cloneRange();
+    popupScrollY = window.scrollY;
 
     const rect = range.getBoundingClientRect();
     showPopup(popup, text, rect, {
@@ -127,10 +131,13 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
   }
 
   function onScroll(): void {
-    if (isPopupVisible(popup)) {
-      hidePopup(popup);
-      currentRange = null;
-      currentElementTarget = null;
+    if (isPopupVisible(popup) && popupScrollY !== null) {
+      if (Math.abs(window.scrollY - popupScrollY) > 50) {
+        hidePopup(popup);
+        currentRange = null;
+        currentElementTarget = null;
+        popupScrollY = null;
+      }
     }
   }
 
@@ -271,6 +278,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
 
     // Store element target for save flow
     currentElementTarget = target;
+    popupScrollY = window.scrollY;
 
     // Build element description for popup
     const selector = buildElementSelector(target);
@@ -369,6 +377,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     const annotation = store.annotations.find(a => a.id === annotationId);
     if (!annotation || !isTextAnnotation(annotation)) return;
 
+    popupScrollY = window.scrollY;
     const rect = mark.getBoundingClientRect();
     showEditPopup(popup, annotation.selectedText, annotation.note, rect, {
       onSave: async (newNote) => {
@@ -404,6 +413,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     const annotation = store.annotations.find(a => a.id === annotationId);
     if (!annotation || !isElementAnnotation(annotation)) return;
 
+    popupScrollY = window.scrollY;
     const rect = element.getBoundingClientRect();
     showEditElementPopup(popup, annotation.elementSelector.description, annotation.note, rect, {
       onSave: async (newNote) => {

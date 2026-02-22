@@ -8,7 +8,7 @@ Dev-only Astro integration that provides a browser-based annotation overlay duri
 - **Server**: Vite dev middleware at `/__inline-review/api/*` — CRUD REST API
 - **Storage**: Single JSON file (`inline-review.json`) in project root via `ReviewStorage` class
 - **Types**: Canonical definitions in `src/shared/types.ts`, re-exported by `src/types.ts` and `src/client/types.ts`
-- **Dismissal**: The panel includes per-annotation delete buttons and orphan indicators for annotations whose target elements have changed (content modified or removed)
+- **Dismissal**: The panel includes per-annotation delete buttons (two-click confirmation: "Sure?" then delete) and orphan indicators for annotations whose target elements have changed (content modified or removed). The popup dismisses on scroll only after 50px threshold.
 
 ## Agent Integration — Reading Annotations
 

@@ -749,7 +749,7 @@ Each text annotation item in the panel shows:
 - **Note** (if non-empty) in light grey
 - Wrapped in quotes: `"selected text..."`
 
-**Delete button**: Each text annotation item has a "Delete" button (`data-air-el="annotation-delete"`) that removes the annotation from the store and its highlight from the page. Clicking Delete calls the API to delete the annotation, removes any associated highlight marks, refreshes the badge count, and refreshes the panel.
+**Delete button**: Each text annotation item has a "Delete" button (`data-air-el="annotation-delete"`) with a two-click confirmation flow matching the Clear All pattern (section 6.2.5). First click changes the button text to "Sure?" and sets `data-air-state="confirming"`. A second click within 3 seconds executes the delete (calls the API, removes highlight marks, refreshes badge and panel). If no second click occurs within 3 seconds, the button reverts to "Delete".
 
 **Orphan indicator**: If the annotation's text cannot be located on the page (Tier 3 orphan per section 8.4), a red indicator is shown with the text "Could not locate on page" (class `.air-annotation-item__orphan`). The item container receives the `.air-annotation-item--orphan` modifier class, which adds a red left border and reduced opacity. Orphan detection only applies to annotations on the current page — annotations for other pages (shown in the "All Pages" tab) do not show an orphan indicator since their DOM is not available.
 
@@ -763,7 +763,7 @@ Each element annotation item in the panel shows:
 
 **Data attributes**: `data-air-el="element-annotation-item"` on each element annotation item (distinct from `annotation-item` used for text annotations).
 
-**Delete button**: Each element annotation item has a "Delete" button (`data-air-el="annotation-delete"`) matching the text annotation pattern. Clicking Delete calls the API to delete the annotation, removes the element's outline highlight, refreshes the badge count, and refreshes the panel.
+**Delete button**: Each element annotation item has a "Delete" button (`data-air-el="annotation-delete"`) with the same two-click confirmation flow as text annotations (section 6.2.3). First click shows "Sure?" with `data-air-state="confirming"`, second click within 3 seconds executes the delete.
 
 **Orphan indicator**: If the annotated element cannot be found on the page (its highlight was not restored), a red indicator is shown with the text "Could not locate on page". The item receives the `.air-annotation-item--orphan` modifier class. Same current-page-only restriction as text annotations (section 6.2.3).
 
@@ -774,7 +774,7 @@ Each element annotation item in the panel shows:
 Each page note item shows:
 - Note text
 - **Edit** button (inline)
-- **Delete** button (inline, immediate — no confirmation)
+- **Delete** button (inline, immediate — no confirmation; page notes do not use the two-click pattern)
 
 Edit mode replaces the item content with a textarea form.
 
@@ -827,7 +827,7 @@ The 208px threshold is `8px margin + 200px` (approximate popup height including 
 
 **Dismissal**:
 - Cancel button
-- Page scroll (scroll event handler hides the popup)
+- Page scroll beyond 50px from popup's original position (see section 7.4)
 - Escape key (when popup is visible)
 
 **Visibility mechanism**: The popup's visibility is controlled by two mechanisms in parallel:
@@ -942,7 +942,7 @@ Note: `Element.contains()` does not pierce shadow boundaries, so both checks are
 
 ### 7.4 Scroll Dismissal
 
-When the page scrolls while the popup is visible, the popup is hidden and the current range is discarded. This prevents the popup from floating away from its associated text.
+When the page scrolls more than 50 pixels from the popup's original position, the popup is hidden and the current range is discarded. This prevents the popup from floating away from its associated text whilst tolerating minor scroll adjustments. The initial `scrollY` is captured when the popup is shown and compared against the current `scrollY` on each scroll event.
 
 
 ### 7.5 Creating an Element Annotation
@@ -1360,6 +1360,7 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | Panel | `open`, `closed` | Panel visibility state |
 | Popup | `visible`, `hidden` | Popup visibility state |
 | Clear All button | `confirming` (or absent) | Waiting for second click |
+| Annotation delete button | `confirming` (or absent) | Waiting for second click to confirm delete |
 
 ### 14.3 Light DOM Attributes
 
@@ -1574,7 +1575,7 @@ The following accessibility features are not yet implemented:
 | Click element annotation in panel | Page scrolls to element, outline pulses | 6.2.3a, 8.5.3 |
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
 | Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
-| Click Delete on annotation in panel | Annotation deleted from store, highlight removed, badge updated, panel refreshed | 6.2.3, 6.2.3a |
+| Click Delete on annotation in panel | Two-click confirmation: first click shows "Sure?", second click deletes | 6.2.3, 6.2.3a |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |
 | Press Escape | Dismiss popup (priority) or close panel | 10.4 |
 | Press Cmd/Ctrl+Shift+. | Toggle panel | 10.1 |

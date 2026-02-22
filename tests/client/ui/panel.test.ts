@@ -338,7 +338,7 @@ describe('annotation item — delete button', () => {
     expect(deleteBtn!.textContent).toBe('Delete');
   });
 
-  it('calls onAnnotationDelete with annotation ID when clicked', async () => {
+  it('first click shows "Sure?" confirmation instead of deleting', async () => {
     await renderWithStore({
       version: 1,
       annotations: [makeTextAnnotation({ id: 'delete-me' })],
@@ -348,7 +348,61 @@ describe('annotation item — delete button', () => {
     const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]') as HTMLButtonElement;
     deleteBtn.click();
 
+    expect(deleteBtn.textContent).toBe('Sure?');
+    expect(deleteBtn.getAttribute('data-air-state')).toBe('confirming');
+    expect(callbacks.onAnnotationDelete).not.toHaveBeenCalled();
+  });
+
+  it('second click within 3s calls onAnnotationDelete', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'delete-me' })],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]') as HTMLButtonElement;
+    deleteBtn.click(); // First click — confirm
+    deleteBtn.click(); // Second click — execute
+
     expect(callbacks.onAnnotationDelete).toHaveBeenCalledWith('delete-me');
+  });
+
+  it('reverts to "Delete" after 3 seconds without second click', async () => {
+    vi.useFakeTimers();
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'timeout-test' })],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]') as HTMLButtonElement;
+    deleteBtn.click(); // First click — confirm
+
+    expect(deleteBtn.textContent).toBe('Sure?');
+
+    vi.advanceTimersByTime(3000);
+
+    expect(deleteBtn.textContent).toBe('Delete');
+    expect(deleteBtn.hasAttribute('data-air-state')).toBe(false);
+    expect(callbacks.onAnnotationDelete).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it('resets to "Delete" after second click executes', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'reset-test' })],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]') as HTMLButtonElement;
+    deleteBtn.click(); // First click
+    deleteBtn.click(); // Second click
+
+    expect(deleteBtn.textContent).toBe('Delete');
+    expect(deleteBtn.hasAttribute('data-air-state')).toBe(false);
   });
 
   it('does not trigger onAnnotationClick when delete is clicked', async () => {

@@ -373,15 +373,7 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
   const actions = document.createElement('div');
   actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
 
-  const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'air-popup__btn air-popup__btn--delete';
-  deleteBtn.setAttribute('data-air-el', 'annotation-delete');
-  deleteBtn.textContent = 'Delete';
-  deleteBtn.style.fontSize = '11px';
-  deleteBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    callbacks.onAnnotationDelete(annotation.id);
-  });
+  const deleteBtn = createDeleteButton(annotation.id, callbacks);
   actions.appendChild(deleteBtn);
 
   item.appendChild(actions);
@@ -441,15 +433,7 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
   const actions = document.createElement('div');
   actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
 
-  const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'air-popup__btn air-popup__btn--delete';
-  deleteBtn.setAttribute('data-air-el', 'annotation-delete');
-  deleteBtn.textContent = 'Delete';
-  deleteBtn.style.fontSize = '11px';
-  deleteBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    callbacks.onAnnotationDelete(annotation.id);
-  });
+  const deleteBtn = createDeleteButton(annotation.id, callbacks);
   actions.appendChild(deleteBtn);
 
   item.appendChild(actions);
@@ -611,6 +595,44 @@ function createNoteForm(
 
   form.appendChild(footer);
   return form;
+}
+
+/** Two-click delete: first click shows "Sure?", second click within 3s executes delete. */
+function createDeleteButton(annotationId: string, callbacks: PanelCallbacks): HTMLButtonElement {
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'air-popup__btn air-popup__btn--delete';
+  deleteBtn.setAttribute('data-air-el', 'annotation-delete');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.style.fontSize = '11px';
+
+  let confirming = false;
+  let resetTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    if (!confirming) {
+      confirming = true;
+      deleteBtn.textContent = 'Sure?';
+      deleteBtn.setAttribute('data-air-state', 'confirming');
+
+      resetTimeout = setTimeout(() => {
+        confirming = false;
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.removeAttribute('data-air-state');
+      }, 3000);
+      return;
+    }
+
+    // Second click — execute delete
+    if (resetTimeout) clearTimeout(resetTimeout);
+    confirming = false;
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.removeAttribute('data-air-state');
+    callbacks.onAnnotationDelete(annotationId);
+  });
+
+  return deleteBtn;
 }
 
 /** Two-click clear: first click shows confirmation, second click deletes. */
