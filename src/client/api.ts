@@ -61,6 +61,10 @@ export const api = {
 
   async getExport(): Promise<string> {
     const res = await fetch(`${API_BASE}/export`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error ?? `HTTP ${res.status}`);
+    }
     return res.text();
   },
 };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateExportMarkdown } from '../../src/client/export.js';
+import { generateExport } from '../../src/client/export.js';
 import type { ReviewStore } from '../../src/client/types.js';
 
 function makeStore(overrides?: Partial<ReviewStore>): ReviewStore {
@@ -11,16 +11,16 @@ function makeStore(overrides?: Partial<ReviewStore>): ReviewStore {
   };
 }
 
-describe('generateExportMarkdown', () => {
+describe('generateExport', () => {
   it('returns empty message when store has no data', () => {
-    const result = generateExportMarkdown(makeStore());
+    const result = generateExport(makeStore());
 
     expect(result).toContain('# Inline Review');
     expect(result).toContain('No annotations or notes yet');
   });
 
   it('includes export date in ISO-like format', () => {
-    const result = generateExportMarkdown(makeStore());
+    const result = generateExport(makeStore());
 
     expect(result).toContain('Exported:');
     // Date should be YYYY-MM-DD HH:MM format
@@ -45,7 +45,7 @@ describe('generateExportMarkdown', () => {
       ],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('## / — Home');
     expect(result).toContain('## /about — About');
@@ -61,7 +61,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('**"important text"**');
   });
@@ -76,7 +76,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('> This needs fixing');
   });
@@ -89,7 +89,7 @@ describe('generateExportMarkdown', () => {
       ],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('1. **"first"**');
     expect(result).toContain('2. **"second"**');
@@ -103,7 +103,7 @@ describe('generateExportMarkdown', () => {
       ],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('### Page Notes');
     expect(result).toContain('- General feedback');
@@ -118,7 +118,7 @@ describe('generateExportMarkdown', () => {
       ],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('---');
   });
@@ -133,7 +133,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('**"text"**');
     expect(result).not.toContain('> ');
@@ -150,7 +150,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('[Resolved]');
     expect(result).toContain('**"fix this"**');
@@ -166,7 +166,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).not.toContain('[Resolved]');
   });
@@ -184,7 +184,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('**Agent:** Fixed the typo in header.ts');
   });
@@ -203,7 +203,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('**Agent:** First reply');
     expect(result).toContain('**Agent:** Second reply');
@@ -223,7 +223,7 @@ describe('generateExportMarkdown', () => {
       }],
     });
 
-    const result = generateExportMarkdown(store);
+    const result = generateExport(store);
 
     expect(result).toContain('[Resolved]');
     expect(result).toContain('div.hero');

@@ -7,15 +7,7 @@
  * 3. Orphaned — visible in panel with warning, no highlight
  */
 
-export interface SerializedSelection {
-  startXPath: string;
-  startOffset: number;
-  endXPath: string;
-  endOffset: number;
-  selectedText: string;
-  contextBefore: string;
-  contextAfter: string;
-}
+import type { SerializedRange } from '../shared/types.js';
 
 const CONTEXT_LENGTH = 30;
 
@@ -84,7 +76,7 @@ export function resolveXPath(xpath: string): Node | null {
 /**
  * Serialize a browser Range into a storable object.
  */
-export function serializeRange(range: Range): SerializedSelection {
+export function serializeRange(range: Range): SerializedRange {
   const startXPath = getXPath(range.startContainer);
   const endXPath = getXPath(range.endContainer);
   const selectedText = range.toString();
@@ -108,7 +100,7 @@ export function serializeRange(range: Range): SerializedSelection {
  * Restore a Range from a serialized selection.
  * Returns null if the XPath nodes no longer exist.
  */
-export function deserializeRange(serialized: SerializedSelection): Range | null {
+export function deserializeRange(serialized: SerializedRange): Range | null {
   const startNode = resolveXPath(serialized.startXPath);
   const endNode = resolveXPath(serialized.endXPath);
 

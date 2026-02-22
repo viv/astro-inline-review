@@ -522,28 +522,6 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     }
   }
 
-  // --- Scroll To Annotation ---
-
-  /**
-   * Scroll to a highlight and pulse it. Called from the panel.
-   */
-  function scrollToAnnotation(annotationId: string): void {
-    // Try text highlight first
-    const marks = getHighlightMarks(annotationId);
-    if (marks.length > 0) {
-      marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-      pulseHighlight(annotationId);
-      return;
-    }
-
-    // Try element highlight
-    const element = getElementByAnnotationId(annotationId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      pulseElementHighlight(annotationId);
-    }
-  }
-
   // Wire up mediator so the panel can trigger highlight restoration
   mediator.restoreHighlights = restoreHighlights;
 

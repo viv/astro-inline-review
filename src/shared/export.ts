@@ -4,9 +4,8 @@ import { isTextAnnotation, isElementAnnotation } from './types.js';
 /**
  * Generate markdown export from a ReviewStore.
  *
- * Shared between the REST API middleware and the MCP server.
- * The client-side version (src/client/export.ts) is intentionally separate
- * because it runs in the browser with different import paths.
+ * Shared between the REST API middleware, the MCP server, and the client
+ * (which re-exports this via src/client/export.ts).
  */
 export function generateExport(store: ReviewStore): string {
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');

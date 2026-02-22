@@ -1,4 +1,5 @@
 import type http from 'node:http';
+import { randomUUID } from 'node:crypto';
 import type { Connect } from 'vite';
 import type { Annotation, TextAnnotation, ElementAnnotation, PageNote } from '../types.js';
 import { ReviewStorage } from './storage.js';
@@ -118,7 +119,7 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
         await storage.mutate(store => {
           const now = new Date().toISOString();
           const base = {
-            id: generateId(),
+            id: randomUUID(),
             pageUrl: (body.pageUrl as string) ?? '',
             pageTitle: (body.pageTitle as string) ?? '',
             note: (body.note as string) ?? '',
@@ -201,7 +202,7 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
         let pageNote!: PageNote;
         await storage.mutate(store => {
           pageNote = {
-            id: generateId(),
+            id: randomUUID(),
             pageUrl: body.pageUrl as string,
             pageTitle: (body.pageTitle as string) ?? '',
             note: body.note as string,
@@ -270,6 +271,9 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       if (err instanceof Error && err.message === 'Request body too large') {
         return sendError(res, 413, 'Request body too large');
       }
+      if (err instanceof Error && err.message === 'Invalid JSON body') {
+        return sendError(res, 400, 'Invalid JSON body');
+      }
       const message = err instanceof Error ? err.message : 'Internal server error';
       return sendError(res, 500, message);
     }
@@ -277,10 +281,6 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
 }
 
 // --- Helpers ---
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
 
 function sendJson(res: http.ServerResponse, data: unknown, status = 200): void {
   res.writeHead(status, { 'Content-Type': 'application/json' });
