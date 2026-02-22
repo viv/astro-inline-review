@@ -8,12 +8,13 @@
 export const HIGHLIGHT_ATTR = 'data-air-id';
 
 const HIGHLIGHT_STYLE = 'background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;';
+const RESOLVED_HIGHLIGHT_STYLE = 'background-color: rgba(34,197,94,0.2); border-radius: 2px; cursor: pointer;';
 
 /**
  * Apply a highlight to a Range by wrapping text nodes in <mark> elements.
  * For cross-element ranges, creates multiple marks all sharing the same ID.
  */
-export function applyHighlight(range: Range, id: string): void {
+export function applyHighlight(range: Range, id: string, resolved = false): void {
   // Collect all text nodes within the range
   const textNodes = getTextNodesInRange(range);
 
@@ -23,7 +24,7 @@ export function applyHighlight(range: Range, id: string): void {
   if (textNodes.length === 1 &&
       range.startContainer === range.endContainer &&
       range.startContainer.nodeType === Node.TEXT_NODE) {
-    const mark = createMark(id);
+    const mark = createMark(id, resolved);
     range.surroundContents(mark);
     return;
   }
@@ -42,7 +43,7 @@ export function applyHighlight(range: Range, id: string): void {
     }
 
     // Wrap the isolated portion
-    const mark = createMark(id);
+    const mark = createMark(id, resolved);
     workNode.parentNode?.insertBefore(mark, workNode);
     mark.appendChild(workNode);
   }
@@ -103,10 +104,12 @@ export const ELEMENT_HIGHLIGHT_ATTR = 'data-air-element-id';
 /**
  * Apply a visual highlight to an element (dashed amber outline).
  */
-export function applyElementHighlight(element: Element, id: string): void {
+export function applyElementHighlight(element: Element, id: string, resolved = false): void {
   const el = element as HTMLElement;
   el.setAttribute(ELEMENT_HIGHLIGHT_ATTR, id);
-  el.style.outline = '2px dashed rgba(217,119,6,0.8)';
+  el.style.outline = resolved
+    ? '2px dashed rgba(34,197,94,0.5)'
+    : '2px dashed rgba(217,119,6,0.8)';
   el.style.outlineOffset = '2px';
   el.style.cursor = 'pointer';
 }
@@ -161,10 +164,10 @@ export function removeAllElementHighlights(): void {
 
 // --- Helpers ---
 
-function createMark(id: string): HTMLElement {
+function createMark(id: string, resolved = false): HTMLElement {
   const mark = document.createElement('mark');
   mark.setAttribute(HIGHLIGHT_ATTR, id);
-  mark.setAttribute('style', HIGHLIGHT_STYLE);
+  mark.setAttribute('style', resolved ? RESOLVED_HIGHLIGHT_STYLE : HIGHLIGHT_STYLE);
   return mark;
 }
 

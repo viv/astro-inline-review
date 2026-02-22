@@ -468,6 +468,8 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       // Restore text highlights
       const textAnnotations = pageAnnotations.filter(isTextAnnotation);
       for (const annotation of textAnnotations) {
+        const resolved = !!annotation.resolvedAt;
+
         // Tier 1: Try XPath + offset
         let range = deserializeRange(annotation.range);
 
@@ -482,7 +484,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
 
         // Tier 3: Orphaned — no highlight, visible only in panel
         if (range) {
-          applyHighlight(range, annotation.id);
+          applyHighlight(range, annotation.id, resolved);
         }
       }
 
@@ -491,7 +493,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       for (const annotation of elementAnnotations) {
         const element = resolveElement(annotation.elementSelector);
         if (element) {
-          applyElementHighlight(element, annotation.id);
+          applyElementHighlight(element, annotation.id, !!annotation.resolvedAt);
         }
       }
 

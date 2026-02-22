@@ -236,6 +236,54 @@ export const PANEL_STYLES = /* css */ `
     color: #ccc;
   }
 
+  .air-annotation-item--resolved {
+    opacity: 0.7;
+  }
+
+  .air-annotation-item--resolved .air-annotation-item__text {
+    text-decoration: line-through;
+  }
+
+  .air-annotation-item__resolved-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #22C55E;
+    margin-bottom: 4px;
+  }
+
+  .air-annotation-item__resolved-time {
+    font-size: 11px;
+    color: #888;
+    font-weight: 400;
+  }
+
+  .air-annotation-item__reply {
+    margin-top: 8px;
+    padding: 8px;
+    background: #1a2a1a;
+    border-left: 3px solid #22C55E;
+    border-radius: 0 4px 4px 0;
+    font-size: 12px;
+    color: #ccc;
+  }
+
+  .air-annotation-item__reply-prefix {
+    font-size: 11px;
+    font-weight: 600;
+    color: #22C55E;
+    margin-bottom: 2px;
+  }
+
+  .air-annotation-item__reply-time {
+    font-size: 10px;
+    color: #888;
+    font-weight: 400;
+    margin-left: 8px;
+  }
+
   .air-annotation-item__orphan {
     font-size: 11px;
     color: #F87171;

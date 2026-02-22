@@ -58,9 +58,15 @@ export function generateExport(store: ReviewStore): string {
       lines.push('### Text Annotations');
       let i = 1;
       for (const a of textAnnotations) {
-        lines.push(`${i}. **"${a.selectedText}"**`);
+        const resolved = a.resolvedAt ? ' ✅ [Resolved]' : '';
+        lines.push(`${i}. **"${a.selectedText}"**${resolved}`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
+        }
+        if (a.replies && a.replies.length > 0) {
+          for (const reply of a.replies) {
+            lines.push(`   > **Agent:** ${reply.message}`);
+          }
         }
         lines.push('');
         i++;
@@ -73,9 +79,15 @@ export function generateExport(store: ReviewStore): string {
       for (const a of elementAnnotations) {
         const safeSelector = a.elementSelector.cssSelector.replace(/`/g, '\\`');
         const safePreview = a.elementSelector.outerHtmlPreview.replace(/`/g, '\\`');
-        lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)`);
+        const resolved = a.resolvedAt ? ' ✅ [Resolved]' : '';
+        lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)${resolved}`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
+        }
+        if (a.replies && a.replies.length > 0) {
+          for (const reply of a.replies) {
+            lines.push(`   > **Agent:** ${reply.message}`);
+          }
         }
         lines.push('');
         i++;

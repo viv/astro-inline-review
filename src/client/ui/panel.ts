@@ -8,7 +8,7 @@
 
 import { api } from '../api.js';
 import { writeCache, readCache } from '../cache.js';
-import type { Annotation, TextAnnotation, PageNote, ReviewStore } from '../types.js';
+import type { Annotation, TextAnnotation, PageNote, ReviewStore, AgentReply } from '../types.js';
 import { isTextAnnotation } from '../types.js';
 import type { ReviewMediator } from '../mediator.js';
 
@@ -292,8 +292,14 @@ function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks)
 
 function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
-  item.className = 'air-annotation-item';
+  item.className = annotation.resolvedAt
+    ? 'air-annotation-item air-annotation-item--resolved'
+    : 'air-annotation-item';
   item.setAttribute('data-air-el', 'annotation-item');
+
+  if (annotation.resolvedAt) {
+    item.appendChild(createResolvedBadge(annotation.resolvedAt));
+  }
 
   const text = document.createElement('div');
   text.className = 'air-annotation-item__text';
@@ -310,6 +316,12 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
     item.appendChild(note);
   }
 
+  if (annotation.replies && annotation.replies.length > 0) {
+    for (const reply of annotation.replies) {
+      item.appendChild(createReplyBlock(reply));
+    }
+  }
+
   item.addEventListener('click', () => {
     callbacks.onAnnotationClick(annotation.id);
   });
@@ -319,8 +331,14 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 
 function createElementAnnotationItem(annotation: Annotation & { type: 'element' }, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
-  item.className = 'air-annotation-item';
+  item.className = annotation.resolvedAt
+    ? 'air-annotation-item air-annotation-item--resolved'
+    : 'air-annotation-item';
   item.setAttribute('data-air-el', 'element-annotation-item');
+
+  if (annotation.resolvedAt) {
+    item.appendChild(createResolvedBadge(annotation.resolvedAt));
+  }
 
   const desc = document.createElement('div');
   desc.className = 'air-annotation-item__text';
@@ -332,6 +350,12 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
     note.className = 'air-annotation-item__note';
     note.textContent = annotation.note;
     item.appendChild(note);
+  }
+
+  if (annotation.replies && annotation.replies.length > 0) {
+    for (const reply of annotation.replies) {
+      item.appendChild(createReplyBlock(reply));
+    }
   }
 
   item.addEventListener('click', () => {
@@ -535,6 +559,57 @@ function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks, m
       console.error('[astro-inline-review] Failed to clear all:', err);
     }
   });
+}
+
+function formatTimestamp(iso: string): string {
+  try {
+    const date = new Date(iso);
+    return date.toLocaleString(undefined, {
+      month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function createResolvedBadge(resolvedAt: string): HTMLDivElement {
+  const badge = document.createElement('div');
+  badge.className = 'air-annotation-item__resolved-badge';
+  badge.setAttribute('data-air-el', 'resolved-badge');
+  badge.textContent = '\u2714 Resolved';
+
+  const time = document.createElement('span');
+  time.className = 'air-annotation-item__resolved-time';
+  time.textContent = formatTimestamp(resolvedAt);
+  badge.appendChild(time);
+
+  return badge;
+}
+
+function createReplyBlock(reply: AgentReply): HTMLDivElement {
+  const block = document.createElement('div');
+  block.className = 'air-annotation-item__reply';
+  block.setAttribute('data-air-el', 'agent-reply');
+
+  const prefix = document.createElement('div');
+  prefix.className = 'air-annotation-item__reply-prefix';
+  prefix.textContent = 'Agent:';
+
+  if (reply.createdAt) {
+    const time = document.createElement('span');
+    time.className = 'air-annotation-item__reply-time';
+    time.textContent = formatTimestamp(reply.createdAt);
+    prefix.appendChild(time);
+  }
+
+  block.appendChild(prefix);
+
+  const message = document.createElement('div');
+  message.textContent = reply.message;
+  block.appendChild(message);
+
+  return block;
 }
 
 async function updateTabCounts(

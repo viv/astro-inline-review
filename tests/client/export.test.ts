@@ -138,4 +138,94 @@ describe('generateExportMarkdown', () => {
     expect(result).toContain('**"text"**');
     expect(result).not.toContain('> ');
   });
+
+  it('shows [Resolved] indicator for resolved text annotations', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', type: 'text', pageUrl: '/', pageTitle: '',
+        selectedText: 'fix this', note: 'needs work',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        createdAt: '', updatedAt: '',
+        resolvedAt: '2026-02-22T10:00:00Z',
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('[Resolved]');
+    expect(result).toContain('**"fix this"**');
+  });
+
+  it('does not show [Resolved] for unresolved annotations', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', type: 'text', pageUrl: '/', pageTitle: '',
+        selectedText: 'pending', note: '',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        createdAt: '', updatedAt: '',
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).not.toContain('[Resolved]');
+  });
+
+  it('shows agent replies as blockquotes with Agent: prefix', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', type: 'text', pageUrl: '/', pageTitle: '',
+        selectedText: 'text', note: 'fix this',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        createdAt: '', updatedAt: '',
+        replies: [
+          { message: 'Fixed the typo in header.ts', createdAt: '2026-02-22T10:00:00Z' },
+        ],
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('**Agent:** Fixed the typo in header.ts');
+  });
+
+  it('shows multiple agent replies in order', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', type: 'text', pageUrl: '/', pageTitle: '',
+        selectedText: 'text', note: 'fix',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        createdAt: '', updatedAt: '',
+        replies: [
+          { message: 'First reply', createdAt: '2026-02-22T10:00:00Z' },
+          { message: 'Second reply', createdAt: '2026-02-22T11:00:00Z' },
+        ],
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('**Agent:** First reply');
+    expect(result).toContain('**Agent:** Second reply');
+    const firstIdx = result.indexOf('First reply');
+    const secondIdx = result.indexOf('Second reply');
+    expect(firstIdx).toBeLessThan(secondIdx);
+  });
+
+  it('shows [Resolved] for resolved element annotations', () => {
+    const store = makeStore({
+      annotations: [{
+        id: '1', type: 'element', pageUrl: '/', pageTitle: '',
+        note: 'fix this element',
+        elementSelector: { cssSelector: 'div.hero', xpath: '', description: '', tagName: 'div', attributes: {}, outerHtmlPreview: '<div class="hero">' },
+        createdAt: '', updatedAt: '',
+        resolvedAt: '2026-02-22T10:00:00Z',
+      }],
+    });
+
+    const result = generateExportMarkdown(store);
+
+    expect(result).toContain('[Resolved]');
+    expect(result).toContain('div.hero');
+  });
 });

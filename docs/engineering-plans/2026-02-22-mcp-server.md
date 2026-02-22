@@ -336,7 +336,7 @@ Then implement:
 5. Run full test suite + build. Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
-**Status**: `not_started`
+**Status**: `completed`
 
 ---
 
