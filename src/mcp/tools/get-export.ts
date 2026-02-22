@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ReviewStorage } from '../../server/storage.js';
-import type { ToolResult } from './list-annotations.js';
+import type { ToolResult } from '../types.js';
 import { generateExport } from '../../shared/export.js';
 
 export async function getExportHandler(

@@ -1,11 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ReviewStorage } from '../../server/storage.js';
-
-export interface ToolResult {
-  [key: string]: unknown;
-  content: Array<{ type: 'text'; text: string }>;
-}
+import type { ToolResult } from '../types.js';
 
 export async function listAnnotationsHandler(
   storage: ReviewStorage,

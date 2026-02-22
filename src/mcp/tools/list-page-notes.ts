@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ReviewStorage } from '../../server/storage.js';
-import type { ToolResult } from './list-annotations.js';
+import type { ToolResult } from '../types.js';
 
 export async function listPageNotesHandler(
   storage: ReviewStorage,

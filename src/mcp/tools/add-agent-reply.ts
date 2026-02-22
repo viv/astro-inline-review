@@ -1,11 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ReviewStorage } from '../../server/storage.js';
-import type { ToolResult } from './list-annotations.js';
-
-interface ErrorResult extends ToolResult {
-  isError: boolean;
-}
+import type { ToolResult, ErrorResult } from '../types.js';
 
 export async function addAgentReplyHandler(
   storage: ReviewStorage,
@@ -48,7 +44,7 @@ export function register(server: McpServer, storage: ReviewStorage): void {
     'add_agent_reply',
     'Add a reply to an annotation explaining what action was taken. Appends to the replies array so reviewers can see agent responses alongside their original notes.',
     {
-      id: z.string().describe('The annotation ID to reply to'),
+      id: z.string().min(1).describe('The annotation ID to reply to'),
       message: z.string().describe('The reply message explaining what was done'),
     },
     async (params) => addAgentReplyHandler(storage, params),
