@@ -11,13 +11,10 @@ import { serializeRange, deserializeRange, findRangeByContext } from './selectio
 import {
   applyHighlight,
   removeHighlight,
-  pulseHighlight,
   getHighlightMarks,
   HIGHLIGHT_ATTR,
   applyElementHighlight,
   removeElementHighlight,
-  pulseElementHighlight,
-  getElementByAnnotationId,
   removeAllElementHighlights,
   ELEMENT_HIGHLIGHT_ATTR,
 } from './highlights.js';
@@ -36,7 +33,6 @@ import { api } from './api.js';
 import { writeCache, readCache } from './cache.js';
 import { updateBadge } from './ui/fab.js';
 import { showToast } from './ui/toast.js';
-import type { Annotation } from './types.js';
 import { isTextAnnotation, isElementAnnotation } from './types.js';
 import type { ReviewMediator } from './mediator.js';
 

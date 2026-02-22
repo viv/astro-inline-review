@@ -132,7 +132,6 @@ function getElementPart(element: Element): string {
 
   if (siblings.length === 1) return tag;
 
-  const index = siblings.indexOf(element) + 1;
   return `${tag}:nth-child(${getChildIndex(element)})`;
 }
 

@@ -35,7 +35,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: astro-inline-review/package-lock.json
+          cache-dependency-path: |
+            astro-inline-review/package-lock.json
+            astro-inline-review-tests/package-lock.json
 
       - name: Build main package
         working-directory: astro-inline-review
@@ -48,6 +50,17 @@ jobs:
       - name: Install fixture deps
         working-directory: astro-inline-review-tests/fixture
         run: npm install
+
+      - name: Get Playwright version
+        id: playwright-version
+        working-directory: astro-inline-review-tests
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}-chromium
 
       - name: Install Playwright Chromium
         working-directory: astro-inline-review-tests

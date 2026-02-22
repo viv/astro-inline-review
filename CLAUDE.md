@@ -107,6 +107,7 @@ The `--storage` flag is optional and defaults to `./inline-review.json` relative
 ## Development
 
 - **Build**: `npm run build` (tsup — server ESM + client browser bundle)
+- **Lint**: `npm run lint` (ESLint with typescript-eslint, flat config)
 - **Test**: `npm test` (vitest — client with happy-dom, server with node)
 - **Watch**: `npm run dev` / `npm run test:watch`
 - Runtime dependencies: `@modelcontextprotocol/sdk`, `zod` (for MCP server only); `astro ^5.0.0` peer dependency

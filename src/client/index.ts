@@ -14,7 +14,7 @@ import { registerShortcuts } from './shortcuts.js';
 import { exportToClipboard } from './export.js';
 import { showToast } from './ui/toast.js';
 import { api } from './api.js';
-import { writeCache, readCache } from './cache.js';
+import { writeCache } from './cache.js';
 import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByAnnotationId, removeHighlight, removeElementHighlight } from './highlights.js';
 
 // Idempotency guard
