@@ -31,7 +31,7 @@ jobs:
           repository: viv/astro-inline-review-tests
           path: astro-inline-review-tests
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
