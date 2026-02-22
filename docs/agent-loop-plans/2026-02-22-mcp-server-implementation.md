@@ -3,9 +3,11 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: autonomous_agent_loop_plan
-status: draft
+status: superseded
 human_reviewer: matthewvivian
 implementation_tracking: not_started
+superseded_by: docs/engineering-plans/2026-02-22-mcp-server.md
+superseded_reason: Restructured as human-driven session plan instead of autonomous agent loop
 tags: [mcp, agent-integration, json, real-time, developer-experience, architecture, autonomous-loop]
 related_plans:
   - docs/engineering-plans/2026-02-22-agent-bridge.md
