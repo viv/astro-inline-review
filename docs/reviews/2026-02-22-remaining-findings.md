@@ -26,8 +26,8 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 
 | Review | Total Findings | Done | Previously Resolved | Remaining |
 |--------|---------------|------|-------------------|-----------|
-| Spec Review (2026-02-22) | 21 | 11 (H1-3, M1-8) | — | 10 (L1-6, I1-4) |
-| Spec Review Round 3 (2026-02-21) | 15 | 0 | Marked resolved but content unverified | 15 (needs verification) |
+| Spec Review (2026-02-22) | 21 | 16 (H1-3, M1-8, L1, L3-6) | — | 5 (L2, I1-4) |
+| Spec Review Round 3 (2026-02-21) | 15 | 15 | Verified and fixed (Session 3) | 0 |
 | Implementation Review (2026-02-22) | 30 | 9 (C1-3, H3-4, M1, M9-10) | — | 21 |
 | Documentation Review (2026-02-22) | 16 | 6 (H1, M1, L3-4, L6) | — | 10 |
 | Test Coverage Review (2026-02-22) | 17 | 2 (annotator, element-selector) | — | 15 |
@@ -74,35 +74,35 @@ These are concrete code improvements from the implementation and architecture re
 
 ### Priority 2: Specification Accuracy (Medium)
 
-These are from Spec Review Round 3 (2026-02-21). The review was marked `status: resolved` but the actual spec content changes were NOT verified. Prompt 7 from the comprehensive review addressed different findings from the 2026-02-22 spec review, not these Round 3 items.
+These are from Spec Review Round 3 (2026-02-21). All verified and fixed in Session 3.
 
-| ID | Source | Severity | Finding |
-|----|--------|----------|---------|
-| REM-20 | SPEC3-001 | Critical | PATCH mutability table says multiple fields mutable — code only allows `note` |
-| REM-21 | SPEC3-002 | Critical | Element highlight opacity: spec says 0.7, code uses 0.8 (three spec sections) |
-| REM-22 | SPEC3-003 | Major | Inspector overlay colours: spec says `rgb(59,130,246)`, code uses `rgb(66,133,244)` |
-| REM-23 | SPEC3-004 | Major | Spec claims resolveElement verifies CSS selector uniqueness — code does not |
-| REM-24 | SPEC3-005 | Major | Spec says captured attributes are tag-conditional — code captures unconditionally |
-| REM-25 | SPEC3-006 | Major | Element description format examples don't match code output |
-| REM-26 | SPEC3-007 | Major | Spec says inspector listeners attached/detached dynamically — code registers all once |
-| REM-27 | SPEC3-008 | Major | `__restoreHighlights` missing from shadow root bridge table in spec |
-| REM-28 | SPEC3-009 | Minor | First-use tooltip text doesn't match code |
-| REM-29 | SPEC3-010 | Minor | Export outerHtmlPreview: spec says 100 chars, code stores 200 |
-| REM-30 | SPEC3-011 | Minor | Appendix A test count still says "110" |
-| REM-31 | SPEC3-012 | Minor | Element click walks ancestors — not documented |
-| REM-32 | SPEC3-013 | Minor | Clear All highlight cleanup description outdated |
-| REM-33 | SPEC3-014 | Suggestion | Document onAnnotationClick callback duplication |
-| REM-34 | SPEC3-015 | Suggestion | Destroy method event listener list incomplete |
+| ID | Source | Severity | Finding | Status |
+|----|--------|----------|---------|--------|
+| REM-20 | SPEC3-001 | Critical | PATCH mutability table says multiple fields mutable — code only allows `note` | **Resolved** (Session 3) |
+| REM-21 | SPEC3-002 | Critical | Element highlight opacity: spec says 0.7, code uses 0.8 (three spec sections) | **Resolved** (Session 3) |
+| REM-22 | SPEC3-003 | Major | Inspector overlay colours: spec says `rgb(59,130,246)`, code uses `rgb(66,133,244)` | **Resolved** (Session 3) |
+| REM-23 | SPEC3-004 | Major | Spec claims resolveElement verifies CSS selector uniqueness — code does not | **Resolved** (Session 3) |
+| REM-24 | SPEC3-005 | Major | Spec says captured attributes are tag-conditional — code captures unconditionally | **Resolved** (Session 3) |
+| REM-25 | SPEC3-006 | Major | Element description format examples don't match code output | **Resolved** (Session 3) |
+| REM-26 | SPEC3-007 | Major | Spec says inspector listeners attached/detached dynamically — code registers all once | **Resolved** (Session 3) |
+| REM-27 | SPEC3-008 | Major | `__restoreHighlights` missing from shadow root bridge table in spec | **Resolved** (Session 3) |
+| REM-28 | SPEC3-009 | Minor | First-use tooltip text doesn't match code | **Resolved** (Session 3) |
+| REM-29 | SPEC3-010 | Minor | Export outerHtmlPreview: spec says 100 chars, code stores 200 | **Resolved** (Session 3) |
+| REM-30 | SPEC3-011 | Minor | Appendix A test count still says "110" | **Resolved** (Session 3) |
+| REM-31 | SPEC3-012 | Minor | Element click walks ancestors — not documented | **Resolved** (Session 3) |
+| REM-32 | SPEC3-013 | Minor | Clear All highlight cleanup description outdated | **Resolved** (Session 3) |
+| REM-33 | SPEC3-014 | Suggestion | Document onAnnotationClick callback duplication | **Resolved** (Session 3) |
+| REM-34 | SPEC3-015 | Suggestion | Destroy method event listener list incomplete | **Resolved** (Session 3) |
 
 Plus remaining Low items from the 2026-02-22 spec review:
 
-| ID | Source | Severity | Finding |
-|----|--------|----------|---------|
-| REM-35 | SPEC-L1 | Low | Popup positioning threshold description imprecise |
-| REM-36 | SPEC-L3 | Low | Clear All data-air-state tracking inconsistent with table pattern |
-| REM-37 | SPEC-L4 | Low | Tooltip fade-out class and 300ms timeout undocumented |
-| REM-38 | SPEC-L5 | Low | Section 4.3 heading level inconsistent (H2 instead of H3) |
-| REM-39 | SPEC-L6 | Low | add_agent_reply non-empty message validation undocumented |
+| ID | Source | Severity | Finding | Status |
+|----|--------|----------|---------|--------|
+| REM-35 | SPEC-L1 | Low | Popup positioning threshold description imprecise | **Resolved** (Session 3) |
+| REM-36 | SPEC-L3 | Low | Clear All data-air-state tracking inconsistent with table pattern | **Resolved** (Session 3) |
+| REM-37 | SPEC-L4 | Low | Tooltip fade-out class and 300ms timeout undocumented | **Resolved** (Session 3) |
+| REM-38 | SPEC-L5 | Low | Section 4.3 heading level inconsistent (H2 instead of H3) | **Resolved** (Session 3) |
+| REM-39 | SPEC-L6 | Low | add_agent_reply non-empty message validation undocumented | **Resolved** (Session 3) |
 
 ### Priority 3: Test Coverage Gaps (Medium)
 

@@ -431,11 +431,11 @@ Returns raw Markdown text (not JSON). See [Section 9: Markdown Export](#9-markdo
 - Non-API requests (URLs not starting with `/__inline-review/api`) are passed through to the next middleware via `next()`
 
 
-## 4.3 MCP Server
+### 4.3 MCP Server
 
 The MCP (Model Context Protocol) server provides structured agent access to review annotations. It runs as a separate subprocess communicating over stdio, independent of the Vite dev server.
 
-### 4.3.1 Architecture
+#### 4.3.1 Architecture
 
 ```
 ┌─────────────┐     HTTP API      ┌──────────────────┐
@@ -456,7 +456,7 @@ The MCP (Model Context Protocol) server provides structured agent access to revi
 2. **Separate process** — Runs independently of Vite. Works even without the dev server running (e.g., reading annotations after a review session).
 3. **Shared `ReviewStorage`** — Reuses the same storage class as the REST API, ensuring identical file I/O behaviour, migration logic, and write queuing.
 
-### 4.3.2 MCP Tools
+#### 4.3.2 MCP Tools
 
 | Tool | Type | Parameters | Description |
 |------|------|-----------|-------------|
@@ -467,11 +467,11 @@ The MCP (Model Context Protocol) server provides structured agent access to revi
 | `resolve_annotation` | Write | `id` (string, required) | Mark an annotation as resolved (sets `resolvedAt` timestamp) |
 | `add_agent_reply` | Write | `id` (string, required), `message` (string, required) | Add a reply to an annotation explaining what action was taken |
 
-All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters require non-empty strings (`.min(1)`).
+All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters require non-empty strings (`.min(1)`). The `add_agent_reply` tool additionally validates that `message` is non-empty after trimming — an empty or whitespace-only message returns an error.
 
 **Return format:** All tools return `{ content: [{ type: 'text', text: '...' }] }`. Read tools return JSON-stringified data. `get_export` returns markdown text. Error responses include `isError: true` with a descriptive message.
 
-### 4.3.3 Configuration
+#### 4.3.3 Configuration
 
 **Auto-discovery:** The `.mcp.json` file at the project root enables auto-discovery for Claude Code and other MCP-compatible agents:
 
@@ -493,11 +493,11 @@ All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters
 |----------|---------|-------------|
 | `--storage <path>` | `./inline-review.json` | Path to the JSON storage file (resolved relative to `process.cwd()`) |
 
-### 4.3.4 Process Lifecycle
+#### 4.3.4 Process Lifecycle
 
 The MCP server is a single-process, single-connection stdio server. The agent spawns it as a subprocess and communicates via pipes. The server exits when stdin closes (parent process terminates). No explicit shutdown logic is needed.
 
-### 4.3.5 Concurrency Model
+#### 4.3.5 Concurrency Model
 
 The server assumes single-agent use. Write tools perform read-modify-write operations that are not atomic across processes — the `ReviewStorage` write queue serialises writes within a single process, but concurrent access from multiple processes could lose data. This is acceptable because MCP stdio transport is inherently single-connection.
 
@@ -522,7 +522,7 @@ The bootstrap runs when `DOMContentLoaded` fires, or immediately if the document
 
 **Notes**:
 - `restoreHighlights()` is async but called without `await` (fire-and-forget). The `init()` function is synchronous; highlights appear asynchronously after the API response arrives.
-- The annotator returns an `AnnotatorInstance` with three fields: `restoreHighlights()` (async, restores highlights from store), `destroy()` (removes all event listeners and inspector overlay), and `popup` (the `PopupElements` reference, exposed so the Escape handler can call `isPopupVisible()` and `hidePopup()` directly).
+- The annotator returns an `AnnotatorInstance` with three fields: `restoreHighlights()` (async, restores highlights from store), `destroy()` (removes all six event listeners — `mouseup`, `scroll`, `keydown`, `keyup`, `mousemove`, `click` capture — and calls `destroyInspector()` to clean up the overlay), and `popup` (the `PopupElements` reference, exposed so the Escape handler can call `isPopupVisible()` and `hidePopup()` directly).
 - `destroy()` is not called during normal operation — the annotator lives for the entire page lifecycle. The method exists for potential future use (e.g. hot-module replacement cleanup).
 
 **Ordering dependency**: The panel MUST be created before the FAB because the `refreshBadge` closure (defined before both) references `fab.badge`. This works because the closure captures the variable by reference, not by value, and `refreshBadge` is never invoked during construction — it only executes when the user opens the panel, by which time the FAB exists.
@@ -1359,8 +1359,8 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | FAB | `open`, `closed` | Panel is open or closed |
 | Panel | `open`, `closed` | Panel visibility state |
 | Popup | `visible`, `hidden` | Popup visibility state |
-| Clear All button | `confirming` (or absent) | Waiting for second click |
-| Annotation delete button | `confirming` (or absent) | Waiting for second click to confirm delete |
+| Clear All button | `"confirming"` or not set | Waiting for second click; attribute removed after timeout or delete |
+| Annotation delete button | `"confirming"` or not set | Waiting for second click; attribute removed after timeout or delete |
 
 ### 14.3 Light DOM Attributes
 
@@ -1537,6 +1537,7 @@ The following accessibility features are not yet implemented:
 - Tooltip text: "Select text to annotate it, or Alt+click any element"
 - `data-air-el="first-use-tooltip"` for test automation
 - Dismissed on: click anywhere (document or shadow root), or after 8 seconds auto-fade
+- On dismiss, the `air-tooltip--hidden` class is added (triggering a CSS opacity fade-out), then the element is removed from the DOM after a 300ms timeout to allow the transition to complete
 - On dismiss, sets `localStorage.setItem('air-tooltip-dismissed', '1')`
 - Idempotent — guarded against double-dismiss via `dismissed` boolean
 - Styled consistently with existing dark theme, amber border to match FAB
