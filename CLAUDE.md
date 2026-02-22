@@ -8,6 +8,7 @@ Dev-only Astro integration that provides a browser-based annotation overlay duri
 - **Server**: Vite dev middleware at `/__inline-review/api/*` — CRUD REST API
 - **Storage**: Single JSON file (`inline-review.json`) in project root via `ReviewStorage` class
 - **Types**: Canonical definitions in `src/shared/types.ts`, re-exported by `src/types.ts` and `src/client/types.ts`
+- **Dismissal**: The panel includes per-annotation delete buttons and orphan indicators for annotations whose target elements have changed (content modified or removed)
 
 ## Agent Integration — Reading Annotations
 
@@ -33,6 +34,8 @@ This file is the source of truth. `ReviewStorage` reads from disk on every call 
       "note": "reviewer's comment",
       "createdAt": "ISO 8601",
       "updatedAt": "ISO 8601",
+      "resolvedAt": "ISO 8601 (optional)",
+      "replies": [{ "message": "string", "createdAt": "ISO 8601" }],
       "selectedText": "quoted text (text annotations only)",
       "range": { "startXPath": "...", "startOffset": 0, "endXPath": "...", "endOffset": 0, "selectedText": "...", "contextBefore": "...", "contextAfter": "..." },
       "elementSelector": { "cssSelector": "...", "xpath": "...", "description": "...", "tagName": "...", "attributes": {}, "outerHtmlPreview": "..." }

@@ -3,13 +3,16 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: implementation_plan
-status: draft
+status: deferred
 human_reviewer: matthewvivian
 implementation_tracking: not_started
+superseded_by: docs/engineering-plans/2026-02-22-mcp-server.md
 tags: [export, agent-integration, markdown, prompt-engineering, developer-experience]
 ---
 
 # Agent-Prompt Export Format
+
+> **Note:** This plan has been deferred. The MCP server implementation (`docs/engineering-plans/2026-02-22-mcp-server.md`) provides a more powerful agent integration path — agents can query annotations directly via structured tools rather than relying on pasted markdown exports. If a prompt-style export is still desired in future, it can be revisited as a lightweight addition on top of the MCP foundation.
 
 ## Problem
 
