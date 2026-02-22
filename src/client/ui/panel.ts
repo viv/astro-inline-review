@@ -23,6 +23,8 @@ export interface PanelElements {
 
 export interface PanelCallbacks {
   onAnnotationClick: (annotationId: string) => void;
+  onAnnotationDelete: (annotationId: string) => Promise<void>;
+  isAnnotationOrphaned: (annotationId: string, pageUrl: string) => boolean;
   onRefreshBadge: () => Promise<void>;
   onExport: () => Promise<void>;
 }
@@ -292,9 +294,11 @@ function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks)
 
 function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
-  item.className = annotation.resolvedAt
-    ? 'air-annotation-item air-annotation-item--resolved'
-    : 'air-annotation-item';
+  const orphaned = callbacks.isAnnotationOrphaned(annotation.id, annotation.pageUrl);
+  const classes = ['air-annotation-item'];
+  if (annotation.resolvedAt) classes.push('air-annotation-item--resolved');
+  if (orphaned) classes.push('air-annotation-item--orphan');
+  item.className = classes.join(' ');
   item.setAttribute('data-air-el', 'annotation-item');
 
   if (annotation.resolvedAt) {
@@ -322,6 +326,29 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
     }
   }
 
+  if (orphaned) {
+    const orphanIndicator = document.createElement('div');
+    orphanIndicator.className = 'air-annotation-item__orphan';
+    orphanIndicator.textContent = 'Could not locate on page';
+    item.appendChild(orphanIndicator);
+  }
+
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'air-popup__btn air-popup__btn--delete';
+  deleteBtn.setAttribute('data-air-el', 'annotation-delete');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.style.fontSize = '11px';
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    callbacks.onAnnotationDelete(annotation.id);
+  });
+  actions.appendChild(deleteBtn);
+
+  item.appendChild(actions);
+
   item.addEventListener('click', () => {
     callbacks.onAnnotationClick(annotation.id);
   });
@@ -331,9 +358,11 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 
 function createElementAnnotationItem(annotation: Annotation & { type: 'element' }, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
-  item.className = annotation.resolvedAt
-    ? 'air-annotation-item air-annotation-item--resolved'
-    : 'air-annotation-item';
+  const orphaned = callbacks.isAnnotationOrphaned(annotation.id, annotation.pageUrl);
+  const classes = ['air-annotation-item'];
+  if (annotation.resolvedAt) classes.push('air-annotation-item--resolved');
+  if (orphaned) classes.push('air-annotation-item--orphan');
+  item.className = classes.join(' ');
   item.setAttribute('data-air-el', 'element-annotation-item');
 
   if (annotation.resolvedAt) {
@@ -357,6 +386,29 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
       item.appendChild(createReplyBlock(reply));
     }
   }
+
+  if (orphaned) {
+    const orphanIndicator = document.createElement('div');
+    orphanIndicator.className = 'air-annotation-item__orphan';
+    orphanIndicator.textContent = 'Could not locate on page';
+    item.appendChild(orphanIndicator);
+  }
+
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'air-popup__btn air-popup__btn--delete';
+  deleteBtn.setAttribute('data-air-el', 'annotation-delete');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.style.fontSize = '11px';
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    callbacks.onAnnotationDelete(annotation.id);
+  });
+  actions.appendChild(deleteBtn);
+
+  item.appendChild(actions);
 
   item.addEventListener('click', () => {
     callbacks.onAnnotationClick(annotation.id);

@@ -284,6 +284,11 @@ export const PANEL_STYLES = /* css */ `
     margin-left: 8px;
   }
 
+  .air-annotation-item--orphan {
+    opacity: 0.7;
+    border-left: 3px solid #F87171;
+  }
+
   .air-annotation-item__orphan {
     font-size: 11px;
     color: #F87171;

@@ -15,7 +15,7 @@ import { exportToClipboard } from './export.js';
 import { showToast } from './ui/toast.js';
 import { api } from './api.js';
 import { writeCache, readCache } from './cache.js';
-import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByAnnotationId } from './highlights.js';
+import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByAnnotationId, removeHighlight, removeElementHighlight } from './highlights.js';
 
 // Idempotency guard
 const INIT_FLAG = '__astro_inline_review_init';
@@ -68,6 +68,25 @@ function init(): void {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         pulseElementHighlight(id);
       }
+    },
+    onAnnotationDelete: async (id) => {
+      try {
+        await api.deleteAnnotation(id);
+        removeHighlight(id);
+        removeElementHighlight(id);
+        await refreshBadge();
+        mediator.refreshPanel();
+      } catch (err) {
+        console.error('[astro-inline-review] Failed to delete annotation:', err);
+      }
+    },
+    isAnnotationOrphaned: (id, pageUrl) => {
+      if (pageUrl !== window.location.pathname) return false;
+      const marks = getHighlightMarks(id);
+      if (marks.length > 0) return false;
+      const element = getElementByAnnotationId(id);
+      if (element) return false;
+      return true;
     },
     onRefreshBadge: refreshBadge,
     onExport: async () => {

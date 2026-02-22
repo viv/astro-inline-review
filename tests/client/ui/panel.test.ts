@@ -32,6 +32,8 @@ describe('createPanel — export button', () => {
 
     callbacks = {
       onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -125,6 +127,8 @@ describe('createPanel — resolved annotations and agent replies', () => {
 
     callbacks = {
       onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -255,5 +259,239 @@ describe('createPanel — resolved annotations and agent replies', () => {
     expect(timeSpan).not.toBeNull();
     // Should contain some formatted date text (locale-dependent)
     expect(timeSpan!.textContent!.length).toBeGreaterThan(0);
+  });
+});
+
+describe('annotation item — delete button', () => {
+  let shadowRoot: ShadowRoot;
+  let callbacks: PanelCallbacks;
+  let mediator: ReviewMediator;
+
+  function makeTextAnnotation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ann-1', type: 'text' as const, pageUrl: '/', pageTitle: 'Home',
+      selectedText: 'hello world', note: 'fix this',
+      range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello world', contextBefore: '', contextAfter: '' },
+      createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      ...overrides,
+    };
+  }
+
+  function makeElementAnnotation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ann-2', type: 'element' as const, pageUrl: '/', pageTitle: 'Home',
+      note: 'fix element',
+      elementSelector: { cssSelector: 'div.hero', xpath: '', description: 'Hero section', tagName: 'div', attributes: {}, outerHtmlPreview: '<div class="hero">' },
+      createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+
+    callbacks = {
+      onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      onRefreshBadge: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mediator = {
+      refreshPanel: vi.fn(),
+      restoreHighlights: vi.fn().mockResolvedValue(undefined),
+    };
+  });
+
+  async function renderWithStore(store: ReviewStore) {
+    vi.mocked(api.getStore).mockResolvedValue(store);
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+  }
+
+  it('renders delete button on text annotation item', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]');
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn!.tagName.toLowerCase()).toBe('button');
+    expect(deleteBtn!.textContent).toBe('Delete');
+  });
+
+  it('renders delete button on element annotation item', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeElementAnnotation()],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]');
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn!.textContent).toBe('Delete');
+  });
+
+  it('calls onAnnotationDelete with annotation ID when clicked', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'delete-me' })],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]') as HTMLButtonElement;
+    deleteBtn.click();
+
+    expect(callbacks.onAnnotationDelete).toHaveBeenCalledWith('delete-me');
+  });
+
+  it('does not trigger onAnnotationClick when delete is clicked', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]') as HTMLButtonElement;
+    deleteBtn.click();
+
+    expect(callbacks.onAnnotationClick).not.toHaveBeenCalled();
+  });
+});
+
+describe('annotation item — orphan indicator', () => {
+  let shadowRoot: ShadowRoot;
+  let callbacks: PanelCallbacks;
+  let mediator: ReviewMediator;
+
+  function makeTextAnnotation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ann-1', type: 'text' as const, pageUrl: '/', pageTitle: 'Home',
+      selectedText: 'hello world', note: 'fix this',
+      range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello world', contextBefore: '', contextAfter: '' },
+      createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      ...overrides,
+    };
+  }
+
+  function makeElementAnnotation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ann-2', type: 'element' as const, pageUrl: '/', pageTitle: 'Home',
+      note: 'fix element',
+      elementSelector: { cssSelector: 'div.hero', xpath: '', description: 'Hero section', tagName: 'div', attributes: {}, outerHtmlPreview: '<div class="hero">' },
+      createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+
+    callbacks = {
+      onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      onRefreshBadge: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mediator = {
+      refreshPanel: vi.fn(),
+      restoreHighlights: vi.fn().mockResolvedValue(undefined),
+    };
+  });
+
+  async function renderWithStore(store: ReviewStore) {
+    vi.mocked(api.getStore).mockResolvedValue(store);
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+  }
+
+  it('shows orphan indicator when isAnnotationOrphaned returns true', async () => {
+    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(true);
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const orphanIndicator = shadowRoot.querySelector('.air-annotation-item__orphan');
+    expect(orphanIndicator).not.toBeNull();
+    expect(orphanIndicator!.textContent).toBe('Could not locate on page');
+  });
+
+  it('does not show orphan indicator when isAnnotationOrphaned returns false', async () => {
+    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(false);
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const orphanIndicator = shadowRoot.querySelector('.air-annotation-item__orphan');
+    expect(orphanIndicator).toBeNull();
+  });
+
+  it('adds orphan modifier class when annotation is orphaned', async () => {
+    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(true);
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
+    expect(item!.classList.contains('air-annotation-item--orphan')).toBe(true);
+  });
+
+  it('does not add orphan modifier class when annotation is not orphaned', async () => {
+    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(false);
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
+    expect(item!.classList.contains('air-annotation-item--orphan')).toBe(false);
+  });
+
+  it('shows orphan indicator on element annotation when orphaned', async () => {
+    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(true);
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeElementAnnotation()],
+      pageNotes: [],
+    });
+
+    const orphanIndicator = shadowRoot.querySelector('.air-annotation-item__orphan');
+    expect(orphanIndicator).not.toBeNull();
+
+    const item = shadowRoot.querySelector('[data-air-el="element-annotation-item"]');
+    expect(item!.classList.contains('air-annotation-item--orphan')).toBe(true);
+  });
+
+  it('calls isAnnotationOrphaned with annotation id and pageUrl', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'check-me' })],
+      pageNotes: [],
+    });
+
+    expect(callbacks.isAnnotationOrphaned).toHaveBeenCalledWith('check-me', '/');
   });
 });
