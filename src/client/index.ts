@@ -136,12 +136,16 @@ function init(): void {
       const success = await exportToClipboard(store);
       showToast(shadowRoot, success ? 'Copied to clipboard!' : 'Export failed — try again');
     },
-    addPageNote: () => {
-      // Open panel and trigger the add note form
+    addPageNote: async () => {
+      // Open panel and ensure content is loaded before adding the form.
+      // togglePanel fires mediator.refreshPanel() without awaiting it,
+      // so the async refresh would wipe the form via innerHTML = ''.
+      // Instead, open the panel manually and await the refresh.
       if (!isPanelOpen(panel)) {
-        togglePanel(panel);
+        panel.container.classList.add('air-panel--open');
+        panel.container.setAttribute('data-air-state', 'open');
+        await panel.mediator.refreshPanel();
       }
-      // Click the add note button
       panel.addNoteBtn.click();
     },
   });

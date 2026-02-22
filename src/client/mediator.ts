@@ -5,6 +5,6 @@
  * with a discoverable, compile-time-safe contract.
  */
 export interface ReviewMediator {
-  refreshPanel: () => void;
+  refreshPanel: () => Promise<void>;
   restoreHighlights: () => Promise<void>;
 }
