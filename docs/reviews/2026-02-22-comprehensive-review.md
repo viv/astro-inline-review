@@ -424,7 +424,7 @@ Add two-click confirmation to individual annotation delete buttons (matching "Cl
 
 Below are ready-to-use prompts for independent AI agents to implement each recommendation.
 
-### Prompt 1: Fix Read-Modify-Write Race Condition
+### Prompt 1: Fix Read-Modify-Write Race Condition — ✅ Implemented
 
 ```
 Read src/server/storage.ts in the astro-inline-review repository.
@@ -452,6 +452,10 @@ Files to modify:
 
 Add a unit test for the new mutate method in tests/server/storage.test.ts
 that verifies concurrent mutate calls are serialised correctly.
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, docs/spec/specification.md, engineering
+plans in docs/). Commit all changes and push.
 ```
 
 ### Prompt 2: Replace innerHTML with DOM API
@@ -473,6 +477,10 @@ Replace with a stable icon container that swaps just the SVG content.
 
 Run `npm test` to verify all tests pass. Pay special attention to
 tests/client/ui/panel.test.ts and tests/client/ui/fab.test.ts.
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, docs/spec/specification.md, engineering
+plans in docs/). Commit all changes and push.
 ```
 
 ### Prompt 3: Add REST API Input Validation
@@ -502,6 +510,10 @@ Add corresponding tests in tests/server/middleware.test.ts:
 - Test that valid payloads still work
 
 Run `npm test` to verify.
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, docs/spec/specification.md, engineering
+plans in docs/). Commit all changes and push.
 ```
 
 ### Prompt 4: Add ARIA Semantics and Focus Management
@@ -544,6 +556,10 @@ Add ARIA accessibility attributes:
    - Add prefers-reduced-motion media query
 
 Run `npm test` to verify existing tests pass.
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, docs/spec/specification.md, engineering
+plans in docs/). Commit all changes and push.
 ```
 
 ### Prompt 5: Add annotator.ts Unit Tests
@@ -588,6 +604,10 @@ Mock the following:
 Use the happy-dom environment (vitest project 'client').
 
 Run `npm test` to verify.
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, docs/spec/specification.md, engineering
+plans in docs/). Commit all changes and push.
 ```
 
 ### Prompt 6: Add element-selector.ts Unit Tests
@@ -617,6 +637,10 @@ Create tests/client/element-selector.test.ts with tests covering:
 
 Use the happy-dom environment.
 Run `npm test` to verify.
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, docs/spec/specification.md, engineering
+plans in docs/). Commit all changes and push.
 ```
 
 ### Prompt 7: Update Specification
@@ -656,6 +680,10 @@ Make the following corrections:
    client generates markdown locally
 
 10. Section 17.1 (colour palette): Add resolved highlight colours
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, engineering plans in docs/). Commit all
+changes and push.
 ```
 
 ### Prompt 8: Configure CI/CD Improvements
@@ -693,6 +721,10 @@ Make the following changes:
 
 6. Add to package.json:
    "engines": { "node": ">=20" }
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, engineering plans in docs/). Commit all
+changes and push.
 ```
 
 ### Prompt 9: Update CLAUDE.md and Documentation
@@ -722,6 +754,8 @@ Read CLAUDE.md in the astro-inline-review repository root.
 
 6. Read docs/reviews/2026-02-22-mcp-design-review.md
    Update frontmatter status from draft to resolved
+
+Commit all changes and push.
 ```
 
 ### Prompt 10: Add Delete Confirmation and Scroll Threshold
@@ -746,6 +780,26 @@ Focus on the annotation delete button and the "Clear All" confirmation pattern.
 Run `npm test` to verify all tests pass.
 Update tests/client/ui/panel.test.ts to add tests for the new
 delete confirmation behaviour.
+
+After implementation, check that any relevant documentation and plan
+files are updated (CLAUDE.md, docs/spec/specification.md, engineering
+plans in docs/). Commit all changes and push.
+```
+
+---
+
+## Starting the Next Session
+
+Use the following prompt to begin the next implementation session. Replace `N` with the prompt number you want to work on.
+
+```
+Read docs/reviews/2026-02-22-comprehensive-review.md in the astro-inline-review
+repo. This is a consolidated review with prioritised findings.
+
+Prompt 1 (race condition fix) is already implemented. Continue with
+Prompt N from the Implementation Prompts section.
+
+Current state: main branch, all 166 tests passing, build clean.
 ```
 
 ---
