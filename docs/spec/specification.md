@@ -264,9 +264,9 @@ interface SerializedRange {
 
 ### 3.6 ID Generation
 
-IDs are generated server-side using: `Date.now().toString(36) + Math.random().toString(36).slice(2, 8)`
+IDs are generated server-side using `crypto.randomUUID()` from `node:crypto`, producing standard v4 UUIDs (e.g. `550e8400-e29b-41d4-a716-446655440000`).
 
-**Collision resistance**: The combination of millisecond timestamp (base-36) and 6 random characters (base-36, ~2.18 billion combinations) makes collisions negligible for single-user use. No server-side deduplication guard is implemented. If two annotations are created in the same millisecond, the random suffix provides sufficient differentiation.
+**Collision resistance**: UUID v4 provides 122 bits of randomness from a cryptographically secure source, making collisions effectively impossible for any practical use case. No server-side deduplication guard is implemented.
 
 
 ## 4. Server Architecture
