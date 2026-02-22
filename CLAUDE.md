@@ -112,6 +112,19 @@ The `--storage` flag is optional and defaults to `./inline-review.json` relative
 - Runtime dependencies: `@modelcontextprotocol/sdk`, `zod` (for MCP server only); `astro ^5.0.0` peer dependency
 - ESM-only package (`"type": "module"`)
 
+## Releasing
+
+Releases are tag-triggered. Pushing a `v*` tag to GitHub runs the release workflow which publishes to npm with provenance and creates a GitHub Release. See `docs/guides/release.md` for the full process.
+
+```bash
+npm version <major|minor|patch|1.0.0> -m "chore: release v%s"
+git push origin main --tags
+```
+
+- The `NPM_TOKEN` secret (granular access token, 90-day expiry) must be configured in GitHub repository settings
+- The `prepublishOnly` script guards against accidental local publishes
+- Version in `package.json` must match the tag or the workflow fails
+
 ## Key File Paths
 
 - `src/shared/types.ts` — canonical type definitions

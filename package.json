@@ -42,6 +42,7 @@
     "url": "https://github.com/viv/astro-inline-review/issues"
   },
   "scripts": {
+    "prepublishOnly": "npm run build && npm test",
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
