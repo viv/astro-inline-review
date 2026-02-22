@@ -562,7 +562,7 @@ files are updated (CLAUDE.md, docs/spec/specification.md, engineering
 plans in docs/). Commit all changes and push.
 ```
 
-### Prompt 5: Add annotator.ts Unit Tests
+### Prompt 5: Add annotator.ts Unit Tests — ✅ Implemented
 
 ```
 Read src/client/annotator.ts in the astro-inline-review repository.
@@ -610,7 +610,7 @@ files are updated (CLAUDE.md, docs/spec/specification.md, engineering
 plans in docs/). Commit all changes and push.
 ```
 
-### Prompt 6: Add element-selector.ts Unit Tests
+### Prompt 6: Add element-selector.ts Unit Tests — ✅ Implemented
 
 ```
 Read src/client/element-selector.ts in the astro-inline-review repository.
@@ -686,7 +686,7 @@ files are updated (CLAUDE.md, engineering plans in docs/). Commit all
 changes and push.
 ```
 
-### Prompt 8: Configure CI/CD Improvements
+### Prompt 8: Configure CI/CD Improvements — ✅ Implemented
 
 ```
 Read .github/workflows/ci.yml, .github/workflows/acceptance.yml,
@@ -725,6 +725,8 @@ Make the following changes:
 After implementation, check that any relevant documentation and plan
 files are updated (CLAUDE.md, engineering plans in docs/). Commit all
 changes and push.
+
+Print the next prompt (Prompt 9) from this file.
 ```
 
 ### Prompt 9: Update CLAUDE.md and Documentation
@@ -756,6 +758,8 @@ Read CLAUDE.md in the astro-inline-review repository root.
    Update frontmatter status from draft to resolved
 
 Commit all changes and push.
+
+Print the next prompt (Prompt 10) from this file.
 ```
 
 ### Prompt 10: Add Delete Confirmation and Scroll Threshold
@@ -784,6 +788,8 @@ delete confirmation behaviour.
 After implementation, check that any relevant documentation and plan
 files are updated (CLAUDE.md, docs/spec/specification.md, engineering
 plans in docs/). Commit all changes and push.
+
+This is the final prompt. All review recommendations have been implemented.
 ```
 
 ---

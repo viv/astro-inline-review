@@ -3,12 +3,21 @@ name: Acceptance Tests
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: acceptance-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   acceptance-tests:
     name: Playwright E2E
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
 
     steps:
       - name: Checkout main repo
@@ -25,6 +34,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: astro-inline-review/package-lock.json
 
       - name: Build main package
         working-directory: astro-inline-review

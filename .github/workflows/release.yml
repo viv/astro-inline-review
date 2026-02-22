@@ -15,8 +15,13 @@ on:
 
 jobs:
   validate-release:
-    name: Validate release v${{ inputs.version }}
+    name: Validate release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    env:
+      EXPECTED_VERSION: ${{ inputs.version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +42,9 @@ jobs:
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
           echo "package.json version: $PKG_VERSION"
-          echo "Expected version: ${{ inputs.version }}"
-          if [ "$PKG_VERSION" != "${{ inputs.version }}" ]; then
-            echo "::error::Version mismatch — package.json has $PKG_VERSION but expected ${{ inputs.version }}"
+          echo "Expected version: $EXPECTED_VERSION"
+          if [ "$PKG_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::Version mismatch — package.json has $PKG_VERSION but expected $EXPECTED_VERSION"
             exit 1
           fi
 
@@ -48,14 +53,14 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: release-tarball-v${{ inputs.version }}
+          name: release-tarball-v${{ env.EXPECTED_VERSION }}
           path: "*.tgz"
 
       - name: Publish instructions
         run: |
           echo "## Ready to publish" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All checks passed for v${{ inputs.version }}." >> $GITHUB_STEP_SUMMARY
+          echo "All checks passed for v${EXPECTED_VERSION}." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "npm publish --otp <code>" >> $GITHUB_STEP_SUMMARY
