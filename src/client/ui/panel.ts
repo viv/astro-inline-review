@@ -8,6 +8,7 @@
 
 import { api } from '../api.js';
 import { writeCache, readCache } from '../cache.js';
+import { showToast } from './toast.js';
 import type { Annotation, TextAnnotation, PageNote, ReviewStore, AgentReply } from '../types.js';
 import { isTextAnnotation } from '../types.js';
 import type { ReviewMediator } from '../mediator.js';
@@ -114,6 +115,7 @@ export function createPanel(
   content.setAttribute('data-air-el', 'panel-content');
   content.setAttribute('role', 'tabpanel');
   content.setAttribute('aria-labelledby', 'air-tab-this-page');
+  content.setAttribute('aria-live', 'polite');
   container.appendChild(content);
 
   shadowRoot.appendChild(container);
@@ -217,8 +219,10 @@ async function refreshPanel(
   } catch {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'air-panel__empty';
-    errorDiv.textContent = 'Failed to load annotations';
+    errorDiv.textContent = 'Failed to load annotations. Is the dev server running?';
     content.appendChild(errorDiv);
+    const root = content.getRootNode() as ShadowRoot;
+    showToast(root, 'Failed to load annotations');
   }
 }
 
@@ -490,6 +494,8 @@ function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks, mediator:
       mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to delete page note:', err);
+      const root = item.getRootNode() as ShadowRoot;
+      showToast(root, 'Failed to delete page note');
     }
   });
   actions.appendChild(deleteBtn);
@@ -524,6 +530,8 @@ function showAddNoteForm(content: HTMLDivElement, callbacks: PanelCallbacks, med
       mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to create page note:', err);
+      const root = content.getRootNode() as ShadowRoot;
+      showToast(root, 'Failed to save page note');
     }
   }, () => {
     form.remove();
@@ -548,6 +556,8 @@ function showEditNoteForm(
       mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to update page note:', err);
+      const root = item.getRootNode() as ShadowRoot;
+      showToast(root, 'Failed to update page note');
     }
   }, () => {
     // Cancel — just restore the item
@@ -682,6 +692,8 @@ function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks, m
       mediator.refreshPanel();
     } catch (err) {
       console.error('[astro-inline-review] Failed to clear all:', err);
+      const root = clearBtn.getRootNode() as ShadowRoot;
+      showToast(root, 'Failed to clear annotations');
     }
   });
 }

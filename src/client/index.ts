@@ -78,6 +78,7 @@ function init(): void {
         mediator.refreshPanel();
       } catch (err) {
         console.error('[astro-inline-review] Failed to delete annotation:', err);
+        showToast(shadowRoot, 'Failed to delete annotation');
       }
     },
     isAnnotationOrphaned: (id, pageUrl) => {
@@ -155,6 +156,8 @@ function init(): void {
     closeActive: () => {
       // Popup takes precedence over panel
       if (isPopupVisible(annotator.popup)) {
+        // Don't dismiss if textarea has unsaved content
+        if (annotator.popup.textarea.value.trim()) return true;
         hidePopup(annotator.popup);
         return true;
       }

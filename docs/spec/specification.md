@@ -566,6 +566,8 @@ The integration guards against creating duplicate hosts:
 
 The client communicates with the server via fetch requests to `/__inline-review/api/*`. All requests set `Content-Type: application/json` via a shared `request()` helper. Error responses throw exceptions with the error message from the server. Markdown export is generated locally by the client (see Section 9), not fetched from the server.
 
+**Error feedback**: All API errors are surfaced to the user via toast notifications (e.g. "Failed to save annotation", "Failed to delete annotation", "Failed to load annotations") in addition to `console.error` logging for debugging. The panel's "Failed to load annotations" message includes guidance: "Is the dev server running?".
+
 **Endpoints used by the client**:
 - `GET /annotations` (with optional `?page=` filter) — primary store fetch
 - `POST /annotations` — create annotation
@@ -867,7 +869,7 @@ Tests should use `data-air-state` (the automation contract) rather than CSS disp
 **Visual feedback while Alt is held**:
 - As the user moves the mouse over elements, an **inspector overlay** highlights the element under the cursor
 - The overlay is a semi-transparent blue box (`rgba(66, 133, 244, 0.15)`) with a 2px solid border (`rgba(66, 133, 244, 0.6)`) placed over the hovered element using its `getBoundingClientRect()`
-- A **tag label** appears at the top-left corner of the overlay showing the element's tag name and key identifier (e.g. `img.hero-image`, `section#expertise`, `div`)
+- A **tag label** appears at the top-left corner of the overlay showing the element's tag name and key identifier (e.g. `img.hero-image`, `section#expertise`, `div`). The label is clamped to `max-width: 400px` with `overflow: hidden` and `text-overflow: ellipsis` to prevent overflow on long selectors
 - The overlay and label are injected into the **light DOM** (not shadow DOM) so they can position over any element
 - The overlay updates on `mousemove` events while Alt is held
 - `data-air-el="inspector-overlay"` on the overlay element
@@ -943,6 +945,8 @@ Note: `Element.contains()` does not pierce shadow boundaries, so both checks are
 ### 7.4 Scroll Dismissal
 
 When the page scrolls more than 50 pixels from the popup's original position, the popup is hidden and the current range is discarded. This prevents the popup from floating away from its associated text whilst tolerating minor scroll adjustments. The initial `scrollY` is captured when the popup is shown and compared against the current `scrollY` on each scroll event.
+
+**Unsaved changes protection**: If the popup textarea contains non-empty content (after trimming whitespace), scroll dismissal is skipped. This prevents accidental loss of in-progress notes. The popup is only dismissed on scroll when the textarea is empty. Users can always dismiss via the Cancel button regardless of textarea content.
 
 
 ### 7.5 Creating an Element Annotation
@@ -1236,11 +1240,11 @@ The "Copy All" button is styled with an orange accent (`border-color: #D97706`, 
 
 When Escape is pressed, `closeActive()` is called. The handler checks state in priority order:
 
-1. If the popup is visible (via `isPopupVisible()`): dismiss the popup using `hidePopup()`, which removes the visibility class, sets `data-air-state` to `"hidden"`, and clears the textarea value.
+1. If the popup is visible (via `isPopupVisible()`): check for unsaved changes — if the textarea has non-empty content (after trimming), the Escape is consumed but the popup stays open. Otherwise, dismiss the popup using `hidePopup()`, which removes the visibility class, sets `data-air-state` to `"hidden"`, and clears the textarea value.
 2. If the panel is open (and popup is not visible): close the panel via `closePanel()` and reset the FAB to closed state via `resetFab()`.
 3. If neither is open: no action taken, the event propagates normally to site handlers.
 
-**Known Technical Debt**: The handler never calls `stopPropagation()`. This means the Escape event also propagates to site handlers in cases 1 and 2, which is technically incorrect but has no user-visible impact since the popup/panel dismissal happens first. A future improvement would be to return a boolean from `closeActive()` indicating whether it consumed the event, and call `e.stopPropagation()` only when true.
+When `closeActive()` returns `true` (cases 1 and 2), the handler calls `e.stopPropagation()` and `e.preventDefault()` to prevent the event from reaching site handlers.
 
 
 ## 11. Page Notes
@@ -1482,8 +1486,9 @@ The integration provides accessibility support following WAI-ARIA patterns:
 
 - **Panel**: `role="complementary"`, `aria-label="Inline Review Panel"`
 - **Tabs**: WAI-ARIA tabs pattern — `role="tablist"` on container, `role="tab"` on buttons with `aria-selected`, `role="tabpanel"` on content with `aria-labelledby`
+- **Panel content**: `aria-live="polite"` on the content container so screen readers announce when the content refreshes (tab switches, annotation changes)
 - **Popup**: `role="dialog"`, `aria-modal="true"`, `aria-label="Add annotation"`
-- **Toast**: `role="status"`, `aria-live="polite"`
+- **Toast**: `role="status"`, `aria-live="polite"` — used for success messages (e.g. "Copied to clipboard!") and error feedback (e.g. "Failed to save annotation")
 - **FAB**: `aria-label` dynamically updated to include count (e.g. "Toggle inline review (3 annotations)"), `title="Inline Review"`
 
 ### 18.2 Focus Management
@@ -1507,7 +1512,6 @@ The integration provides accessibility support following WAI-ARIA patterns:
 
 The following accessibility features are not yet implemented:
 - High contrast mode support
-- Screen reader announcements for dynamic content changes beyond `aria-live` on toast
 
 
 ## 19. UX Improvements

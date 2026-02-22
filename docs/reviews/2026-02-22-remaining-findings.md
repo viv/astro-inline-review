@@ -32,7 +32,7 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 | Documentation Review (2026-02-22) | 16 | 6 (H1, M1, L3-4, L6) | — | 10 |
 | Test Coverage Review (2026-02-22) | 17 | 8 (annotator, element-selector, + Session 5: deserializeRange, popup, export, api, coverage, MCP helpers) | — | 9 |
 | CI/CD Review (2026-02-22) | 17 | 9 (H1, M1, M3-4, L10, L12, L15, L17) | — | 8 |
-| Design & Accessibility Review (2026-02-22) | 27 | 13 (C1-2, H1-7, scroll, badge, toast) | — | 14 |
+| Design & Accessibility Review (2026-02-22) | 27 | 18 (C1-2, H1-7, scroll, badge, toast, + Session 6: error toasts, unsaved changes, inspector overflow, aria-live, load guidance) | — | 9 |
 | Architecture Review (2026-02-22) | 16 | 2 (M1, M4) | — | 14 (mostly Info/Low) |
 | Comprehensive Review Priority 7 | 4 | 2 (7.3 atomic writes, 7.4 delete confirm) | — | 2 (7.1-7.2) |
 | Comprehensive Review Priority 3 | 4 | 4 (3.1-3.4) | — | 0 |
@@ -128,21 +128,21 @@ Remaining from the comprehensive review's Priority 3 (items 3.3 and 3.4) plus th
 
 Remaining from the design review that weren't addressed by Prompts 4 and 10.
 
-| ID | Source | Severity | Finding |
-|----|--------|----------|---------|
-| REM-53 | UX | High | Panel overlaps content on small viewports (380px wide, full-width < 480px, no tablet breakpoint) |
-| REM-54 | UX | Medium | API errors are console-only — no user-visible feedback via toast |
-| REM-55 | UX | Medium | No unsaved changes warning when popup dismissed with text in textarea |
-| REM-56 | UX | Medium | Inspector label can overflow (no max-width on long selectors) |
-| REM-57 | UX | Medium | Dynamic content updates not announced (no aria-live on panel content refresh) |
-| REM-58 | UX | Medium | FAB and panel share z-index 10000 — FAB occluded on narrow full-width panel |
-| REM-59 | UX | Medium | Potential keyboard shortcut conflicts with host apps (Cmd+Shift+E = VS Code Explorer) |
-| REM-60 | UX | Medium | Popup positioning can be obscured by open panel |
-| REM-61 | UX | Medium | Panel "Failed to load annotations" gives no guidance (e.g. "Is dev server running?") |
-| REM-62 | UX | Medium | Inspector mode (Alt+hover) is mouse-only — no keyboard equivalent |
-| REM-63 | UX | Low | Keyboard shortcuts not discoverable in UI (no help dialog or tooltips) |
-| REM-64 | UX | Low | Tooltip lacks `role="tooltip"` and FAB lacks `aria-describedby` linkage |
-| REM-65 | UX | Low | Z-index values scattered — no centralised constants |
+| ID | Source | Severity | Finding | Status |
+|----|--------|----------|---------|--------|
+| REM-53 | UX | High | Panel overlaps content on small viewports (380px wide, full-width < 480px, no tablet breakpoint) | Still present |
+| REM-54 | UX | Medium | API errors are console-only — no user-visible feedback via toast | **Resolved** (Session 6) |
+| REM-55 | UX | Medium | No unsaved changes warning when popup dismissed with text in textarea | **Resolved** (Session 6) |
+| REM-56 | UX | Medium | Inspector label can overflow (no max-width on long selectors) | **Resolved** (Session 6) |
+| REM-57 | UX | Medium | Dynamic content updates not announced (no aria-live on panel content refresh) | **Resolved** (Session 6) |
+| REM-58 | UX | Medium | FAB and panel share z-index 10000 — FAB occluded on narrow full-width panel | Still present |
+| REM-59 | UX | Medium | Potential keyboard shortcut conflicts with host apps (Cmd+Shift+E = VS Code Explorer) | Still present |
+| REM-60 | UX | Medium | Popup positioning can be obscured by open panel | Still present |
+| REM-61 | UX | Medium | Panel "Failed to load annotations" gives no guidance (e.g. "Is dev server running?") | **Resolved** (Session 6) |
+| REM-62 | UX | Medium | Inspector mode (Alt+hover) is mouse-only — no keyboard equivalent | Still present |
+| REM-63 | UX | Low | Keyboard shortcuts not discoverable in UI (no help dialog or tooltips) | Still present |
+| REM-64 | UX | Low | Tooltip lacks `role="tooltip"` and FAB lacks `aria-describedby` linkage | Still present |
+| REM-65 | UX | Low | Z-index values scattered — no centralised constants | Still present |
 
 ### Priority 5: CI/CD (Low)
 

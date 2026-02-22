@@ -35,6 +35,7 @@ import { buildElementSelector, resolveElement } from './element-selector.js';
 import { api } from './api.js';
 import { writeCache, readCache } from './cache.js';
 import { updateBadge } from './ui/fab.js';
+import { showToast } from './ui/toast.js';
 import type { Annotation } from './types.js';
 import { isTextAnnotation, isElementAnnotation } from './types.js';
 import type { ReviewMediator } from './mediator.js';
@@ -133,6 +134,8 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
   function onScroll(): void {
     if (isPopupVisible(popup) && popupScrollY !== null) {
       if (Math.abs(window.scrollY - popupScrollY) > 50) {
+        // Don't dismiss if textarea has unsaved content
+        if (popup.textarea.value.trim()) return;
         hidePopup(popup);
         currentRange = null;
         currentElementTarget = null;
@@ -216,6 +219,9 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       'border-radius: 2px 2px 0 0',
       'white-space: nowrap',
       'pointer-events: none',
+      'max-width: 400px',
+      'overflow: hidden',
+      'text-overflow: ellipsis',
     ].join('; ');
 
     inspectorOverlay.appendChild(inspectorLabel);
@@ -333,6 +339,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       await refreshCacheAndBadge();
     } catch (err) {
       console.error('[astro-inline-review] Failed to save annotation:', err);
+      showToast(shadowRoot, 'Failed to save annotation');
     }
 
     window.getSelection()?.removeAllRanges();
@@ -363,6 +370,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       await refreshCacheAndBadge();
     } catch (err) {
       console.error('[astro-inline-review] Failed to save element annotation:', err);
+      showToast(shadowRoot, 'Failed to save annotation');
     }
   }
 
@@ -387,6 +395,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           await refreshCacheAndBadge();
         } catch (err) {
           console.error('[astro-inline-review] Failed to update annotation:', err);
+          showToast(shadowRoot, 'Failed to update annotation');
         }
       },
       onCancel: () => hidePopup(popup),
@@ -398,6 +407,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           await refreshCacheAndBadge();
         } catch (err) {
           console.error('[astro-inline-review] Failed to delete annotation:', err);
+          showToast(shadowRoot, 'Failed to delete annotation');
         }
       },
     });
@@ -423,6 +433,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           await refreshCacheAndBadge();
         } catch (err) {
           console.error('[astro-inline-review] Failed to update element annotation:', err);
+          showToast(shadowRoot, 'Failed to update annotation');
         }
       },
       onCancel: () => hidePopup(popup),
@@ -434,6 +445,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           await refreshCacheAndBadge();
         } catch (err) {
           console.error('[astro-inline-review] Failed to delete element annotation:', err);
+          showToast(shadowRoot, 'Failed to delete annotation');
         }
       },
     });
@@ -511,6 +523,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       updateBadge(badge, pageAnnotations.length);
     } catch (err) {
       console.error('[astro-inline-review] Failed to restore highlights:', err);
+      showToast(shadowRoot, 'Failed to load annotations');
       // Try cache fallback
       const cached = readCache();
       if (cached) {
