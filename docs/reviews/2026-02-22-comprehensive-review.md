@@ -643,7 +643,7 @@ files are updated (CLAUDE.md, docs/spec/specification.md, engineering
 plans in docs/). Commit all changes and push.
 ```
 
-### Prompt 7: Update Specification
+### Prompt 7: Update Specification — ✅ Implemented
 
 ```
 Read docs/spec/specification.md in the astro-inline-review repository.

@@ -97,6 +97,7 @@ Annotations use a discriminated union with a `type` field to support both text s
 ```typescript
 interface BaseAnnotation {
   id: string;           // Server-generated unique ID
+  type: 'text' | 'element';  // Discriminant field (see 3.2.4)
   pageUrl: string;      // window.location.pathname at creation time
   pageTitle: string;    // document.title at creation time
   note: string;         // User's annotation note (may be empty)
@@ -563,7 +564,7 @@ The integration guards against creating duplicate hosts:
 
 ### 5.5 API Client
 
-The client communicates with the server via fetch requests to `/__inline-review/api/*`. All requests except `GET /export` set `Content-Type: application/json` via a shared `request()` helper. The `GET /export` call uses a direct `fetch()` since the response is `text/markdown`, not JSON. Error responses throw exceptions with the error message from the server.
+The client communicates with the server via fetch requests to `/__inline-review/api/*`. All requests set `Content-Type: application/json` via a shared `request()` helper. Error responses throw exceptions with the error message from the server. Markdown export is generated locally by the client (see Section 9), not fetched from the server.
 
 **Endpoints used by the client**:
 - `GET /annotations` (with optional `?page=` filter) — primary store fetch
@@ -573,9 +574,8 @@ The client communicates with the server via fetch requests to `/__inline-review/
 - `POST /page-notes` — create page note
 - `PATCH /page-notes/:id` — update page note
 - `DELETE /page-notes/:id` — delete page note
-- `GET /export` — Markdown export
 
-**Endpoints NOT used by the client**: `GET /page-notes` (page notes are included in the `GET /annotations` response).
+**Endpoints NOT used by the client**: `GET /page-notes` (page notes are included in the `GET /annotations` response), `GET /export` (client generates Markdown locally via `shared/export.ts`).
 
 
 ### 5.6 Inter-Component Communication
@@ -589,7 +589,10 @@ Components accept callback interfaces during construction:
 | Component | Callback | Provider | Purpose |
 |-----------|----------|----------|---------|
 | Panel | `onAnnotationClick(id)` | Client bootstrap | Scroll to highlight and pulse |
+| Panel | `onAnnotationDelete(id)` | Client bootstrap | Delete annotation, remove highlight, refresh badge and panel |
+| Panel | `isAnnotationOrphaned(id, pageUrl)` | Client bootstrap | Check if annotation's target cannot be found on page |
 | Panel | `onRefreshBadge()` | Client bootstrap | Update FAB badge count |
+| Panel | `onExport()` | Client bootstrap | Export annotations to clipboard as Markdown |
 | Panel | `mediator` | Client bootstrap | Typed mediator for cross-module refresh/restore |
 | Annotator | `mediator` | Client bootstrap | Typed mediator — annotator wires up `restoreHighlights` |
 | FAB | `onToggle()` | Client bootstrap | Toggle panel open/closed |
@@ -604,7 +607,7 @@ Cross-module communication uses a typed `ReviewMediator` interface, avoiding cir
 
 ```typescript
 interface ReviewMediator {
-  refreshPanel: () => void;
+  refreshPanel: () => Promise<void>;
   restoreHighlights: () => Promise<void>;
 }
 ```
@@ -723,7 +726,7 @@ Shows annotations and page notes for the **current page only** (`window.location
 
 **Empty state**: "No annotations on this page yet. Select text or Alt+click elements to get started."
 
-**Tab label**: Includes count in parentheses, e.g. "This Page (3)". The count includes both text annotations AND page notes for the current page. This differs from the FAB badge, which counts only text annotations.
+**Tab label**: Includes count in parentheses, e.g. "This Page (3)". The count includes both annotations (text + element) AND page notes for the current page. This differs from the FAB badge, which counts all annotations (text + element, not page notes).
 
 #### 6.2.2 All Pages Tab
 
@@ -755,8 +758,7 @@ Each text annotation item in the panel shows:
 #### 6.2.3a Element Annotation Items
 
 Each element annotation item in the panel shows:
-- **Element description** in yellow (`#FCD34D`), showing the CSS selector in monospace (e.g. `section.hero > img.hero-image`)
-- **Element tag label** in grey, showing the human-readable description (e.g. `<img src="hero.jpg" alt="Hero banner">`)
+- **Element description** in yellow (`#FCD34D`), showing `elementSelector.description` (e.g. `img.hero-image (src=hero.jpg, alt=Hero banner)`)
 - **Note** (if non-empty) in light grey
 
 **Data attributes**: `data-air-el="element-annotation-item"` on each element annotation item (distinct from `annotation-item` used for text annotations).
@@ -988,6 +990,14 @@ Highlights are `<mark>` elements injected into the **light DOM** (the page's own
 - `data-air-id="<annotation-id>"` — links the mark to its annotation
 - `style="background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;"`
 
+**Resolved text highlights**: When a text annotation has `resolvedAt` set, its highlight uses a green background instead of amber:
+
+```css
+background-color: rgba(34,197,94,0.2);
+```
+
+This visually distinguishes resolved annotations from active ones.
+
 **Single-node selections**: Use `Range.surroundContents()` for simplicity.
 
 **Cross-element selections**: The selection is split into multiple `<mark>` elements, one per text node segment. All marks share the same `data-air-id`. Text nodes are split at the selection boundaries to isolate the highlighted portion.
@@ -1051,6 +1061,13 @@ outline-offset: 2px;
 - Dashed amber outline distinguishes element annotations from text highlights (solid amber background)
 - `outline-offset: 2px` adds visual breathing room
 - `outline` does not affect element dimensions or layout (unlike `border`)
+
+**Resolved element highlights**: When an element annotation has `resolvedAt` set, its outline uses a green dashed style instead of amber:
+
+```css
+outline: 2px dashed rgba(34,197,94,0.5);
+outline-offset: 2px;
+```
 - The `data-air-element-id="<annotation-id>"` attribute is added to the element to link it to its annotation
 - `cursor: pointer` is added to indicate the element is clickable for editing
 
@@ -1327,6 +1344,11 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `toast` | Toast notification | Shadow DOM | Created on first toast, then reused |
 | `annotation-delete` | Annotation delete button | Shadow DOM | Present on each annotation item when panel shows annotations |
 | `element-annotation-item` | Element annotation list item in panel | Shadow DOM | Present when panel is open and element annotations exist |
+| `panel-content` | Panel content area (scrollable) | Shadow DOM | Always present (child of panel) |
+| `resolved-badge` | Resolved status badge on annotation | Shadow DOM | Present on resolved annotations |
+| `agent-reply` | Agent reply block on annotation | Shadow DOM | Present when annotation has agent replies |
+| `first-use-tooltip` | First-use tooltip near FAB | Shadow DOM | Shown once on first visit, then dismissed |
+| `empty-arrow` | Directional arrow in empty state | Shadow DOM | Present when "This Page" tab has no annotations |
 | `inspector-overlay` | Inspector overlay during Alt+hover | Light DOM | Present only while Alt is held and mouse is over an element |
 | `inspector-label` | Tag label on inspector overlay | Light DOM | Child of inspector overlay |
 
@@ -1429,6 +1451,8 @@ Errors are logged with the prefix `[astro-inline-review]` for easy filtering. No
 | Inspector label text | `white` | White text on tag label |
 | Element highlight outline | `rgba(217,119,6,0.8)` | Dashed amber outline on annotated elements |
 | Element highlight pulse | `rgba(217,119,6,1)` | Fully opaque amber outline during pulse |
+| Resolved text highlight | `rgba(34,197,94,0.2)` | Green background on resolved text annotations |
+| Resolved element highlight | `rgba(34,197,94,0.5)` | Green dashed outline on resolved element annotations |
 
 ### 17.2 Z-Index Stack
 
