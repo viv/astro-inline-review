@@ -155,7 +155,7 @@ Steps:
    - `fish -c "npm test"` — all 92 existing tests still pass
    - `fish -c "echo '{}' | node dist/mcp/server.js"` — server starts (it will hang waiting for MCP protocol messages; that's correct)
 
-7. Commit. Then print a suitable commit message.
+7. Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
 **Status**: `not_started`
@@ -212,7 +212,7 @@ Step 3 — Verify everything:
 - `fish -c "npm test"` — all tests pass
 - Type-check passes
 
-Commit. Then print a suitable commit message.
+Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
 **Status**: `not_started`
@@ -282,7 +282,7 @@ Produce `docs/reviews/2026-02-22-mcp-design-review.md` reviewing the MCP impleme
 
 Use the same frontmatter format as `docs/reviews/2026-02-21-security-review.md`. Address any Critical/High findings. Commit.
 
-Print a suitable commit message for each commit.
+Use conventional commit format for each commit. Focus messages on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
 **Status**: `not_started`
@@ -333,7 +333,7 @@ Then implement:
 
 4. Update panel tests in tests/client/ui/panel.test.ts
 
-5. Run full test suite + build. Commit. Print a suitable commit message.
+5. Run full test suite + build. Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
 **Status**: `not_started`
@@ -405,7 +405,7 @@ Add an "MCP Server" section explaining:
 - That .mcp.json enables auto-discovery for Claude Code
 - That the MCP server reads the same inline-review.json as the browser
 
-Run full test suite + build. Commit. Print a suitable commit message.
+Run full test suite + build. Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
 **Status**: `not_started`
@@ -474,7 +474,7 @@ Part C — Documentation updates:
 
 4. Ensure CLAUDE.md is accurate with final state
 
-Commit. Print a suitable commit message.
+Commit using conventional commit format. Focus the message on WHY, not WHAT — the diff shows the what. No Co-Authored-By lines.
 ```
 
 **Status**: `not_started`
