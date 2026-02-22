@@ -98,7 +98,14 @@ function init(): void {
 
   // FAB
   const fab: FabElements = createFab(shadowRoot, () => {
-    togglePanel(panel);
+    const isOpen = togglePanel(panel);
+    if (isOpen) {
+      // Move focus to first focusable element in panel
+      const firstFocusable = panel.container.querySelector<HTMLElement>('button, [tabindex="0"]');
+      if (firstFocusable) firstFocusable.focus();
+    } else {
+      fab.button.focus();
+    }
   });
 
   // First-use tooltip
@@ -147,6 +154,7 @@ function init(): void {
       if (isPanelOpen(panel)) {
         closePanel(panel);
         resetFab(fab);
+        fab.button.focus();
       }
     },
     exportToClipboard: async () => {

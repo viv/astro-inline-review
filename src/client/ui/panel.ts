@@ -43,6 +43,8 @@ export function createPanel(
   container.className = 'air-panel';
   container.setAttribute('data-air-el', 'panel');
   container.setAttribute('data-air-state', 'closed');
+  container.setAttribute('role', 'complementary');
+  container.setAttribute('aria-label', 'Inline Review Panel');
 
   // Header
   const header = document.createElement('div');
@@ -84,16 +86,23 @@ export function createPanel(
   // Tabs
   const tabs = document.createElement('div');
   tabs.className = 'air-panel__tabs';
+  tabs.setAttribute('role', 'tablist');
 
   const thisPageTab = document.createElement('button');
   thisPageTab.className = 'air-panel__tab air-panel__tab--active';
   thisPageTab.setAttribute('data-air-el', 'tab-this-page');
+  thisPageTab.setAttribute('role', 'tab');
+  thisPageTab.setAttribute('aria-selected', 'true');
+  thisPageTab.id = 'air-tab-this-page';
   thisPageTab.textContent = 'This Page (0)';
   tabs.appendChild(thisPageTab);
 
   const allPagesTab = document.createElement('button');
   allPagesTab.className = 'air-panel__tab';
   allPagesTab.setAttribute('data-air-el', 'tab-all-pages');
+  allPagesTab.setAttribute('role', 'tab');
+  allPagesTab.setAttribute('aria-selected', 'false');
+  allPagesTab.id = 'air-tab-all-pages';
   allPagesTab.textContent = 'All Pages (0)';
   tabs.appendChild(allPagesTab);
 
@@ -103,6 +112,8 @@ export function createPanel(
   const content = document.createElement('div');
   content.className = 'air-panel__content';
   content.setAttribute('data-air-el', 'panel-content');
+  content.setAttribute('role', 'tabpanel');
+  content.setAttribute('aria-labelledby', 'air-tab-this-page');
   container.appendChild(content);
 
   shadowRoot.appendChild(container);
@@ -113,14 +124,20 @@ export function createPanel(
   thisPageTab.addEventListener('click', () => {
     activeTab = 'this-page';
     thisPageTab.classList.add('air-panel__tab--active');
+    thisPageTab.setAttribute('aria-selected', 'true');
     allPagesTab.classList.remove('air-panel__tab--active');
+    allPagesTab.setAttribute('aria-selected', 'false');
+    content.setAttribute('aria-labelledby', 'air-tab-this-page');
     refreshPanel(content, activeTab, callbacks, mediator);
   });
 
   allPagesTab.addEventListener('click', () => {
     activeTab = 'all-pages';
     allPagesTab.classList.add('air-panel__tab--active');
+    allPagesTab.setAttribute('aria-selected', 'true');
     thisPageTab.classList.remove('air-panel__tab--active');
+    thisPageTab.setAttribute('aria-selected', 'false');
+    content.setAttribute('aria-labelledby', 'air-tab-all-pages');
     refreshPanel(content, activeTab, callbacks, mediator);
   });
 
@@ -369,8 +386,15 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 
   item.appendChild(actions);
 
+  item.setAttribute('tabindex', '0');
   item.addEventListener('click', () => {
     callbacks.onAnnotationClick(annotation.id);
+  });
+  item.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      callbacks.onAnnotationClick(annotation.id);
+    }
   });
 
   return item;
@@ -430,8 +454,15 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
 
   item.appendChild(actions);
 
+  item.setAttribute('tabindex', '0');
   item.addEventListener('click', () => {
     callbacks.onAnnotationClick(annotation.id);
+  });
+  item.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      callbacks.onAnnotationClick(annotation.id);
+    }
   });
 
   return item;

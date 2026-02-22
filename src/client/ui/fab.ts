@@ -68,8 +68,18 @@ export function resetFab(fab: FabElements): void {
   fab.button.setAttribute('data-air-state', 'closed');
 }
 
-/** Update the badge count on the FAB */
+/** Update the badge count on the FAB and its aria-label */
 export function updateBadge(badge: HTMLSpanElement, count: number): void {
   badge.textContent = String(count);
   badge.classList.toggle('air-fab__badge--hidden', count === 0);
+
+  // Update the parent button's aria-label to include the count
+  const button = badge.parentElement;
+  if (button) {
+    button.setAttribute('aria-label',
+      count > 0
+        ? `Toggle inline review (${count} annotation${count === 1 ? '' : 's'})`
+        : 'Toggle inline review panel',
+    );
+  }
 }

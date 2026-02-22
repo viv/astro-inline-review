@@ -672,7 +672,7 @@ The FAB derives its state from the `data-air-state` attribute on each click rath
 The `resetFab()` function sets the icon back to the clipboard SVG, removes the `air-fab--open` class, and sets `data-air-state` to `"closed"`.
 
 **Accessibility**:
-- `aria-label="Toggle inline review panel"`
+- `aria-label="Toggle inline review panel"` (updated dynamically to include count when annotations exist, e.g. "Toggle inline review (3 annotations)")
 - `title="Inline Review"`
 
 ### 6.2 Review Panel
@@ -1451,20 +1451,38 @@ The integration uses `z-index: 10000+` to position above typical site z-indexes 
 
 ## 18. Accessibility
 
-The integration provides minimal accessibility support appropriate for a dev-only tool:
+The integration provides accessibility support following WAI-ARIA patterns:
 
-- **FAB**: `aria-label="Toggle inline review panel"` and `title="Inline Review"`
-- **Popup textarea**: Auto-focused on open via `requestAnimationFrame(() => textarea.focus())`
-- **Page note textarea**: Auto-focused when add/edit form opens
+### 18.1 ARIA Semantics
 
-The following accessibility features are explicitly **out of scope** for this dev tool:
-- ARIA roles on the panel (e.g. `role="complementary"`)
-- Focus trapping within the panel or popup
-- Keyboard navigation between annotation items in the panel
-- Screen reader announcements for state changes
+- **Panel**: `role="complementary"`, `aria-label="Inline Review Panel"`
+- **Tabs**: WAI-ARIA tabs pattern — `role="tablist"` on container, `role="tab"` on buttons with `aria-selected`, `role="tabpanel"` on content with `aria-labelledby`
+- **Popup**: `role="dialog"`, `aria-modal="true"`, `aria-label="Add annotation"`
+- **Toast**: `role="status"`, `aria-live="polite"`
+- **FAB**: `aria-label` dynamically updated to include count (e.g. "Toggle inline review (3 annotations)"), `title="Inline Review"`
+
+### 18.2 Focus Management
+
+- **Panel open**: Focus moves to first focusable element in panel
+- **Panel close** (FAB toggle or Escape): Focus returns to FAB
+- **Popup**: Focus trap cycles through textarea and buttons via Tab/Shift+Tab
+- **Popup dismiss**: Focus returns to previously focused element
+- **Popup/page note textareas**: Auto-focused on open via `requestAnimationFrame(() => textarea.focus())`
+
+### 18.3 Keyboard Navigation
+
+- **Annotation items**: `tabindex="0"` with Enter/Space activation (triggers onAnnotationClick)
+- **Escape**: Closes popup (priority) or panel
+
+### 18.4 Motion
+
+- **`prefers-reduced-motion: reduce`**: All animations and transitions reduced to 0.01ms
+
+### 18.5 Out of Scope
+
+The following accessibility features are not yet implemented:
 - High contrast mode support
-
-These may be added in future if the tool gains broader adoption.
+- Screen reader announcements for dynamic content changes beyond `aria-live` on toast
 
 
 ## 19. UX Improvements
@@ -1479,7 +1497,7 @@ These may be added in future if the tool gains broader adoption.
 
 **Implementation** (done):
 - Replaced `PENCIL_ICON` with `CLIPBOARD_ICON` in `fab.ts` — Material Design clipboard SVG
-- `aria-label` and `title` unchanged (already correct: "Toggle inline review panel" / "Inline Review")
+- `aria-label` dynamically includes annotation count (e.g. "Toggle inline review (3 annotations)"); `title` unchanged ("Inline Review")
 - Plus/X icon (open state) unchanged
 
 ### 19.2 First-Use Tooltip

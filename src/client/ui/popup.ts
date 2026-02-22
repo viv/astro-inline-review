@@ -19,6 +19,9 @@ export interface PopupElements {
 
 const MAX_PREVIEW_LENGTH = 100;
 
+/** Tracks the element that was focused before the popup was shown */
+let previouslyFocusedElement: HTMLElement | null = null;
+
 /**
  * Create the popup container and append to the shadow root.
  * The popup starts hidden — call showPopup() to display it.
@@ -28,6 +31,35 @@ export function createPopup(shadowRoot: ShadowRoot): PopupElements {
   container.className = 'air-popup';
   container.setAttribute('data-air-el', 'popup');
   container.setAttribute('data-air-state', 'hidden');
+  container.setAttribute('role', 'dialog');
+  container.setAttribute('aria-modal', 'true');
+  container.setAttribute('aria-label', 'Add annotation');
+
+  // Focus trap: Tab cycles through focusable elements within the popup
+  container.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+
+    const focusable = Array.from(
+      container.querySelectorAll<HTMLElement>('textarea, button'),
+    );
+    if (focusable.length === 0) return;
+
+    const root = container.getRootNode() as ShadowRoot;
+    const active = root.activeElement;
+    const currentIndex = focusable.indexOf(active as HTMLElement);
+
+    if (e.shiftKey) {
+      if (currentIndex <= 0) {
+        e.preventDefault();
+        focusable[focusable.length - 1].focus();
+      }
+    } else {
+      if (currentIndex === focusable.length - 1) {
+        e.preventDefault();
+        focusable[0].focus();
+      }
+    }
+  });
 
   const selectedTextPreview = document.createElement('div');
   selectedTextPreview.className = 'air-popup__selected';
@@ -57,6 +89,7 @@ export function showPopup(
   rect: DOMRect,
   callbacks: PopupCallbacks,
 ): void {
+  previouslyFocusedElement = document.activeElement as HTMLElement | null;
   const { container, textarea, selectedTextPreview } = popup;
 
   // Set preview text
@@ -92,6 +125,7 @@ export function showEditPopup(
   rect: DOMRect,
   callbacks: PopupCallbacks,
 ): void {
+  previouslyFocusedElement = document.activeElement as HTMLElement | null;
   const { container, textarea, selectedTextPreview } = popup;
 
   // Set preview text
@@ -125,6 +159,7 @@ export function showElementPopup(
   rect: DOMRect,
   callbacks: PopupCallbacks,
 ): void {
+  previouslyFocusedElement = document.activeElement as HTMLElement | null;
   const { container, textarea, selectedTextPreview } = popup;
 
   const truncated = description.length > MAX_PREVIEW_LENGTH
@@ -151,6 +186,7 @@ export function showEditElementPopup(
   rect: DOMRect,
   callbacks: PopupCallbacks,
 ): void {
+  previouslyFocusedElement = document.activeElement as HTMLElement | null;
   const { container, textarea, selectedTextPreview } = popup;
 
   const truncated = description.length > MAX_PREVIEW_LENGTH
@@ -174,6 +210,12 @@ export function hidePopup(popup: PopupElements): void {
   popup.container.classList.remove('air-popup--visible');
   popup.container.setAttribute('data-air-state', 'hidden');
   popup.textarea.value = '';
+
+  // Return focus to the element that was focused before the popup opened
+  if (previouslyFocusedElement && previouslyFocusedElement.isConnected) {
+    previouslyFocusedElement.focus();
+    previouslyFocusedElement = null;
+  }
 }
 
 /**

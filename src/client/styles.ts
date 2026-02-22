@@ -451,7 +451,17 @@ export const TOOLTIP_STYLES = /* css */ `
   }
 `;
 
+export const REDUCED_MOTION_STYLES = /* css */ `
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+`;
+
 /** Combine all styles for the shadow root stylesheet */
 export function getAllStyles(): string {
-  return [HOST_STYLES, FAB_STYLES, PANEL_STYLES, POPUP_STYLES, TOAST_STYLES, TOOLTIP_STYLES].join('\n');
+  return [HOST_STYLES, FAB_STYLES, PANEL_STYLES, POPUP_STYLES, TOAST_STYLES, TOOLTIP_STYLES, REDUCED_MOTION_STYLES].join('\n');
 }

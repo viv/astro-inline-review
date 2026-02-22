@@ -495,3 +495,141 @@ describe('annotation item — orphan indicator', () => {
     expect(callbacks.isAnnotationOrphaned).toHaveBeenCalledWith('check-me', '/');
   });
 });
+
+describe('createPanel — ARIA semantics', () => {
+  let shadowRoot: ShadowRoot;
+  let callbacks: PanelCallbacks;
+  let mediator: ReviewMediator;
+
+  function makeTextAnnotation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ann-1', type: 'text' as const, pageUrl: '/', pageTitle: 'Home',
+      selectedText: 'hello world', note: 'fix this',
+      range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello world', contextBefore: '', contextAfter: '' },
+      createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+
+    callbacks = {
+      onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      onRefreshBadge: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mediator = {
+      refreshPanel: vi.fn(),
+      restoreHighlights: vi.fn().mockResolvedValue(undefined),
+    };
+  });
+
+  it('panel container has role="complementary" and aria-label', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const panel = shadowRoot.querySelector('[data-air-el="panel"]');
+    expect(panel!.getAttribute('role')).toBe('complementary');
+    expect(panel!.getAttribute('aria-label')).toBe('Inline Review Panel');
+  });
+
+  it('tabs container has role="tablist"', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const tablist = shadowRoot.querySelector('.air-panel__tabs');
+    expect(tablist!.getAttribute('role')).toBe('tablist');
+  });
+
+  it('tab buttons have role="tab" and aria-selected', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const thisPageTab = shadowRoot.querySelector('[data-air-el="tab-this-page"]');
+    const allPagesTab = shadowRoot.querySelector('[data-air-el="tab-all-pages"]');
+
+    expect(thisPageTab!.getAttribute('role')).toBe('tab');
+    expect(thisPageTab!.getAttribute('aria-selected')).toBe('true');
+
+    expect(allPagesTab!.getAttribute('role')).toBe('tab');
+    expect(allPagesTab!.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('clicking all pages tab updates aria-selected', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const thisPageTab = shadowRoot.querySelector('[data-air-el="tab-this-page"]') as HTMLButtonElement;
+    const allPagesTab = shadowRoot.querySelector('[data-air-el="tab-all-pages"]') as HTMLButtonElement;
+
+    allPagesTab.click();
+
+    expect(allPagesTab.getAttribute('aria-selected')).toBe('true');
+    expect(thisPageTab.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('content area has role="tabpanel" and aria-labelledby', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const content = shadowRoot.querySelector('[data-air-el="panel-content"]');
+    expect(content!.getAttribute('role')).toBe('tabpanel');
+    expect(content!.getAttribute('aria-labelledby')).toBe('air-tab-this-page');
+  });
+
+  it('switching tabs updates aria-labelledby on content', () => {
+    createPanel(shadowRoot, callbacks, mediator);
+
+    const allPagesTab = shadowRoot.querySelector('[data-air-el="tab-all-pages"]') as HTMLButtonElement;
+    const content = shadowRoot.querySelector('[data-air-el="panel-content"]');
+
+    allPagesTab.click();
+
+    expect(content!.getAttribute('aria-labelledby')).toBe('air-tab-all-pages');
+  });
+
+  it('annotation items have tabindex="0" for keyboard navigation', async () => {
+    vi.mocked(api.getStore).mockResolvedValue({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
+    expect(item!.getAttribute('tabindex')).toBe('0');
+  });
+
+  it('annotation items respond to Enter key', async () => {
+    vi.mocked(api.getStore).mockResolvedValue({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'kbd-test' })],
+      pageNotes: [],
+    });
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]') as HTMLElement;
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(callbacks.onAnnotationClick).toHaveBeenCalledWith('kbd-test');
+  });
+
+  it('annotation items respond to Space key', async () => {
+    vi.mocked(api.getStore).mockResolvedValue({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'space-test' })],
+      pageNotes: [],
+    });
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]') as HTMLElement;
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+
+    expect(callbacks.onAnnotationClick).toHaveBeenCalledWith('space-test');
+  });
+});

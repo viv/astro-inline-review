@@ -13,6 +13,8 @@ export function showToast(shadowRoot: ShadowRoot, message: string, durationMs = 
     toastEl = document.createElement('div');
     toastEl.className = 'air-toast';
     toastEl.setAttribute('data-air-el', 'toast');
+    toastEl.setAttribute('role', 'status');
+    toastEl.setAttribute('aria-live', 'polite');
     shadowRoot.appendChild(toastEl);
   }
 

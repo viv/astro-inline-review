@@ -516,7 +516,7 @@ files are updated (CLAUDE.md, docs/spec/specification.md, engineering
 plans in docs/). Commit all changes and push.
 ```
 
-### Prompt 4: Add ARIA Semantics and Focus Management
+### Prompt 4: Add ARIA Semantics and Focus Management — ✅ Implemented
 
 ```
 Read the following files in astro-inline-review:
@@ -799,7 +799,7 @@ repo. This is a consolidated review with prioritised findings.
 Prompt 1 (race condition fix) is already implemented. Continue with
 Prompt N from the Implementation Prompts section.
 
-Current state: main branch, all 166 tests passing, build clean.
+Current state: main branch, all 192 tests passing, build clean.
 ```
 
 ---
