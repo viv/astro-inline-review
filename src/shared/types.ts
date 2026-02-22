@@ -5,6 +5,12 @@ export interface ReviewStore {
   pageNotes: PageNote[];
 }
 
+/** A reply added by a coding agent via MCP */
+export interface AgentReply {
+  message: string;
+  createdAt: string;
+}
+
 /** Shared fields for all annotation types */
 export interface BaseAnnotation {
   id: string;
@@ -14,6 +20,8 @@ export interface BaseAnnotation {
   note: string;
   createdAt: string;
   updatedAt: string;
+  resolvedAt?: string;
+  replies?: AgentReply[];
 }
 
 /** A text selection annotation */
