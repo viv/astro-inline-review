@@ -735,6 +735,10 @@ Each text annotation item in the panel shows:
 - **Note** (if non-empty) in light grey
 - Wrapped in quotes: `"selected text..."`
 
+**Delete button**: Each text annotation item has a "Delete" button (`data-air-el="annotation-delete"`) that removes the annotation from the store and its highlight from the page. Clicking Delete calls the API to delete the annotation, removes any associated highlight marks, refreshes the badge count, and refreshes the panel.
+
+**Orphan indicator**: If the annotation's text cannot be located on the page (Tier 3 orphan per section 8.4), a red indicator is shown with the text "Could not locate on page" (class `.air-annotation-item__orphan`). The item container receives the `.air-annotation-item--orphan` modifier class, which adds a red left border and reduced opacity. Orphan detection only applies to annotations on the current page — annotations for other pages (shown in the "All Pages" tab) do not show an orphan indicator since their DOM is not available.
+
 **Click behaviour**: Scrolls the page to the corresponding highlight and triggers a pulse animation. Uses `scrollIntoView({ behavior: 'smooth', block: 'center' })`.
 
 #### 6.2.3a Element Annotation Items
@@ -745,6 +749,10 @@ Each element annotation item in the panel shows:
 - **Note** (if non-empty) in light grey
 
 **Data attributes**: `data-air-el="element-annotation-item"` on each element annotation item (distinct from `annotation-item` used for text annotations).
+
+**Delete button**: Each element annotation item has a "Delete" button (`data-air-el="annotation-delete"`) matching the text annotation pattern. Clicking Delete calls the API to delete the annotation, removes the element's outline highlight, refreshes the badge count, and refreshes the panel.
+
+**Orphan indicator**: If the annotated element cannot be found on the page (its highlight was not restored), a red indicator is shown with the text "Could not locate on page". The item receives the `.air-annotation-item--orphan` modifier class. Same current-page-only restriction as text annotations (section 6.2.3).
 
 **Click behaviour**: Scrolls the page to the annotated element and triggers a pulse animation on the element's outline highlight. Uses `scrollIntoView({ behavior: 'smooth', block: 'center' })`.
 
@@ -1015,7 +1023,8 @@ When the page loads (or on SPA navigation), **text** highlights are restored fro
 - The annotation exists in the store but cannot be located in the DOM
 - It is **visible in the review panel** (listed as an annotation item)
 - No highlight is applied on the page
-- The panel should indicate orphaned status (style exists: `.air-annotation-item__orphan` class in red)
+- The panel indicates orphaned status with a red indicator ("Could not locate on page") and the `.air-annotation-item--orphan` modifier class (red left border, reduced opacity)
+- The annotation can be deleted via its Delete button in the panel (`data-air-el="annotation-delete"`)
 
 ### 8.5 Element Highlights
 
@@ -1305,6 +1314,7 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `page-note-save` | Page note form save button | Shadow DOM | Present when add/edit note form is open |
 | `clear-all` | "Clear All" button | Shadow DOM | Always present (child of panel header) |
 | `toast` | Toast notification | Shadow DOM | Created on first toast, then reused |
+| `annotation-delete` | Annotation delete button | Shadow DOM | Present on each annotation item when panel shows annotations |
 | `element-annotation-item` | Element annotation list item in panel | Shadow DOM | Present when panel is open and element annotations exist |
 | `inspector-overlay` | Inspector overlay during Alt+hover | Light DOM | Present only while Alt is held and mouse is over an element |
 | `inspector-label` | Tag label on inspector overlay | Light DOM | Child of inspector overlay |
@@ -1511,6 +1521,7 @@ These may be added in future if the tool gains broader adoption.
 | Click element annotation in panel | Page scrolls to element, outline pulses | 6.2.3a, 8.5.3 |
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
 | Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
+| Click Delete on annotation in panel | Annotation deleted from store, highlight removed, badge updated, panel refreshed | 6.2.3, 6.2.3a |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |
 | Press Escape | Dismiss popup (priority) or close panel | 10.4 |
 | Press Cmd/Ctrl+Shift+. | Toggle panel | 10.1 |
