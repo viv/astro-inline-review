@@ -104,6 +104,7 @@ describe('middleware', () => {
 
     it('POST /annotations creates and returns annotation with ID', async () => {
       const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
         pageUrl: '/',
         pageTitle: 'Home',
         selectedText: 'hello world',
@@ -125,6 +126,7 @@ describe('middleware', () => {
     it('PATCH /annotations/:id updates the annotation', async () => {
       // Create first
       const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
         pageUrl: '/',
         selectedText: 'test',
         note: 'original',
@@ -159,6 +161,7 @@ describe('middleware', () => {
     it('DELETE /annotations/:id removes the annotation', async () => {
       // Create first
       const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
         pageUrl: '/',
         selectedText: 'delete me',
         note: '',
@@ -187,6 +190,7 @@ describe('middleware', () => {
       // Create annotations on different pages
       for (const pageUrl of ['/', '/about']) {
         const req = mockRequest('POST', '/__inline-review/api/annotations', {
+          type: 'text',
           pageUrl,
           selectedText: `text on ${pageUrl}`,
           note: '',
@@ -248,6 +252,7 @@ describe('middleware', () => {
       // Create annotations on two pages
       for (const [pageUrl, text] of [['/', 'home text'], ['/about', 'about text']] as const) {
         const req = mockRequest('POST', '/__inline-review/api/annotations', {
+          type: 'text',
           pageUrl,
           pageTitle: pageUrl === '/' ? 'Home' : 'About',
           selectedText: text,
@@ -321,10 +326,198 @@ describe('middleware', () => {
     });
   });
 
+  describe('POST /annotations validation', () => {
+    it('rejects missing type field with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        pageUrl: '/',
+        note: 'test',
+        selectedText: 'hello',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"type"');
+    });
+
+    it('rejects invalid type value with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'invalid',
+        pageUrl: '/',
+        note: 'test',
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"type"');
+    });
+
+    it('rejects missing pageUrl with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        note: 'test',
+        selectedText: 'hello',
+        range: {},
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"pageUrl"');
+    });
+
+    it('rejects missing note with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'hello',
+        range: {},
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"note"');
+    });
+
+    it('rejects text annotation without selectedText with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        note: 'test',
+        range: {},
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"selectedText"');
+    });
+
+    it('rejects text annotation without range with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        note: 'test',
+        selectedText: 'hello',
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"range"');
+    });
+
+    it('rejects text annotation with array range with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        note: 'test',
+        selectedText: 'hello',
+        range: [1, 2, 3],
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"range"');
+    });
+
+    it('rejects element annotation without elementSelector with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'element',
+        pageUrl: '/',
+        note: 'test',
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"elementSelector"');
+    });
+
+    it('accepts valid text annotation', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        note: 'test',
+        selectedText: 'hello',
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 5, selectedText: 'hello', contextBefore: '', contextAfter: '' },
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(201);
+    });
+
+    it('accepts valid element annotation', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'element',
+        pageUrl: '/',
+        note: 'test',
+        elementSelector: { cssSelector: 'div', xpath: '//div', description: 'A div', tagName: 'div', attributes: {}, outerHtmlPreview: '<div></div>' },
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(201);
+    });
+  });
+
+  describe('POST /page-notes validation', () => {
+    it('rejects missing pageUrl with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/page-notes', {
+        note: 'test',
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"pageUrl"');
+    });
+
+    it('rejects missing note with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/page-notes', {
+        pageUrl: '/',
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"note"');
+    });
+
+    it('rejects non-string pageUrl with 400', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/page-notes', {
+        pageUrl: 123,
+        note: 'test',
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"pageUrl"');
+    });
+
+    it('accepts valid page note', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/page-notes', {
+        pageUrl: '/',
+        note: 'This page needs work',
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(201);
+    });
+  });
+
   describe('PATCH field allowlist', () => {
     it('PATCH /annotations/:id only applies allowlisted fields', async () => {
       // Create an annotation
       const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
         pageUrl: '/test',
         pageTitle: 'Test Page',
         selectedText: 'original text',

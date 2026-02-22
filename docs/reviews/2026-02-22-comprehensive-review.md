@@ -483,7 +483,7 @@ files are updated (CLAUDE.md, docs/spec/specification.md, engineering
 plans in docs/). Commit all changes and push.
 ```
 
-### Prompt 3: Add REST API Input Validation
+### Prompt 3: Add REST API Input Validation — ✅ Implemented
 
 ```
 Read src/server/middleware.ts in the astro-inline-review repository.

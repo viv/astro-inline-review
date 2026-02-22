@@ -12,6 +12,59 @@ class NotFoundError extends Error {
   }
 }
 
+class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
+ * Validates the request body for POST /annotations.
+ * Returns a descriptive error message, or null if valid.
+ */
+function validateAnnotationBody(body: Record<string, unknown>): string | null {
+  if (body.type !== 'text' && body.type !== 'element') {
+    return 'Invalid or missing "type": must be "text" or "element"';
+  }
+  if (typeof body.pageUrl !== 'string') {
+    return 'Invalid or missing "pageUrl": must be a string';
+  }
+  if (typeof body.note !== 'string') {
+    return 'Invalid or missing "note": must be a string';
+  }
+
+  if (body.type === 'text') {
+    if (typeof body.selectedText !== 'string') {
+      return 'Invalid or missing "selectedText": must be a string when type is "text"';
+    }
+    if (typeof body.range !== 'object' || body.range === null || Array.isArray(body.range)) {
+      return 'Invalid or missing "range": must be an object when type is "text"';
+    }
+  }
+
+  if (body.type === 'element') {
+    if (typeof body.elementSelector !== 'object' || body.elementSelector === null || Array.isArray(body.elementSelector)) {
+      return 'Invalid or missing "elementSelector": must be an object when type is "element"';
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Validates the request body for POST /page-notes.
+ * Returns a descriptive error message, or null if valid.
+ */
+function validatePageNoteBody(body: Record<string, unknown>): string | null {
+  if (typeof body.pageUrl !== 'string') {
+    return 'Invalid or missing "pageUrl": must be a string';
+  }
+  if (typeof body.note !== 'string') {
+    return 'Invalid or missing "note": must be a string';
+  }
+  return null;
+}
+
 /**
  * Creates Vite dev server middleware that serves the REST API.
  *
@@ -57,6 +110,9 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
 
       if (routePath === '/annotations' && method === 'POST') {
         const body = await readBody<Record<string, unknown>>(req);
+
+        const annotationError = validateAnnotationBody(body);
+        if (annotationError) throw new ValidationError(annotationError);
 
         let annotation!: Annotation;
         await storage.mutate(store => {
@@ -137,15 +193,18 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       }
 
       if (routePath === '/page-notes' && method === 'POST') {
-        const body = await readBody<Partial<PageNote>>(req);
+        const body = await readBody<Record<string, unknown>>(req);
+
+        const pageNoteError = validatePageNoteBody(body);
+        if (pageNoteError) throw new ValidationError(pageNoteError);
 
         let pageNote!: PageNote;
         await storage.mutate(store => {
           pageNote = {
             id: generateId(),
-            pageUrl: body.pageUrl ?? '',
-            pageTitle: body.pageTitle ?? '',
-            note: body.note ?? '',
+            pageUrl: body.pageUrl as string,
+            pageTitle: (body.pageTitle as string) ?? '',
+            note: body.note as string,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
@@ -202,6 +261,9 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       // Unknown API route
       return sendError(res, 404, 'Not found');
     } catch (err) {
+      if (err instanceof ValidationError) {
+        return sendError(res, 400, err.message);
+      }
       if (err instanceof NotFoundError) {
         return sendError(res, 404, err.message);
       }

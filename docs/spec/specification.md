@@ -376,7 +376,16 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 | `createdAt` | No | Preserved from original |
 | `updatedAt` | No | Server-generated on every PATCH |
 
-**Minimum validation**: `POST /annotations` does not enforce required fields. An empty body creates an annotation with all empty-string fields. The client always provides `pageUrl`, `selectedText`, `note`, and `range`. Server-side validation is not enforced — the server trusts the client as this is a dev-only tool.
+**Validation**: `POST /annotations` validates required fields and returns 400 with a descriptive error message on failure:
+- `type` must be `"text"` or `"element"`
+- `pageUrl` must be a string
+- `note` must be a string
+- When `type` is `"text"`: `selectedText` must be a string, `range` must be an object
+- When `type` is `"element"`: `elementSelector` must be an object
+
+`POST /page-notes` validates:
+- `pageUrl` must be a string
+- `note` must be a string
 
 **DELETE /annotations/:id**: Returns `{ "ok": true }` on success. Returns 404 if the ID does not exist.
 
@@ -413,7 +422,9 @@ Returns raw Markdown text (not JSON). See [Section 9: Markdown Export](#9-markdo
 
 #### 4.2.4 Error Handling
 
+- **400**: Returned when a POST request body fails validation (missing or invalid required fields)
 - **404**: Returned for unknown API routes or when an annotation/note ID is not found
+- **413**: Returned when the request body exceeds 1 MB
 - **500**: Returned for internal errors (e.g. JSON parse failure on request body)
 - Error response shape: `{ "error": "message" }`
 - Non-API requests (URLs not starting with `/__inline-review/api`) are passed through to the next middleware via `next()`
