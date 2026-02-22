@@ -10,7 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./client": "./dist/client.js"
+    "./client": "./dist/client.js",
+    "./mcp": "./dist/mcp/server.js"
+  },
+  "bin": {
+    "astro-inline-review-mcp": "./dist/mcp/server.js"
   },
   "files": [
     "dist"
@@ -45,11 +49,15 @@
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "astro": "^5.3.0",
     "happy-dom": "^20.6.3",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
-    "@vitest/coverage-v8": "^3.2.4",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "zod": "^3.25.76"
   }
 }

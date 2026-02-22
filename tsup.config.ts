@@ -20,4 +20,13 @@ export default defineConfig([
     noExternal: [/.*/],
     platform: 'browser',
   },
+  // MCP server entry — CLI executable, runtime deps externalised
+  {
+    entry: { 'mcp/server': 'src/mcp/server.ts' },
+    format: ['esm'],
+    dts: false,
+    sourcemap: true,
+    banner: { js: '#!/usr/bin/env node' },
+    external: ['@modelcontextprotocol/sdk', 'zod', 'node:fs', 'node:fs/promises', 'node:path'],
+  },
 ]);
