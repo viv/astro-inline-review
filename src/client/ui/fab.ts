@@ -68,6 +68,13 @@ export function resetFab(fab: FabElements): void {
   fab.button.setAttribute('data-air-state', 'closed');
 }
 
+/** Set the FAB to its open visual state (used when panel is opened externally). */
+export function openFab(fab: FabElements): void {
+  setIcon(fab.button, PLUS_PATH);
+  fab.button.classList.add('air-fab--open');
+  fab.button.setAttribute('data-air-state', 'open');
+}
+
 /** Update the badge count on the FAB and its aria-label */
 export function updateBadge(badge: HTMLSpanElement, count: number): void {
   badge.textContent = String(count);

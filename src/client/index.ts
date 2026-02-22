@@ -5,7 +5,7 @@
  * and loads existing annotations. Idempotent — safe to call multiple times.
  */
 import { createHost } from './ui/host.js';
-import { createFab, updateBadge, resetFab, type FabElements } from './ui/fab.js';
+import { createFab, updateBadge, resetFab, openFab, type FabElements } from './ui/fab.js';
 import { createPanel, togglePanel, closePanel, isPanelOpen, type PanelElements } from './ui/panel.js';
 import { createAnnotator, type AnnotatorInstance } from './annotator.js';
 import type { ReviewMediator } from './mediator.js';
@@ -144,18 +144,27 @@ function init(): void {
 
   // Keyboard shortcuts
   registerShortcuts({
-    togglePanel: () => togglePanel(panel),
+    togglePanel: () => {
+      const isOpen = togglePanel(panel);
+      if (isOpen) {
+        openFab(fab);
+      } else {
+        resetFab(fab);
+      }
+    },
     closeActive: () => {
       // Popup takes precedence over panel
       if (isPopupVisible(annotator.popup)) {
         hidePopup(annotator.popup);
-        return;
+        return true;
       }
       if (isPanelOpen(panel)) {
         closePanel(panel);
         resetFab(fab);
         fab.button.focus();
+        return true;
       }
+      return false;
     },
     exportToClipboard: async () => {
       // Always fetch from server — cache only has current page's annotations

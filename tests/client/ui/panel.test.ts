@@ -550,6 +550,68 @@ describe('annotation item — orphan indicator', () => {
   });
 });
 
+describe('createPanel — single fetch per refresh', () => {
+  let shadowRoot: ShadowRoot;
+  let callbacks: PanelCallbacks;
+  let mediator: ReviewMediator;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+
+    callbacks = {
+      onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      onRefreshBadge: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mediator = {
+      refreshPanel: vi.fn(),
+      restoreHighlights: vi.fn().mockResolvedValue(undefined),
+    };
+
+    vi.mocked(api.getStore).mockClear();
+  });
+
+  it('mediator.refreshPanel calls api.getStore only once', async () => {
+    const store: ReviewStore = { version: 1, annotations: [], pageNotes: [] };
+    vi.mocked(api.getStore).mockResolvedValue(store);
+
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+
+    expect(api.getStore).toHaveBeenCalledTimes(1);
+  });
+
+  it('mediator.refreshPanel passes fetched store to both content and tab counts', async () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [{
+        id: 'a1', type: 'text' as const, pageUrl: '/', pageTitle: 'Home',
+        selectedText: 'hello', note: 'note',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello', contextBefore: '', contextAfter: '' },
+        createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      }],
+      pageNotes: [],
+    };
+    vi.mocked(api.getStore).mockResolvedValue(store);
+
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+
+    // Only one fetch despite needing data for both content and tab counts
+    expect(api.getStore).toHaveBeenCalledTimes(1);
+
+    // Verify tab counts were updated (This Page should show 1)
+    const thisPageTab = shadowRoot.querySelector('[data-air-el="tab-this-page"]');
+    expect(thisPageTab!.textContent).toBe('This Page (1)');
+  });
+});
+
 describe('createPanel — ARIA semantics', () => {
   let shadowRoot: ShadowRoot;
   let callbacks: PanelCallbacks;

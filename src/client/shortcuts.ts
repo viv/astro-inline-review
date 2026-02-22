@@ -15,7 +15,8 @@
 
 export interface ShortcutHandlers {
   togglePanel: () => void;
-  closeActive: () => void;
+  /** Returns true if something was closed (popup or panel), false otherwise. */
+  closeActive: () => boolean;
   exportToClipboard: () => void;
   addPageNote: () => void;
 }
@@ -31,9 +32,14 @@ export function registerShortcuts(handlers: ShortcutHandlers): void {
     const isModified = e.metaKey || e.ctrlKey;
     const isInInput = isInputFocused();
 
-    // Escape — always fire (even in inputs), but only on capture phase
+    // Escape — always fire (even in inputs), but only on capture phase.
+    // Only stop propagation when we actually close something.
     if (e.key === 'Escape') {
-      handlers.closeActive();
+      const handled = handlers.closeActive();
+      if (handled) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
       return;
     }
 

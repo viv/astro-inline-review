@@ -28,7 +28,7 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 |--------|---------------|------|-------------------|-----------|
 | Spec Review (2026-02-22) | 21 | 16 (H1-3, M1-8, L1, L3-6) | — | 5 (L2, I1-4) |
 | Spec Review Round 3 (2026-02-21) | 15 | 15 | Verified and fixed (Session 3) | 0 |
-| Implementation Review (2026-02-22) | 30 | 9 (C1-3, H3-4, M1, M9-10) | — | 21 |
+| Implementation Review (2026-02-22) | 30 | 11 (C1-3, H3-4, M1, M4-5, M9-10) | — | 19 |
 | Documentation Review (2026-02-22) | 16 | 6 (H1, M1, L3-4, L6) | — | 10 |
 | Test Coverage Review (2026-02-22) | 17 | 2 (annotator, element-selector) | — | 15 |
 | CI/CD Review (2026-02-22) | 17 | 9 (H1, M1, M3-4, L10, L12, L15, L17) | — | 8 |
@@ -39,7 +39,7 @@ prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 | Spec Reviews Rounds 1-2 (2026-02-21) | 39 | — | All resolved | 0 |
 | Security Reviews 1-2 (2026-02-21) | 18 | — | All resolved | 0 |
 | MCP Reviews (2026-02-22) | 17 | — | All resolved | 0 |
-| System Review (2026-02-21) | 10 | — | 3 resolved | 7 (overlap with impl review) |
+| System Review (2026-02-21) | 10 | 3 (SYS-4, SYS-5, SYS-7 — Session 4) | 3 resolved | 4 (overlap with impl review) |
 | Test Quality Review (2026-02-21) | ~20 | — | External test repo | Not verifiable |
 
 ---
@@ -56,7 +56,7 @@ These are concrete code improvements from the implementation and architecture re
 | REM-02 | IMPL-H2, ARCH-M3 | High | Client export.ts duplicates shared/export.ts (~100 lines identical logic) | **Resolved** (Session 1) |
 | REM-03 | IMPL-H4 | High | `existsSync` then async `readFile` is a TOCTOU race in storage.ts:22-24 | **Resolved** (Session 2) |
 | REM-04 | IMPL-H5 | High | No size limit on MCP tool string inputs (message param) | Still present |
-| REM-05 | IMPL-M4 | Medium | Escape handler doesn't call stopPropagation when handling event | Partially — shortcuts.ts has preventDefault on Cmd shortcuts but not on Escape |
+| REM-05 | IMPL-M4 | Medium | Escape handler doesn't call stopPropagation when handling event | **Resolved** (Session 4) |
 | REM-06 | IMPL-M5 | Medium | Clear All sends N sequential DELETE API calls (no bulk endpoint) | Still present |
 | REM-07 | IMPL-M7 | Medium | `SerializedSelection` in selection.ts duplicates `SerializedRange` in shared/types.ts | **Resolved** (Session 1) |
 | REM-08 | IMPL-M8 | Medium | `generateId()` uses `Math.random()` not `crypto.randomUUID()` | **Resolved** (Session 1) |
@@ -64,9 +64,9 @@ These are concrete code improvements from the implementation and architecture re
 | REM-10 | IMPL-M6 | Medium | Inspector overlay is in light DOM, inconsistent with shadow DOM pattern | Still present |
 | REM-11 | Comp-7.3 | Medium | No atomic writes — storage.write() should use temp file + rename | **Resolved** (Session 2) |
 | REM-12 | ARCH-M2 | Medium | localStorage cache has no invalidation strategy | Still present |
-| REM-13 | SYS-4 | Medium | FAB state desync — FAB's internal `isOpen` can desync from panel state | Still present |
-| REM-14 | SYS-5 | Medium | Escape handler bypasses `hidePopup()` — stale textarea content possible | Still present |
-| REM-15 | SYS-7 | Medium | Double API fetch on panel open — `refreshPanel()` and `updateTabCounts()` both fetch | Still present |
+| REM-13 | SYS-4 | Medium | FAB state desync — FAB's internal `isOpen` can desync from panel state | **Resolved** (Session 4) |
+| REM-14 | SYS-5 | Medium | Escape handler bypasses `hidePopup()` — stale textarea content possible | **Resolved** (Session 4) |
+| REM-15 | SYS-7 | Medium | Double API fetch on panel open — `refreshPanel()` and `updateTabCounts()` both fetch | **Resolved** (Session 4) |
 | REM-16 | IMPL-L1 | Low | `readBody` with empty body returns 500 instead of 400 | **Resolved** (Session 1) |
 | REM-17 | IMPL-L7 | Low | Client API `getExport()` doesn't check `res.ok` | **Resolved** (Session 1) |
 | REM-18 | MCP-L1 | Low | `src/mcp/index.ts` barrel re-export is unused dead code | **Resolved** (Session 1) |

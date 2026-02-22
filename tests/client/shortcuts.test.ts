@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { registerShortcuts, unregisterShortcuts } from '../../src/client/shortcuts.js';
+import { registerShortcuts, unregisterShortcuts, type ShortcutHandlers } from '../../src/client/shortcuts.js';
 
 describe('registerShortcuts', () => {
-  let handlers: Record<string, () => void>;
+  let handlers: ShortcutHandlers;
 
   beforeEach(() => {
     handlers = {
       togglePanel: vi.fn(),
-      closeActive: vi.fn(),
+      closeActive: vi.fn().mockReturnValue(false),
       exportToClipboard: vi.fn(),
       addPageNote: vi.fn(),
     };
@@ -139,5 +139,43 @@ describe('registerShortcuts', () => {
 
     expect(handlers.closeActive).toHaveBeenCalledOnce();
     document.body.removeChild(input);
+  });
+
+  it('Escape calls stopPropagation and preventDefault when closeActive returns true', () => {
+    vi.mocked(handlers.closeActive).mockReturnValue(true);
+    registerShortcuts(handlers);
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    });
+    const stopSpy = vi.spyOn(event, 'stopPropagation');
+    const preventSpy = vi.spyOn(event, 'preventDefault');
+
+    document.dispatchEvent(event);
+
+    expect(handlers.closeActive).toHaveBeenCalledOnce();
+    expect(stopSpy).toHaveBeenCalledOnce();
+    expect(preventSpy).toHaveBeenCalledOnce();
+  });
+
+  it('Escape does NOT call stopPropagation when closeActive returns false', () => {
+    vi.mocked(handlers.closeActive).mockReturnValue(false);
+    registerShortcuts(handlers);
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    });
+    const stopSpy = vi.spyOn(event, 'stopPropagation');
+    const preventSpy = vi.spyOn(event, 'preventDefault');
+
+    document.dispatchEvent(event);
+
+    expect(handlers.closeActive).toHaveBeenCalledOnce();
+    expect(stopSpy).not.toHaveBeenCalled();
+    expect(preventSpy).not.toHaveBeenCalled();
   });
 });
