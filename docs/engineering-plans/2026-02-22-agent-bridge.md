@@ -3,9 +3,10 @@ generated_by: Claude Opus 4.6
 generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: implementation_plan
-status: draft
+status: in_progress
 human_reviewer: matthewvivian
-implementation_tracking: not_started
+implementation_tracking: partial
+notes: Approach A (CLAUDE.md + direct JSON access) implemented. Approach B (MCP server) planned — see docs/agent-loop-plans/2026-02-22-mcp-server-implementation.md
 tags: [mcp, agent-integration, json, real-time, developer-experience, architecture]
 ---
 
