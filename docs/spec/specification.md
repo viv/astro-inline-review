@@ -700,12 +700,13 @@ The `resetFab()` function sets the icon back to the clipboard SVG, removes the `
 - Text: `#e5e5e5`
 - Borders: `#333`
 - Accent: `#D97706` (orange)
-- `z-index: 10000`
+- `z-index: 9999`
 
 **Structure**:
 - **Header**: Title "Inline Review" + action buttons ("+ Note", "Copy All", "Clear All")
 - **Tabs**: "This Page" / "All Pages" with active indicator
 - **Content**: Scrollable area showing annotations and page notes
+- **Shortcuts footer**: Keyboard shortcuts reference at the bottom, showing platform-aware modifier keys (⌘ on Mac, Ctrl elsewhere). `data-air-el="shortcuts-help"`
 
 **Data attributes**:
 - `data-air-el="panel"` on the container
@@ -797,11 +798,12 @@ Edit mode replaces the item content with a textarea form.
 
 **Positioning algorithm**:
 1. Calculate horizontal centre: `left = selection.left + (selection.width / 2) - (POPUP_WIDTH / 2)` where `POPUP_WIDTH = 300px`
-2. Clamp horizontally: `left = max(8, min(left, viewportWidth - 300 - 8))`
-3. Try above: `top = selection.top - 8`
-4. If `top < 208` (not enough room above): switch to below: `top = selection.bottom + 8`
-5. If placed above: apply `transform: translateY(-100%)` so the popup's bottom edge aligns with the selection's top edge
-6. If placed below: no transform (popup's top edge aligns with the selection's bottom edge)
+2. Determine right boundary: if the panel is open (`data-air-state="open"`), use the panel's `offsetLeft - 8`; otherwise use `viewportWidth - 8`
+3. Clamp horizontally: `left = max(8, min(left, rightBound - 300))`
+4. Try above: `top = selection.top - 8`
+5. If `top < 208` (not enough room above): switch to below: `top = selection.bottom + 8`
+6. If placed above: apply `transform: translateY(-100%)` so the popup's bottom edge aligns with the selection's top edge
+7. If placed below: no transform (popup's top edge aligns with the selection's bottom edge)
 
 The 208px threshold is `8px margin + 200px` (approximate popup height including textarea and buttons).
 
@@ -892,7 +894,7 @@ Tests should use `data-air-state` (the automation contract) rather than CSS disp
 - Elements inside the Shadow DOM are excluded
 - The `<html>` and `<body>` elements are excluded (too broad to be useful)
 
-**Z-index**: The inspector overlay uses `z-index: 9999` — below the FAB/panel/popup (10000+) but above typical page content.
+**Z-index**: The inspector overlay uses `z-index: 10002` — above the FAB and panel but below the toast, ensuring the highlight is visible while inspecting.
 
 **Implementation notes**:
 - The overlay is a single `<div>` element that is repositioned on each `mousemove`, not one-per-element
@@ -1463,13 +1465,14 @@ Errors are logged with the prefix `[astro-inline-review]` for easy filtering. No
 
 | Layer | Z-Index | Element |
 |-------|---------|---------|
-| Inspector overlay | 9999 | `.air-inspector-overlay` (light DOM) |
+| Panel | 9999 | `.air-panel` |
 | FAB | 10000 | `.air-fab` |
-| Panel | 10000 | `.air-panel` |
 | Popup | 10001 | `.air-popup` |
-| Toast | 10002 | `.air-toast` |
+| Inspector overlay | 10002 | `.air-inspector-overlay` (light DOM) |
+| Tooltip | 10002 | `.air-tooltip` |
+| Toast | 10003 | `.air-toast` |
 
-The integration uses `z-index: 10000+` to position above typical site z-indexes (which conventionally stay below 9999).
+All z-index values are centralised in the `Z_INDEX` constant exported from `src/client/styles.ts`. The integration uses `z-index: 9999+` to position above typical site z-indexes (which conventionally stay below 9999).
 
 ### 17.3 Typography
 
@@ -1540,6 +1543,7 @@ The following accessibility features are not yet implemented:
 - Creates tooltip element inside the shadow root, positioned above the FAB (bottom-right, 80px from bottom)
 - Tooltip text: "Select text to annotate it, or Alt+click any element"
 - `data-air-el="first-use-tooltip"` for test automation
+- `id="air-tooltip"`, `role="tooltip"` for ARIA semantics; the FAB has `aria-describedby="air-tooltip"` while the tooltip is visible (removed on dismiss)
 - Dismissed on: click anywhere (document or shadow root), or after 8 seconds auto-fade
 - On dismiss, the `air-tooltip--hidden` class is added (triggering a CSS opacity fade-out), then the element is removed from the DOM after a 300ms timeout to allow the transition to complete
 - On dismiss, sets `localStorage.setItem('air-tooltip-dismissed', '1')`
