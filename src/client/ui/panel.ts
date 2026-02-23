@@ -793,9 +793,8 @@ function formatTimestamp(iso: string): string {
 
 function createStatusBadge(status: AnnotationStatus, addressedAt?: string, resolvedAt?: string): HTMLDivElement {
   const badge = document.createElement('div');
-  badge.setAttribute('data-air-el', 'status-badge');
-
   if (status === 'resolved') {
+    badge.setAttribute('data-air-el', 'resolved-badge');
     badge.className = 'air-annotation-item__resolved-badge';
     badge.textContent = '\u2714 Resolved';
     if (resolvedAt) {
@@ -805,6 +804,7 @@ function createStatusBadge(status: AnnotationStatus, addressedAt?: string, resol
       badge.appendChild(time);
     }
   } else if (status === 'addressed') {
+    badge.setAttribute('data-air-el', 'addressed-badge');
     badge.className = 'air-annotation-item__addressed-badge';
     badge.textContent = '\uD83D\uDD27 Addressed';
     if (addressedAt) {

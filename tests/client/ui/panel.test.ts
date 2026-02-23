@@ -156,7 +156,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
     expect(badge).not.toBeNull();
     expect(badge!.textContent).toContain('Resolved');
   });
@@ -179,7 +179,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
     expect(badge).toBeNull();
   });
 
@@ -201,7 +201,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
     expect(badge).not.toBeNull();
   });
 
@@ -256,7 +256,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
     const timeSpan = badge!.querySelector('.air-annotation-item__resolved-time');
     expect(timeSpan).not.toBeNull();
     // Should contain some formatted date text (locale-dependent)
@@ -956,7 +956,7 @@ describe('createPanel — status lifecycle buttons', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="addressed-badge"]');
     expect(badge).not.toBeNull();
     expect(badge!.textContent).toContain('Addressed');
   });
