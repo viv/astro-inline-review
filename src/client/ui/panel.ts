@@ -9,8 +9,8 @@
 import { api } from '../api.js';
 import { writeCache, readCache } from '../cache.js';
 import { showToast } from './toast.js';
-import type { Annotation, TextAnnotation, PageNote, ReviewStore, AgentReply } from '../types.js';
-import { isTextAnnotation } from '../types.js';
+import type { Annotation, TextAnnotation, PageNote, ReviewStore, AgentReply, AnnotationStatus } from '../types.js';
+import { isTextAnnotation, getAnnotationStatus } from '../types.js';
 import type { ReviewMediator } from '../mediator.js';
 
 export interface PanelElements {
@@ -25,6 +25,7 @@ export interface PanelElements {
 export interface PanelCallbacks {
   onAnnotationClick: (annotationId: string) => void;
   onAnnotationDelete: (annotationId: string) => Promise<void>;
+  onAnnotationStatusChange: (annotationId: string, status: AnnotationStatus) => Promise<void>;
   isAnnotationOrphaned: (annotationId: string, pageUrl: string) => boolean;
   onRefreshBadge: () => Promise<void>;
   onExport: () => Promise<void>;
@@ -351,14 +352,16 @@ function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks)
 function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
   const orphaned = callbacks.isAnnotationOrphaned(annotation.id, annotation.pageUrl);
+  const status = getAnnotationStatus(annotation);
   const classes = ['air-annotation-item'];
-  if (annotation.resolvedAt) classes.push('air-annotation-item--resolved');
+  if (status === 'resolved') classes.push('air-annotation-item--resolved');
+  if (status === 'addressed') classes.push('air-annotation-item--addressed');
   if (orphaned) classes.push('air-annotation-item--orphan');
   item.className = classes.join(' ');
   item.setAttribute('data-air-el', 'annotation-item');
 
-  if (annotation.resolvedAt) {
-    item.appendChild(createResolvedBadge(annotation.resolvedAt));
+  if (status !== 'open') {
+    item.appendChild(createStatusBadge(status, annotation.addressedAt, annotation.resolvedAt));
   }
 
   const text = document.createElement('div');
@@ -415,6 +418,8 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
   const actions = document.createElement('div');
   actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
 
+  appendStatusActions(actions, annotation.id, status, callbacks);
+
   const deleteBtn = createDeleteButton(annotation.id, callbacks);
   actions.appendChild(deleteBtn);
 
@@ -437,14 +442,16 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 function createElementAnnotationItem(annotation: Annotation & { type: 'element' }, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
   const orphaned = callbacks.isAnnotationOrphaned(annotation.id, annotation.pageUrl);
+  const status = getAnnotationStatus(annotation);
   const classes = ['air-annotation-item'];
-  if (annotation.resolvedAt) classes.push('air-annotation-item--resolved');
+  if (status === 'resolved') classes.push('air-annotation-item--resolved');
+  if (status === 'addressed') classes.push('air-annotation-item--addressed');
   if (orphaned) classes.push('air-annotation-item--orphan');
   item.className = classes.join(' ');
   item.setAttribute('data-air-el', 'element-annotation-item');
 
-  if (annotation.resolvedAt) {
-    item.appendChild(createResolvedBadge(annotation.resolvedAt));
+  if (status !== 'open') {
+    item.appendChild(createStatusBadge(status, annotation.addressedAt, annotation.resolvedAt));
   }
 
   const desc = document.createElement('div');
@@ -474,6 +481,8 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
 
   const actions = document.createElement('div');
   actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
+
+  appendStatusActions(actions, annotation.id, status, callbacks);
 
   const deleteBtn = createDeleteButton(annotation.id, callbacks);
   actions.appendChild(deleteBtn);
@@ -683,6 +692,40 @@ function createDeleteButton(annotationId: string, callbacks: PanelCallbacks): HT
   return deleteBtn;
 }
 
+/** Add Accept/Reopen buttons based on current annotation status. */
+function appendStatusActions(
+  container: HTMLElement,
+  annotationId: string,
+  status: AnnotationStatus,
+  callbacks: PanelCallbacks,
+): void {
+  if (status === 'addressed') {
+    const acceptBtn = document.createElement('button');
+    acceptBtn.className = 'air-popup__btn air-popup__btn--accept';
+    acceptBtn.setAttribute('data-air-el', 'annotation-accept');
+    acceptBtn.textContent = 'Accept';
+    acceptBtn.style.fontSize = '11px';
+    acceptBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onAnnotationStatusChange(annotationId, 'resolved');
+    });
+    container.appendChild(acceptBtn);
+  }
+
+  if (status === 'resolved') {
+    const reopenBtn = document.createElement('button');
+    reopenBtn.className = 'air-popup__btn air-popup__btn--cancel';
+    reopenBtn.setAttribute('data-air-el', 'annotation-reopen');
+    reopenBtn.textContent = 'Reopen';
+    reopenBtn.style.fontSize = '11px';
+    reopenBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onAnnotationStatusChange(annotationId, 'open');
+    });
+    container.appendChild(reopenBtn);
+  }
+}
+
 /** Two-click clear: first click shows confirmation, second click deletes. */
 function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks, mediator: ReviewMediator): void {
   let confirming = false;
@@ -748,16 +791,29 @@ function formatTimestamp(iso: string): string {
   }
 }
 
-function createResolvedBadge(resolvedAt: string): HTMLDivElement {
+function createStatusBadge(status: AnnotationStatus, addressedAt?: string, resolvedAt?: string): HTMLDivElement {
   const badge = document.createElement('div');
-  badge.className = 'air-annotation-item__resolved-badge';
-  badge.setAttribute('data-air-el', 'resolved-badge');
-  badge.textContent = '\u2714 Resolved';
+  badge.setAttribute('data-air-el', 'status-badge');
 
-  const time = document.createElement('span');
-  time.className = 'air-annotation-item__resolved-time';
-  time.textContent = formatTimestamp(resolvedAt);
-  badge.appendChild(time);
+  if (status === 'resolved') {
+    badge.className = 'air-annotation-item__resolved-badge';
+    badge.textContent = '\u2714 Resolved';
+    if (resolvedAt) {
+      const time = document.createElement('span');
+      time.className = 'air-annotation-item__resolved-time';
+      time.textContent = formatTimestamp(resolvedAt);
+      badge.appendChild(time);
+    }
+  } else if (status === 'addressed') {
+    badge.className = 'air-annotation-item__addressed-badge';
+    badge.textContent = '\uD83D\uDD27 Addressed';
+    if (addressedAt) {
+      const time = document.createElement('span');
+      time.className = 'air-annotation-item__addressed-time';
+      time.textContent = formatTimestamp(addressedAt);
+      badge.appendChild(time);
+    }
+  }
 
   return badge;
 }

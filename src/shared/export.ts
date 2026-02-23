@@ -1,5 +1,5 @@
 import type { ReviewStore, Annotation, PageNote } from './types.js';
-import { isTextAnnotation, isElementAnnotation } from './types.js';
+import { isTextAnnotation, isElementAnnotation, getAnnotationStatus } from './types.js';
 
 /**
  * Generate markdown export from a ReviewStore.
@@ -57,8 +57,11 @@ export function generateExport(store: ReviewStore): string {
       lines.push('### Text Annotations');
       let i = 1;
       for (const a of textAnnotations) {
-        const resolved = a.resolvedAt ? ' ✅ [Resolved]' : '';
-        lines.push(`${i}. **"${a.selectedText}"**${resolved}`);
+        const status = getAnnotationStatus(a);
+        const statusLabel = status === 'resolved' ? ' ✅ [Resolved]'
+          : status === 'addressed' ? ' 🔧 [Addressed]'
+          : '';
+        lines.push(`${i}. **"${a.selectedText}"**${statusLabel}`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
         }
@@ -78,8 +81,11 @@ export function generateExport(store: ReviewStore): string {
       for (const a of elementAnnotations) {
         const safeSelector = a.elementSelector.cssSelector.replace(/`/g, '\\`');
         const safePreview = a.elementSelector.outerHtmlPreview.replace(/`/g, '\\`');
-        const resolved = a.resolvedAt ? ' ✅ [Resolved]' : '';
-        lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)${resolved}`);
+        const status = getAnnotationStatus(a);
+        const statusLabel = status === 'resolved' ? ' ✅ [Resolved]'
+          : status === 'addressed' ? ' 🔧 [Addressed]'
+          : '';
+        lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)${statusLabel}`);
         if (a.note) {
           lines.push(`   > ${a.note}`);
         }

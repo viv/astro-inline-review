@@ -11,6 +11,9 @@ export interface AgentReply {
   createdAt: string;
 }
 
+/** Annotation lifecycle status */
+export type AnnotationStatus = 'open' | 'addressed' | 'resolved';
+
 /** Shared fields for all annotation types */
 export interface BaseAnnotation {
   id: string;
@@ -20,8 +23,21 @@ export interface BaseAnnotation {
   note: string;
   createdAt: string;
   updatedAt: string;
+  status?: AnnotationStatus;
+  addressedAt?: string;
   resolvedAt?: string;
   replies?: AgentReply[];
+}
+
+/**
+ * Get the effective status of an annotation.
+ * Handles backward compatibility: annotations without a status field
+ * default to 'resolved' if resolvedAt is set, otherwise 'open'.
+ */
+export function getAnnotationStatus(a: BaseAnnotation): AnnotationStatus {
+  if (a.status) return a.status;
+  if (a.resolvedAt) return 'resolved';
+  return 'open';
 }
 
 /** A text selection annotation */

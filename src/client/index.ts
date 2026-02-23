@@ -81,6 +81,17 @@ function init(): void {
         showToast(shadowRoot, 'Failed to delete annotation');
       }
     },
+    onAnnotationStatusChange: async (id, status) => {
+      try {
+        await api.updateAnnotation(id, { status } as Partial<import('./types.js').Annotation>);
+        await mediator.restoreHighlights();
+        await refreshBadge();
+        mediator.refreshPanel();
+      } catch (err) {
+        console.error('[astro-inline-review] Failed to update annotation status:', err);
+        showToast(shadowRoot, 'Failed to update status');
+      }
+    },
     isAnnotationOrphaned: (id, pageUrl) => {
       if (pageUrl !== window.location.pathname) return false;
       const marks = getHighlightMarks(id);

@@ -567,7 +567,7 @@ describe('createAnnotator', () => {
         ann.range.contextBefore,
         ann.range.contextAfter,
       );
-      expect(applyHighlight).toHaveBeenCalledWith(fallbackRange, 'ann-1', false);
+      expect(applyHighlight).toHaveBeenCalledWith(fallbackRange, 'ann-1', 'open');
     });
 
     it('falls back to replacedText context matching when Tier 1 and Tier 2 fail (Tier 2.5)', async () => {
@@ -619,7 +619,7 @@ describe('createAnnotator', () => {
       );
 
       // Highlight applied using the Tier 2.5 range
-      expect(applyHighlight).toHaveBeenCalledWith(tier25Range, 'ann-1', false);
+      expect(applyHighlight).toHaveBeenCalledWith(tier25Range, 'ann-1', 'open');
     });
 
     it('leaves annotation as orphan when all tiers including Tier 2.5 fail', async () => {
@@ -676,7 +676,7 @@ describe('createAnnotator', () => {
       await annotator.restoreHighlights();
 
       expect(resolveElement).toHaveBeenCalledWith(ann.elementSelector);
-      expect(applyElementHighlight).toHaveBeenCalledWith(target, 'el-ann-1', false);
+      expect(applyElementHighlight).toHaveBeenCalledWith(target, 'el-ann-1', 'open');
     });
 
     it('removes existing highlights before restoring', async () => {

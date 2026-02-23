@@ -228,18 +228,20 @@ describe('MCP server integration', () => {
     expect(result.content[0].text).toContain('not found');
   });
 
-  it('resolve_annotation persists to disk', async () => {
+  it('resolve_annotation defaults to addressed status', async () => {
     await client.initialize();
 
     const response = await client.callTool('resolve_annotation', { id: 'ann-1' });
     const result = response.result as { content: Array<{ type: string; text: string }> };
     const annotation = JSON.parse(result.content[0].text);
 
-    expect(annotation.resolvedAt).toBeDefined();
+    expect(annotation.status).toBe('addressed');
+    expect(annotation.addressedAt).toBeDefined();
 
     // Verify persisted to disk
     const store = readStore(storagePath);
-    expect(store.annotations[0].resolvedAt).toBeDefined();
+    expect(store.annotations[0].status).toBe('addressed');
+    expect(store.annotations[0].addressedAt).toBeDefined();
   });
 
   it('add_agent_reply persists to disk', async () => {
@@ -314,11 +316,12 @@ describe('MCP server end-to-end workflow', () => {
     const annotations = JSON.parse(listResult.content[0].text);
     expect(annotations).toHaveLength(2);
 
-    // Step 2: Resolve the first annotation
+    // Step 2: Address the first annotation (default behaviour)
     const resolveResponse = await client.callTool('resolve_annotation', { id: 'ann-1' });
     const resolveResult = resolveResponse.result as { content: Array<{ type: string; text: string }> };
     const resolved = JSON.parse(resolveResult.content[0].text);
-    expect(resolved.resolvedAt).toBeDefined();
+    expect(resolved.status).toBe('addressed');
+    expect(resolved.addressedAt).toBeDefined();
 
     // Step 3: Add a reply to the second annotation
     const replyResponse = await client.callTool('add_agent_reply', {
@@ -334,12 +337,13 @@ describe('MCP server end-to-end workflow', () => {
     const exportResult = exportResponse.result as { content: Array<{ type: string; text: string }> };
     const markdown = exportResult.content[0].text;
 
-    expect(markdown).toContain('[Resolved]');
+    expect(markdown).toContain('[Addressed]');
     expect(markdown).toContain('Updated company description');
 
     // Step 5: Verify the JSON file reflects all changes
     const store = readStore(storagePath);
-    expect(store.annotations[0].resolvedAt).toBeDefined();
+    expect(store.annotations[0].status).toBe('addressed');
+    expect(store.annotations[0].addressedAt).toBeDefined();
     expect(store.annotations[1].replies).toHaveLength(1);
     expect(store.annotations[1].replies![0].message).toContain('Updated company description');
   });

@@ -257,6 +257,11 @@ export const PANEL_STYLES = /* css */ `
     text-decoration: line-through;
   }
 
+  .air-annotation-item--addressed {
+    opacity: 0.85;
+    border-left: 3px solid #3B82F6;
+  }
+
   .air-annotation-item__resolved-badge {
     display: inline-flex;
     align-items: center;
@@ -271,6 +276,31 @@ export const PANEL_STYLES = /* css */ `
     font-size: 11px;
     color: #888;
     font-weight: 400;
+  }
+
+  .air-annotation-item__addressed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #3B82F6;
+    margin-bottom: 4px;
+  }
+
+  .air-annotation-item__addressed-time {
+    font-size: 11px;
+    color: #888;
+    font-weight: 400;
+  }
+
+  .air-popup__btn--accept {
+    background: #166534;
+    color: #86EFAC;
+  }
+
+  .air-popup__btn--accept:hover {
+    background: #15803d;
   }
 
   .air-annotation-item__reply {

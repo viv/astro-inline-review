@@ -34,7 +34,7 @@ import { writeCache, readCache } from './cache.js';
 import { updateBadge } from './ui/fab.js';
 import { showToast } from './ui/toast.js';
 import { Z_INDEX } from './styles.js';
-import { isTextAnnotation, isElementAnnotation } from './types.js';
+import { isTextAnnotation, isElementAnnotation, getAnnotationStatus } from './types.js';
 import type { ReviewMediator } from './mediator.js';
 
 export interface AnnotatorDeps {
@@ -487,7 +487,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       // Restore text highlights
       const textAnnotations = pageAnnotations.filter(isTextAnnotation);
       for (const annotation of textAnnotations) {
-        const resolved = !!annotation.resolvedAt;
+        const status = getAnnotationStatus(annotation);
 
         // Tier 1: Try XPath + offset
         let range = deserializeRange(annotation.range);
@@ -512,7 +512,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
 
         // Tier 3: Orphaned — no highlight, visible only in panel
         if (range) {
-          applyHighlight(range, annotation.id, resolved);
+          applyHighlight(range, annotation.id, status);
         }
       }
 
@@ -521,7 +521,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       for (const annotation of elementAnnotations) {
         const element = resolveElement(annotation.elementSelector);
         if (element) {
-          applyElementHighlight(element, annotation.id, !!annotation.resolvedAt);
+          applyElementHighlight(element, annotation.id, getAnnotationStatus(annotation));
         }
       }
 

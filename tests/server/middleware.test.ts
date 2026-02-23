@@ -618,6 +618,110 @@ describe('middleware', () => {
     });
   });
 
+  describe('PATCH /annotations/:id status', () => {
+    async function createTextAnnotation() {
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'some text',
+        note: 'original note',
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 9, selectedText: 'some text', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      return JSON.parse(createRes._body);
+    }
+
+    it('sets status to addressed and sets addressedAt timestamp', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'addressed',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.status).toBe('addressed');
+      expect(patched.addressedAt).toBeTruthy();
+      expect(patched.resolvedAt).toBeUndefined();
+    });
+
+    it('sets status to resolved and sets resolvedAt timestamp', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'resolved',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.status).toBe('resolved');
+      expect(patched.resolvedAt).toBeTruthy();
+    });
+
+    it('reopens annotation by setting status to open', async () => {
+      const created = await createTextAnnotation();
+
+      // First resolve it
+      const resolveReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'resolved',
+      });
+      const resolveRes = mockResponse();
+      await middleware(resolveReq as any, resolveRes as any, () => {});
+      expect(resolveRes._status).toBe(200);
+
+      // Then reopen it
+      const reopenReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'open',
+      });
+      const reopenRes = mockResponse();
+      await middleware(reopenReq as any, reopenRes as any, () => {});
+
+      expect(reopenRes._status).toBe(200);
+      const patched = JSON.parse(reopenRes._body);
+      expect(patched.status).toBe('open');
+      expect(patched.resolvedAt).toBeUndefined();
+      expect(patched.addressedAt).toBeUndefined();
+    });
+
+    it('rejects invalid status with 400', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'invalid',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(400);
+      const body = JSON.parse(patchRes._body);
+      expect(body.error).toContain('open');
+      expect(body.error).toContain('addressed');
+      expect(body.error).toContain('resolved');
+    });
+
+    it('updates status alongside note', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'addressed',
+        note: 'updated note',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.status).toBe('addressed');
+      expect(patched.addressedAt).toBeTruthy();
+      expect(patched.note).toBe('updated note');
+    });
+  });
+
   describe('PATCH field allowlist', () => {
     it('PATCH /annotations/:id only applies allowlisted fields', async () => {
       // Create an annotation

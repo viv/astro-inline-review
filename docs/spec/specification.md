@@ -1,11 +1,11 @@
 ---
 generated_by: Claude Opus 4.6
-generation_date: 2026-02-21
+generation_date: 2026-02-23
 model_version: claude-opus-4-6
 purpose: component_specification
 status: reviewed
 human_reviewer: matthewvivian
-tags: [astro, integration, annotation, dev-tools, specification, element-annotation]
+tags: [astro, integration, annotation, dev-tools, specification, element-annotation, status-lifecycle]
 ---
 
 # astro-inline-review: Component Specification
@@ -95,6 +95,8 @@ Annotations use a discriminated union with a `type` field to support both text s
 #### 3.2.1 BaseAnnotation
 
 ```typescript
+type AnnotationStatus = 'open' | 'addressed' | 'resolved';
+
 interface BaseAnnotation {
   id: string;           // Server-generated unique ID
   type: 'text' | 'element';  // Discriminant field (see 3.2.4)
@@ -103,8 +105,10 @@ interface BaseAnnotation {
   note: string;         // User's annotation note (may be empty)
   createdAt: string;    // ISO 8601 timestamp, server-generated
   updatedAt: string;    // ISO 8601 timestamp, updated on each edit
-  resolvedAt?: string;  // ISO 8601 — when marked resolved by an agent (optional)
-  replies?: AgentReply[];  // Agent replies to this annotation (optional)
+  status?: AnnotationStatus;    // Explicit lifecycle status (see 3.2.5)
+  addressedAt?: string;         // ISO 8601 — when marked addressed by an agent (optional)
+  resolvedAt?: string;          // ISO 8601 — when marked resolved by a human reviewer (optional)
+  replies?: AgentReply[];       // Agent replies to this annotation (optional)
 }
 ```
 
@@ -117,7 +121,7 @@ interface AgentReply {
 }
 ```
 
-Agent replies are appended by the MCP `add_agent_reply` tool. The `replies` array is append-only and grows chronologically. Both `resolvedAt` and `replies` are optional — their absence means "not resolved" / "no replies". No migration is needed for existing data.
+Agent replies are appended by the MCP `add_agent_reply` tool. The `replies` array is append-only and grows chronologically. The `status`, `addressedAt`, `resolvedAt`, and `replies` fields are all optional — their absence means "open" / "not addressed" / "not resolved" / "no replies". No migration is needed for existing data.
 
 #### 3.2.2 TextAnnotation
 
@@ -156,6 +160,47 @@ The discriminant field is `type`:
 - `'element'` — element annotation (has `elementSelector`)
 
 **Backward compatibility**: Annotations without a `type` field (created before this feature) are treated as `TextAnnotation` with `type: 'text'`. The migration is applied on read (see Section 4.1.1).
+
+#### 3.2.5 Annotation Status Lifecycle
+
+Annotations have an explicit lifecycle status that tracks their progress from creation through agent action to human acceptance:
+
+```
+open → addressed → resolved
+  ↑                    │
+  └────────────────────┘  (reopen)
+```
+
+| Status | Meaning | Set by |
+|--------|---------|--------|
+| `open` | Annotation is new or has been reopened | Default on creation; human reviewer via Reopen button |
+| `addressed` | An agent has acted on the annotation | Agent via MCP `resolve_annotation` tool (default behaviour) |
+| `resolved` | A human reviewer has accepted the agent's work | Human reviewer via Accept button in panel; or agent via MCP with `autoResolve: true` |
+
+**Status transitions**:
+- `open` → `addressed`: Agent calls `resolve_annotation` MCP tool (default, without `autoResolve`)
+- `addressed` → `resolved`: Human reviewer clicks Accept button in panel; or agent calls `resolve_annotation` with `autoResolve: true`
+- `resolved` → `open`: Human reviewer clicks Reopen button in panel (clears `addressedAt` and `resolvedAt`)
+
+**Timestamp semantics**:
+- `addressedAt` is set when status transitions to `addressed`
+- `resolvedAt` is set when status transitions to `resolved`
+- Transitioning to `open` (reopen) clears both `addressedAt` and `resolvedAt`
+
+**`getAnnotationStatus()` helper**: A shared helper function provides backward compatibility for annotations that predate the `status` field:
+
+```typescript
+function getAnnotationStatus(a: BaseAnnotation): AnnotationStatus {
+  if (a.status) return a.status;
+  if (a.resolvedAt) return 'resolved';
+  return 'open';
+}
+```
+
+- Annotations with an explicit `status` field use it directly
+- Annotations without `status` but with `resolvedAt` are treated as `'resolved'` (backward compatibility with pre-status-lifecycle data)
+- Annotations without either field default to `'open'`
+- No migration is needed — the helper handles legacy data transparently
 
 ### 3.3 PageNote
 
@@ -307,7 +352,7 @@ All routes are served via Vite dev server middleware at the prefix `/__inline-re
 | `GET` | `/annotations` | List all annotations | 200 |
 | `GET` | `/annotations?page=/path` | List annotations filtered by page URL | 200 |
 | `POST` | `/annotations` | Create a new annotation | 201 |
-| `PATCH` | `/annotations/:id` | Update an annotation (note and/or replacedText) | 200 |
+| `PATCH` | `/annotations/:id` | Update an annotation (note, replacedText, and/or status) | 200 |
 | `DELETE` | `/annotations/:id` | Delete an annotation | 200 |
 
 **GET /annotations** response shape:
@@ -364,9 +409,9 @@ Note: The GET response returns the full store shape (including `pageNotes`), wit
 
 The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields default to empty strings/objects. If `type` is not provided, it defaults to `'text'` (backward compatibility).
 
-**PATCH /annotations/:id** request body: `{ "note": "new value", "replacedText": "new text" }`
+**PATCH /annotations/:id** request body: `{ "note": "new value", "replacedText": "new text", "status": "addressed" }`
 
-**Field mutability on PATCH**: The server uses an allowlist pattern — only `note` and `replacedText` (for text annotations) from the request body are applied; all other fields in the request body are ignored.
+**Field mutability on PATCH**: The server uses an allowlist pattern — only `note`, `replacedText` (for text annotations), and `status` from the request body are applied; all other fields in the request body are ignored.
 
 | Field | Mutable via PATCH? | Notes |
 |-------|-------------------|-------|
@@ -376,10 +421,18 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 | `selectedText` | No | Preserved from original |
 | `note` | **Yes** | Mutable — primary use case |
 | `replacedText` | **Yes** (text only) | Mutable on text annotations only, ignored on element annotations |
+| `status` | **Yes** | Must be `'open'`, `'addressed'`, or `'resolved'` (see status side-effects below) |
 | `range` | No | Preserved from original |
 | `elementSelector` | No | Preserved from original |
 | `createdAt` | No | Preserved from original |
 | `updatedAt` | No | Server-generated on every PATCH |
+| `addressedAt` | No | Server-generated as side-effect of `status` change |
+| `resolvedAt` | No | Server-generated as side-effect of `status` change |
+
+**Status side-effects on PATCH**: When `status` is included in the request body, the server automatically manages the related timestamp fields:
+- `status: 'addressed'` → sets `addressedAt` to current timestamp
+- `status: 'resolved'` → sets `resolvedAt` to current timestamp
+- `status: 'open'` → clears both `addressedAt` and `resolvedAt` (sets to `undefined`)
 
 **Validation**: `POST /annotations` validates required fields and returns 400 with a descriptive error message on failure:
 - `type` must be `"text"` or `"element"`
@@ -387,6 +440,10 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 - `note` must be a string
 - When `type` is `"text"`: `selectedText` must be a string, `range` must be an object
 - When `type` is `"element"`: `elementSelector` must be an object
+
+`PATCH /annotations/:id` validates:
+- `replacedText` must not be empty (if provided)
+- `status` must be one of `'open'`, `'addressed'`, `'resolved'` (if provided)
 
 `POST /page-notes` validates:
 - `pageUrl` must be a string
@@ -468,11 +525,18 @@ The MCP (Model Context Protocol) server provides structured agent access to revi
 | `list_page_notes` | Read | `pageUrl` (string, optional) | List all page-level notes, optionally filtered by page URL |
 | `get_annotation` | Read | `id` (string, required) | Get a single annotation by ID with full detail |
 | `get_export` | Read | None | Get a markdown export of all annotations and page notes |
-| `resolve_annotation` | Write | `id` (string, required) | Mark an annotation as resolved (sets `resolvedAt` timestamp) |
+| `resolve_annotation` | Write | `id` (string, required), `autoResolve` (boolean, optional) | Mark an annotation as addressed (default) or resolved (see below) |
 | `add_agent_reply` | Write | `id` (string, required), `message` (string, required) | Add a reply to an annotation explaining what action was taken |
 | `update_annotation_target` | Write | `id` (string, required), `replacedText` (string, required) | Update what text replaced the original annotated text. Only applicable to text annotations. |
 
 All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters require non-empty strings (`.min(1)`). The `add_agent_reply` tool additionally validates that `message` is non-empty after trimming — an empty or whitespace-only message returns an error. The `update_annotation_target` tool validates that `replacedText` is non-empty after trimming and returns an error if the annotation is not a text annotation.
+
+**`resolve_annotation` behaviour**: By default, this tool sets the annotation's status to `'addressed'` and records an `addressedAt` timestamp. This reflects the intended workflow: the agent marks its work as done, and a human reviewer later accepts it via the UI. Passing `autoResolve: true` skips the human review step and sets the status directly to `'resolved'` with a `resolvedAt` timestamp — useful for trivial fixes or automated pipelines where human confirmation is unnecessary.
+
+| `autoResolve` | Status set | Timestamp set |
+|---------------|-----------|---------------|
+| `false` (default) | `'addressed'` | `addressedAt` |
+| `true` | `'resolved'` | `resolvedAt` |
 
 **Return format:** All tools return `{ content: [{ type: 'text', text: '...' }] }`. Read tools return JSON-stringified data. `get_export` returns markdown text. Error responses include `isError: true` with a descriptive message.
 
@@ -597,6 +661,7 @@ Components accept callback interfaces during construction:
 |-----------|----------|----------|---------|
 | Panel | `onAnnotationClick(id)` | Client bootstrap | Scroll to highlight and pulse |
 | Panel | `onAnnotationDelete(id)` | Client bootstrap | Delete annotation, remove highlight, refresh badge and panel |
+| Panel | `onAnnotationStatusChange(id, status)` | Client bootstrap | Update annotation status via PATCH, restore highlights, refresh badge and panel |
 | Panel | `isAnnotationOrphaned(id, pageUrl)` | Client bootstrap | Check if annotation's target cannot be found on page |
 | Panel | `onRefreshBadge()` | Client bootstrap | Update FAB badge count |
 | Panel | `onExport()` | Client bootstrap | Export annotations to clipboard as Markdown |
@@ -753,9 +818,17 @@ Shows all annotations and page notes **across all pages**, grouped by page URL.
 #### 6.2.3 Text Annotation Items
 
 Each text annotation item in the panel shows:
+- **Status badge** (if not `open`) — see 6.2.3b
 - **Selected text** in italic yellow (`#FCD34D`), truncated to 80 characters with ellipsis
 - **Note** (if non-empty) in light grey
 - Wrapped in quotes: `"selected text..."`
+
+**Status styling**: The item container receives a modifier class based on the annotation's effective status (via `getAnnotationStatus()`):
+- `addressed`: `.air-annotation-item--addressed` — blue left border (`#3B82F6`), reduced opacity (0.85)
+- `resolved`: `.air-annotation-item--resolved` — reduced opacity (0.7), selected text gets `text-decoration: line-through`
+- `open`: no modifier class (default styling)
+
+**Status action buttons**: Each annotation item includes contextual action buttons based on its status (see 6.2.3c).
 
 **Delete button**: Each text annotation item has a "Delete" button (`data-air-el="annotation-delete"`) with a two-click confirmation flow matching the Clear All pattern (section 6.2.5). First click changes the button text to "Sure?" and sets `data-air-state="confirming"`. A second click within 3 seconds executes the delete (calls the API, removes highlight marks, refreshes badge and panel). If no second click occurs within 3 seconds, the button reverts to "Delete".
 
@@ -766,16 +839,49 @@ Each text annotation item in the panel shows:
 #### 6.2.3a Element Annotation Items
 
 Each element annotation item in the panel shows:
+- **Status badge** (if not `open`) — see 6.2.3b
 - **Element description** in yellow (`#FCD34D`), showing `elementSelector.description` (e.g. `img.hero-image (src=hero.jpg, alt=Hero banner)`)
 - **Note** (if non-empty) in light grey
 
 **Data attributes**: `data-air-el="element-annotation-item"` on each element annotation item (distinct from `annotation-item` used for text annotations).
+
+**Status styling**: Same modifier classes and visual treatment as text annotations (section 6.2.3).
+
+**Status action buttons**: Same contextual action buttons as text annotations (see 6.2.3c).
 
 **Delete button**: Each element annotation item has a "Delete" button (`data-air-el="annotation-delete"`) with the same two-click confirmation flow as text annotations (section 6.2.3). First click shows "Sure?" with `data-air-state="confirming"`, second click within 3 seconds executes the delete.
 
 **Orphan indicator**: If the annotated element cannot be found on the page (its highlight was not restored), a red indicator is shown with the text "Could not locate on page". The item receives the `.air-annotation-item--orphan` modifier class. Same current-page-only restriction as text annotations (section 6.2.3).
 
 **Click behaviour**: Scrolls the page to the annotated element and triggers a pulse animation on the element's outline highlight. Uses `scrollIntoView({ behavior: 'smooth', block: 'center' })`.
+
+#### 6.2.3b Status Badges
+
+Annotation items display a status badge (`data-air-el="status-badge"`) when the annotation is not in the `open` state:
+
+| Status | Badge class | Text | Colour | Timestamp shown |
+|--------|------------|------|--------|----------------|
+| `addressed` | `.air-annotation-item__addressed-badge` | `🔧 Addressed` | Blue (`#3B82F6`) | `addressedAt` (formatted as short date+time) |
+| `resolved` | `.air-annotation-item__resolved-badge` | `✔ Resolved` | Green (`#22C55E`) | `resolvedAt` (formatted as short date+time) |
+| `open` | — | — | — | No badge shown |
+
+The badge appears at the top of the annotation item, above the selected text/element description. The timestamp (if available) is displayed as a lighter grey span beside the status text.
+
+#### 6.2.3c Status Action Buttons
+
+Each annotation item includes contextual action buttons based on its effective status:
+
+| Status | Button shown | Label | `data-air-el` | Action |
+|--------|-------------|-------|---------------|--------|
+| `addressed` | Accept | "Accept" | `annotation-accept` | Transitions annotation to `resolved` via `PATCH` with `status: 'resolved'` |
+| `resolved` | Reopen | "Reopen" | `annotation-reopen` | Transitions annotation to `open` via `PATCH` with `status: 'open'` |
+| `open` | — | — | — | No status action button |
+
+**Accept button**: Green background (`#166534`), green text (`#86EFAC`). Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `PATCH /annotations/:id` with `{ "status": "resolved" }`, then restores highlights (to update colours), refreshes badge, and refreshes panel.
+
+**Reopen button**: Styled as a cancel-type button. Used when the reviewer disagrees with the resolution and wants to re-open the annotation. Sends `PATCH /annotations/:id` with `{ "status": "open" }`, then restores highlights, refreshes badge, and refreshes panel.
+
+Both buttons call `e.stopPropagation()` to prevent the click from triggering the scroll-to-annotation behaviour.
 
 #### 6.2.4 Page Note Items
 
@@ -1001,13 +1107,15 @@ Highlights are `<mark>` elements injected into the **light DOM** (the page's own
 - `data-air-id="<annotation-id>"` — links the mark to its annotation
 - `style="background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;"`
 
-**Resolved text highlights**: When a text annotation has `resolvedAt` set, its highlight uses a green background instead of amber:
+**Status-based text highlight colours**: The highlight background colour changes based on the annotation's effective status (via `getAnnotationStatus()`):
 
-```css
-background-color: rgba(34,197,94,0.2);
-```
+| Status | Background colour | Visual effect |
+|--------|------------------|---------------|
+| `open` | `rgba(217,119,6,0.3)` | Amber (default) |
+| `addressed` | `rgba(59,130,246,0.2)` | Blue |
+| `resolved` | `rgba(34,197,94,0.2)` | Green |
 
-This visually distinguishes resolved annotations from active ones.
+This visually distinguishes annotations at different lifecycle stages.
 
 **Single-node selections**: Use `Range.surroundContents()` for simplicity.
 
@@ -1072,21 +1180,18 @@ Element annotations use **CSS outline** (not background colour or border) to avo
 
 #### 8.5.1 Element Highlight Style
 
-```css
-outline: 2px dashed rgba(217,119,6,0.8);
-outline-offset: 2px;
-```
+**Status-based element highlight colours**: The outline colour changes based on the annotation's effective status (via `getAnnotationStatus()`):
 
-- Dashed amber outline distinguishes element annotations from text highlights (solid amber background)
-- `outline-offset: 2px` adds visual breathing room
+| Status | Outline style | Visual effect |
+|--------|--------------|---------------|
+| `open` | `2px dashed rgba(217,119,6,0.8)` | Amber (default) |
+| `addressed` | `2px dashed rgba(59,130,246,0.5)` | Blue |
+| `resolved` | `2px dashed rgba(34,197,94,0.5)` | Green |
+
+All element highlights share:
+- `outline-offset: 2px` — adds visual breathing room
 - `outline` does not affect element dimensions or layout (unlike `border`)
-
-**Resolved element highlights**: When an element annotation has `resolvedAt` set, its outline uses a green dashed style instead of amber:
-
-```css
-outline: 2px dashed rgba(34,197,94,0.5);
-outline-offset: 2px;
-```
+- Dashed outline distinguishes element annotations from text highlights (solid background)
 - The `data-air-element-id="<annotation-id>"` attribute is added to the element to link it to its annotation
 - `cursor: pointer` is added to indicate the element is clickable for editing
 
@@ -1190,7 +1295,10 @@ Exported: YYYY-MM-DD HH:MM
 - **Notes**: Blockquote: `   > note text` (indented 3 spaces)
 - **Empty notes**: No blockquote line rendered
 - **Empty store**: Shows "No annotations or notes yet." instead of page groups
-- **Resolved annotations**: Appended with ` ✅ [Resolved]` after the selected text or selector
+- **Status labels**: Appended after the selected text or selector based on annotation status:
+  - `addressed`: ` 🔧 [Addressed]`
+  - `resolved`: ` ✅ [Resolved]`
+  - `open`: no label
 - **Agent replies**: Shown as blockquotes with `**Agent:**` prefix: `   > **Agent:** reply text`
 - All pages are included in the export, not just the current page
 
@@ -1364,7 +1472,9 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `annotation-delete` | Annotation delete button | Shadow DOM | Present on each annotation item when panel shows annotations |
 | `element-annotation-item` | Element annotation list item in panel | Shadow DOM | Present when panel is open and element annotations exist |
 | `panel-content` | Panel content area (scrollable) | Shadow DOM | Always present (child of panel) |
-| `resolved-badge` | Resolved status badge on annotation | Shadow DOM | Present on resolved annotations |
+| `status-badge` | Status badge on annotation (addressed or resolved) | Shadow DOM | Present on non-open annotations |
+| `annotation-accept` | Accept button on addressed annotation | Shadow DOM | Present on addressed annotations |
+| `annotation-reopen` | Reopen button on resolved annotation | Shadow DOM | Present on resolved annotations |
 | `agent-reply` | Agent reply block on annotation | Shadow DOM | Present when annotation has agent replies |
 | `first-use-tooltip` | First-use tooltip near FAB | Shadow DOM | Shown once on first visit, then dismissed |
 | `empty-arrow` | Directional arrow in empty state | Shadow DOM | Present when "This Page" tab has no annotations |
@@ -1442,6 +1552,8 @@ The context matching algorithm:
 | CSS selector matches multiple elements | First match is used (no uniqueness re-verification at resolution time) |
 | Alt+click on excluded element | Silently ignored (no popup shown) |
 | Clipboard API unavailable | Fall back to execCommand, return false on total failure |
+| Status update fails | Console error, toast notification "Failed to update status" |
+| Invalid status value in PATCH | 400 error: "status must be one of: open, addressed, resolved" |
 
 ### 16.2 Console Logging
 
@@ -1471,10 +1583,17 @@ Errors are logged with the prefix `[astro-inline-review]` for easy filtering. No
 | Inspector overlay border | `rgba(66,133,244,0.6)` | Blue border around hovered element |
 | Inspector label background | `rgba(66,133,244,0.9)` | Blue background for tag label |
 | Inspector label text | `white` | White text on tag label |
-| Element highlight outline | `rgba(217,119,6,0.8)` | Dashed amber outline on annotated elements |
+| Element highlight outline (open) | `rgba(217,119,6,0.8)` | Dashed amber outline on open annotated elements |
+| Element highlight outline (addressed) | `rgba(59,130,246,0.5)` | Dashed blue outline on addressed annotated elements |
+| Element highlight outline (resolved) | `rgba(34,197,94,0.5)` | Dashed green outline on resolved annotated elements |
 | Element highlight pulse | `rgba(217,119,6,1)` | Fully opaque amber outline during pulse |
+| Addressed text highlight | `rgba(59,130,246,0.2)` | Blue background on addressed text annotations |
 | Resolved text highlight | `rgba(34,197,94,0.2)` | Green background on resolved text annotations |
-| Resolved element highlight | `rgba(34,197,94,0.5)` | Green dashed outline on resolved element annotations |
+| Addressed badge text | `#3B82F6` | Blue text for addressed status badge |
+| Resolved badge text | `#22C55E` | Green text for resolved status badge |
+| Addressed border | `#3B82F6` | Blue left border on addressed annotation items |
+| Accept button background | `#166534` | Green background for Accept button |
+| Accept button text | `#86EFAC` | Light green text for Accept button |
 
 ### 17.2 Z-Index Stack
 
@@ -1599,6 +1718,8 @@ The following accessibility features are not yet implemented:
 | Click element annotation in panel | Page scrolls to element, outline pulses | 6.2.3a, 8.5.3 |
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
 | Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
+| Click Accept on addressed annotation | Annotation status changes to resolved, highlights update colours | 6.2.3c, 3.2.5 |
+| Click Reopen on resolved annotation | Annotation status changes to open, highlights update colours | 6.2.3c, 3.2.5 |
 | Click Delete on annotation in panel | Two-click confirmation: first click shows "Sure?", second click deletes | 6.2.3, 6.2.3a |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |
 | Press Escape | Dismiss popup (priority) or close panel | 10.4 |
@@ -1607,4 +1728,5 @@ The following accessibility features are not yet implemented:
 | Press Cmd/Ctrl+Shift+N | Open panel and add-note form | 10.1, 11.2 |
 | Page reload | Highlights restored from server (text + element) | 8.4, 8.5.4, 8.7 |
 | Navigate to different page | Badge updates, highlights re-applied | 12.2 |
+| Agent calls `resolve_annotation` MCP tool | Annotation status set to addressed (or resolved with `autoResolve`) | 4.3.2, 3.2.5 |
 | `astro build` | Zero traces in output | 13 |

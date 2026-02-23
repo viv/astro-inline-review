@@ -34,7 +34,9 @@ This file is the source of truth. `ReviewStorage` reads from disk on every call 
       "note": "reviewer's comment",
       "createdAt": "ISO 8601",
       "updatedAt": "ISO 8601",
+      "status": "open | addressed | resolved (optional, derived from timestamps if absent)",
       "resolvedAt": "ISO 8601 (optional)",
+      "addressedAt": "ISO 8601 (optional)",
       "replies": [{ "message": "string", "createdAt": "ISO 8601" }],
       "selectedText": "quoted text (text annotations only)",
       "replacedText": "text that replaced the original (optional, text annotations only)",
@@ -63,6 +65,7 @@ To read review annotations, parse `inline-review.json` from the project root. Ea
 - `note` — the reviewer's comment describing what to change
 - `type: "text"` — includes `selectedText` and `range` for locating the exact text; optionally `replacedText` if the agent changed the text
 - `type: "element"` — includes `elementSelector` with `cssSelector`, `xpath`, and `outerHtmlPreview`
+- `status` — lifecycle state: `open` → `addressed` (agent acted on it) → `resolved` (reviewer confirmed). Derived from timestamps if absent for backward compatibility
 - `pageNotes` — general notes about a page, not tied to specific elements
 
 ### REST API (when dev server is running)
@@ -74,7 +77,7 @@ Base: `http://localhost:4321/__inline-review/api`
 | GET | `/annotations` | List all (optional `?page=/path` filter) |
 | GET | `/annotations?page=/path` | Filter by page URL |
 | POST | `/annotations` | Create annotation |
-| PATCH | `/annotations/:id` | Update note and/or replacedText |
+| PATCH | `/annotations/:id` | Update note, replacedText, and/or status |
 | DELETE | `/annotations/:id` | Delete annotation |
 | GET | `/page-notes` | List all page notes |
 | POST | `/page-notes` | Create page note |
@@ -94,7 +97,7 @@ The `.mcp.json` file at the project root enables auto-discovery for Claude Code 
 | `list_page_notes` | List all page-level notes, optionally filtered by `pageUrl` |
 | `get_annotation` | Get a single annotation by ID with full detail |
 | `get_export` | Get a markdown export of all annotations and page notes |
-| `resolve_annotation` | Mark an annotation as resolved (sets `resolvedAt` timestamp) |
+| `resolve_annotation` | Mark an annotation as addressed (default) or resolved (with `autoResolve` param) |
 | `add_agent_reply` | Add a reply to an annotation explaining what action was taken |
 | `update_annotation_target` | Update what text replaced the original annotated text (text annotations only) |
 

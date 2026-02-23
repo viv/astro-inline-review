@@ -170,6 +170,64 @@ describe('generateExport', () => {
     expect(result).toContain('\\`');
   });
 
+  it('shows addressed label for addressed annotations', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).toContain('🔧 [Addressed]');
+    expect(result).not.toContain('[Resolved]');
+  });
+
+  it('shows resolved label for resolved annotations (via status field)', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).toContain('✅ [Resolved]');
+    expect(result).not.toContain('[Addressed]');
+  });
+
+  it('shows no status label for open annotations', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeTextAnnotation({ status: 'open' }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).not.toContain('[Resolved]');
+    expect(result).not.toContain('[Addressed]');
+  });
+
+  it('shows no status label for annotations with no status field', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).not.toContain('[Resolved]');
+    expect(result).not.toContain('[Addressed]');
+  });
+
   it('handles annotations without notes', () => {
     const store: ReviewStore = {
       version: 1,

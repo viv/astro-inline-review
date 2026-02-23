@@ -1,10 +1,12 @@
 import type http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { Connect } from 'vite';
-import type { Annotation, TextAnnotation, ElementAnnotation, PageNote } from '../types.js';
+import type { Annotation, TextAnnotation, ElementAnnotation, PageNote, AnnotationStatus } from '../types.js';
 import { isTextAnnotation } from '../types.js';
 import { ReviewStorage } from './storage.js';
 import { generateExport } from '../shared/export.js';
+
+const VALID_STATUSES: AnnotationStatus[] = ['open', 'addressed', 'resolved'];
 
 const API_PREFIX = '/__inline-review/api';
 
@@ -153,10 +155,14 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       const annotationMatch = routePath?.match(/^\/annotations\/([^/]+)$/);
       if (annotationMatch && method === 'PATCH') {
         const id = annotationMatch[1];
-        const body = await readBody<Partial<Annotation> & { replacedText?: string }>(req);
+        const body = await readBody<Partial<Annotation> & { replacedText?: string; status?: string }>(req);
 
         if (typeof body.replacedText === 'string' && !body.replacedText.trim()) {
           throw new ValidationError('replacedText must not be empty');
+        }
+
+        if (body.status !== undefined && !VALID_STATUSES.includes(body.status as AnnotationStatus)) {
+          throw new ValidationError('status must be one of: open, addressed, resolved');
         }
 
         let updated!: Annotation;
@@ -164,6 +170,25 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
           const idx = store.annotations.findIndex(a => a.id === id);
           if (idx === -1) throw new NotFoundError('Annotation not found');
           const existing = store.annotations[idx];
+          const now = new Date().toISOString();
+
+          // Build status-related timestamp updates
+          const statusUpdates: Record<string, unknown> = {};
+          if (body.status !== undefined) {
+            const newStatus = body.status as AnnotationStatus;
+            statusUpdates.status = newStatus;
+            if (newStatus === 'addressed') {
+              statusUpdates.addressedAt = now;
+              statusUpdates.resolvedAt = undefined;
+            } else if (newStatus === 'resolved') {
+              statusUpdates.resolvedAt = now;
+              // Keep addressedAt — shows when the agent first acted
+            } else if (newStatus === 'open') {
+              statusUpdates.addressedAt = undefined;
+              statusUpdates.resolvedAt = undefined;
+            }
+          }
+
           store.annotations[idx] = {
             ...existing,
             note: body.note ?? existing.note,
@@ -171,7 +196,8 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
             ...(isTextAnnotation(existing) && typeof body.replacedText === 'string'
               ? { replacedText: body.replacedText }
               : {}),
-            updatedAt: new Date().toISOString(),
+            ...statusUpdates,
+            updatedAt: now,
           };
           updated = store.annotations[idx];
           return store;

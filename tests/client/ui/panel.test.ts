@@ -33,6 +33,7 @@ describe('createPanel — export button', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -128,6 +129,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -154,7 +156,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
     expect(badge).not.toBeNull();
     expect(badge!.textContent).toContain('Resolved');
   });
@@ -177,7 +179,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
     expect(badge).toBeNull();
   });
 
@@ -199,7 +201,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
     expect(badge).not.toBeNull();
   });
 
@@ -254,7 +256,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       pageNotes: [],
     });
 
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
+    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
     const timeSpan = badge!.querySelector('.air-annotation-item__resolved-time');
     expect(timeSpan).not.toBeNull();
     // Should contain some formatted date text (locale-dependent)
@@ -296,6 +298,7 @@ describe('annotation item — delete button', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -453,6 +456,7 @@ describe('annotation item — orphan indicator', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -564,6 +568,7 @@ describe('createPanel — single fetch per refresh', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -626,6 +631,7 @@ describe('createPanel — shortcuts help footer', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -681,6 +687,7 @@ describe('createPanel — replacedText rendering', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -785,6 +792,7 @@ describe('createPanel — ARIA semantics', () => {
     callbacks = {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
       isAnnotationOrphaned: vi.fn().mockReturnValue(false),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
@@ -896,5 +904,143 @@ describe('createPanel — ARIA semantics', () => {
     item.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
 
     expect(callbacks.onAnnotationClick).toHaveBeenCalledWith('space-test');
+  });
+});
+
+describe('createPanel — status lifecycle buttons', () => {
+  let shadowRoot: ShadowRoot;
+  let callbacks: PanelCallbacks;
+  let mediator: ReviewMediator;
+
+  function makeTextAnnotation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ann-1', type: 'text' as const, pageUrl: '/', pageTitle: 'Home',
+      selectedText: 'hello world', note: 'fix this',
+      range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'hello world', contextBefore: '', contextAfter: '' },
+      createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+
+    callbacks = {
+      onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      onRefreshBadge: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mediator = {
+      refreshPanel: vi.fn(),
+      restoreHighlights: vi.fn().mockResolvedValue(undefined),
+    };
+  });
+
+  async function renderWithStore(store: ReviewStore) {
+    vi.mocked(api.getStore).mockResolvedValue(store);
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+  }
+
+  it('shows addressed badge for addressed annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const badge = shadowRoot.querySelector('[data-air-el="status-badge"]');
+    expect(badge).not.toBeNull();
+    expect(badge!.textContent).toContain('Addressed');
+  });
+
+  it('shows addressed class for addressed annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
+    expect(item!.classList.contains('air-annotation-item--addressed')).toBe(true);
+  });
+
+  it('shows Accept button on addressed annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]');
+    expect(acceptBtn).not.toBeNull();
+    expect(acceptBtn!.tagName.toLowerCase()).toBe('button');
+  });
+
+  it('does not show Accept button on open annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]');
+    expect(acceptBtn).toBeNull();
+  });
+
+  it('shows Reopen button on resolved annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
+    expect(reopenBtn).not.toBeNull();
+    expect(reopenBtn!.tagName.toLowerCase()).toBe('button');
+  });
+
+  it('does not show Reopen button on open annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
+    expect(reopenBtn).toBeNull();
+  });
+
+  it('Accept button calls onAnnotationStatusChange with resolved', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'accept-me', status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]') as HTMLButtonElement;
+    acceptBtn.click();
+
+    expect(callbacks.onAnnotationStatusChange).toHaveBeenCalledWith('accept-me', 'resolved');
+  });
+
+  it('Reopen button calls onAnnotationStatusChange with open', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]') as HTMLButtonElement;
+    reopenBtn.click();
+
+    expect(callbacks.onAnnotationStatusChange).toHaveBeenCalledWith('reopen-me', 'open');
   });
 });
