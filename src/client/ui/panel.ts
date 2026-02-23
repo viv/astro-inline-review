@@ -363,10 +363,33 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 
   const text = document.createElement('div');
   text.className = 'air-annotation-item__text';
-  const truncated = annotation.selectedText.length > 80
-    ? annotation.selectedText.slice(0, 80) + '…'
-    : annotation.selectedText;
-  text.textContent = `"${truncated}"`;
+  if (annotation.replacedText) {
+    // Show original text struck-through, then replacement text
+    const original = document.createElement('span');
+    original.style.textDecoration = 'line-through';
+    original.style.opacity = '0.6';
+    const truncatedOriginal = annotation.selectedText.length > 80
+      ? annotation.selectedText.slice(0, 80) + '…'
+      : annotation.selectedText;
+    original.textContent = `"${truncatedOriginal}"`;
+    text.appendChild(original);
+
+    const arrow = document.createElement('span');
+    arrow.textContent = ' → ';
+    text.appendChild(arrow);
+
+    const replacement = document.createElement('span');
+    const truncatedReplacement = annotation.replacedText.length > 80
+      ? annotation.replacedText.slice(0, 80) + '…'
+      : annotation.replacedText;
+    replacement.textContent = `"${truncatedReplacement}"`;
+    text.appendChild(replacement);
+  } else {
+    const truncated = annotation.selectedText.length > 80
+      ? annotation.selectedText.slice(0, 80) + '…'
+      : annotation.selectedText;
+    text.textContent = `"${truncated}"`;
+  }
   item.appendChild(text);
 
   if (annotation.note) {

@@ -657,6 +657,110 @@ describe('createPanel — shortcuts help footer', () => {
   });
 });
 
+describe('createPanel — replacedText rendering', () => {
+  let shadowRoot: ShadowRoot;
+  let callbacks: PanelCallbacks;
+  let mediator: ReviewMediator;
+
+  function makeTextAnnotation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ann-1', type: 'text' as const, pageUrl: '/', pageTitle: 'Home',
+      selectedText: 'original text', note: 'fix this',
+      range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'original text', contextBefore: '', contextAfter: '' },
+      createdAt: '2026-02-22T09:00:00Z', updatedAt: '2026-02-22T09:00:00Z',
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+
+    callbacks = {
+      onAnnotationClick: vi.fn(),
+      onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
+      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      onRefreshBadge: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mediator = {
+      refreshPanel: vi.fn(),
+      restoreHighlights: vi.fn().mockResolvedValue(undefined),
+    };
+  });
+
+  async function renderWithStore(store: ReviewStore) {
+    vi.mocked(api.getStore).mockResolvedValue(store);
+    createPanel(shadowRoot, callbacks, mediator);
+    await mediator.refreshPanel();
+  }
+
+  it('shows struck-through original text when replacedText is present', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ replacedText: 'replacement text' })],
+      pageNotes: [],
+    });
+
+    const textDiv = shadowRoot.querySelector('.air-annotation-item__text');
+    expect(textDiv).not.toBeNull();
+
+    const strikeSpan = textDiv!.querySelector('span[style*="line-through"]');
+    expect(strikeSpan).not.toBeNull();
+    expect(strikeSpan!.textContent).toContain('original text');
+  });
+
+  it('shows arrow separator → between original and replacement when replacedText is present', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ replacedText: 'replacement text' })],
+      pageNotes: [],
+    });
+
+    const textDiv = shadowRoot.querySelector('.air-annotation-item__text');
+    expect(textDiv!.textContent).toContain('→');
+  });
+
+  it('shows replacement text after the arrow when replacedText is present', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ replacedText: 'replacement text' })],
+      pageNotes: [],
+    });
+
+    const textDiv = shadowRoot.querySelector('.air-annotation-item__text');
+    const spans = textDiv!.querySelectorAll('span');
+    // Last span holds the replacement text (no line-through)
+    const replacementSpan = spans[spans.length - 1];
+    expect(replacementSpan.textContent).toContain('replacement text');
+    expect(replacementSpan.style.textDecoration).not.toBe('line-through');
+  });
+
+  it('renders plain quoted text without line-through when replacedText is absent', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const textDiv = shadowRoot.querySelector('.air-annotation-item__text');
+    expect(textDiv).not.toBeNull();
+
+    // No struck-through span
+    const strikeSpan = textDiv!.querySelector('span[style*="line-through"]');
+    expect(strikeSpan).toBeNull();
+
+    // Plain text content contains the original text
+    expect(textDiv!.textContent).toContain('original text');
+
+    // No arrow
+    expect(textDiv!.textContent).not.toContain('→');
+  });
+});
+
 describe('createPanel — ARIA semantics', () => {
   let shadowRoot: ShadowRoot;
   let callbacks: PanelCallbacks;
