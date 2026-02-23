@@ -126,10 +126,13 @@ interface TextAnnotation extends BaseAnnotation {
   type: 'text';
   selectedText: string;    // The verbatim text the user selected
   range: SerializedRange;  // Three-tier restoration data (see 3.5)
+  replacedText?: string;   // Text that replaced the original selection (optional, set by agent)
 }
 ```
 
 Text annotations are the original annotation type — created by selecting text on the page and attaching a note.
+
+The optional `replacedText` field records what the original selected text was changed to by an agent. When set, the client uses it for Tier 2.5 location matching (see Section 15.2). It is set via the `update_annotation_target` MCP tool or the `PATCH /annotations/:id` REST endpoint. Its absence means "no replacement recorded" — behaviour is identical to before.
 
 #### 3.2.3 ElementAnnotation
 
@@ -304,7 +307,7 @@ All routes are served via Vite dev server middleware at the prefix `/__inline-re
 | `GET` | `/annotations` | List all annotations | 200 |
 | `GET` | `/annotations?page=/path` | List annotations filtered by page URL | 200 |
 | `POST` | `/annotations` | Create a new annotation | 201 |
-| `PATCH` | `/annotations/:id` | Update an annotation (note field) | 200 |
+| `PATCH` | `/annotations/:id` | Update an annotation (note and/or replacedText) | 200 |
 | `DELETE` | `/annotations/:id` | Delete an annotation | 200 |
 
 **GET /annotations** response shape:
@@ -361,9 +364,9 @@ Note: The GET response returns the full store shape (including `pageNotes`), wit
 
 The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields default to empty strings/objects. If `type` is not provided, it defaults to `'text'` (backward compatibility).
 
-**PATCH /annotations/:id** request body: `{ "note": "new value" }`
+**PATCH /annotations/:id** request body: `{ "note": "new value", "replacedText": "new text" }`
 
-**Field mutability on PATCH**: The server uses an allowlist pattern — only `note` from the request body is applied; all other fields in the request body are ignored.
+**Field mutability on PATCH**: The server uses an allowlist pattern — only `note` and `replacedText` (for text annotations) from the request body are applied; all other fields in the request body are ignored.
 
 | Field | Mutable via PATCH? | Notes |
 |-------|-------------------|-------|
@@ -371,7 +374,8 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 | `pageUrl` | No | Preserved from original |
 | `pageTitle` | No | Preserved from original |
 | `selectedText` | No | Preserved from original |
-| `note` | **Yes** | Only mutable field — primary use case |
+| `note` | **Yes** | Mutable — primary use case |
+| `replacedText` | **Yes** (text only) | Mutable on text annotations only, ignored on element annotations |
 | `range` | No | Preserved from original |
 | `elementSelector` | No | Preserved from original |
 | `createdAt` | No | Preserved from original |
@@ -466,8 +470,9 @@ The MCP (Model Context Protocol) server provides structured agent access to revi
 | `get_export` | Read | None | Get a markdown export of all annotations and page notes |
 | `resolve_annotation` | Write | `id` (string, required) | Mark an annotation as resolved (sets `resolvedAt` timestamp) |
 | `add_agent_reply` | Write | `id` (string, required), `message` (string, required) | Add a reply to an annotation explaining what action was taken |
+| `update_annotation_target` | Write | `id` (string, required), `replacedText` (string, required) | Update what text replaced the original annotated text. Only applicable to text annotations. |
 
-All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters require non-empty strings (`.min(1)`). The `add_agent_reply` tool additionally validates that `message` is non-empty after trimming — an empty or whitespace-only message returns an error.
+All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters require non-empty strings (`.min(1)`). The `add_agent_reply` tool additionally validates that `message` is non-empty after trimming — an empty or whitespace-only message returns an error. The `update_annotation_target` tool validates that `replacedText` is non-empty after trimming and returns an error if the annotation is not a text annotation.
 
 **Return format:** All tools return `{ content: [{ type: 'text', text: '...' }] }`. Read tools return JSON-stringified data. `get_export` returns markdown text. Error responses include `isError: true` with a descriptive message.
 
@@ -1045,7 +1050,14 @@ When the page loads (or on SPA navigation), **text** highlights are restored fro
 - Score each match by graduated longest-boundary-match on `contextBefore` and `contextAfter` (see Section 15.3 for the full scoring algorithm)
 - Reject the match if below the minimum confidence threshold (30% of maximum possible context score)
 - If accepted, use the best-scoring match to create a Range and apply highlight
-- If rejected (or no occurrences found), fall through to Tier 3
+- If rejected (or no occurrences found), fall through to Tier 2.5
+
+**Tier 2.5 — Replacement Text Context Matching** (agent-assisted fallback):
+- Only attempted when the annotation has a `replacedText` field set (see Section 3.2.2)
+- Reuses the same `findRangeByContext()` function as Tier 2, but passes `replacedText` instead of `selectedText`
+- The `contextBefore` and `contextAfter` from the original range are retained — because the agent changed the annotated text, not the surrounding text
+- Same graduated scoring and confidence threshold as Tier 2
+- If accepted: apply highlight. If rejected: fall through to Tier 3
 
 **Tier 3 — Orphaned** (last resort):
 - The annotation exists in the store but cannot be located in the DOM
@@ -1421,7 +1433,8 @@ The context matching algorithm:
 | JSON file corrupted | Return empty store (silent recovery) |
 | JSON schema invalid | Return empty store (silent recovery) |
 | XPath resolution fails | Return null, try context matching |
-| Context matching fails | Annotation becomes orphaned |
+| Context matching fails (original text) | Try replacement text if `replacedText` is set, otherwise orphaned |
+| Context matching fails (replacement text) | Annotation becomes orphaned |
 | localStorage full | Silently ignore write error |
 | Concurrent file writes | Queued via promise chain |
 | Highlight application fails | Console error logged, continue with other annotations |

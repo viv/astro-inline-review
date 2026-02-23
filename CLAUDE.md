@@ -37,6 +37,7 @@ This file is the source of truth. `ReviewStorage` reads from disk on every call 
       "resolvedAt": "ISO 8601 (optional)",
       "replies": [{ "message": "string", "createdAt": "ISO 8601" }],
       "selectedText": "quoted text (text annotations only)",
+      "replacedText": "text that replaced the original (optional, text annotations only)",
       "range": { "startXPath": "...", "startOffset": 0, "endXPath": "...", "endOffset": 0, "selectedText": "...", "contextBefore": "...", "contextAfter": "..." },
       "elementSelector": { "cssSelector": "...", "xpath": "...", "description": "...", "tagName": "...", "attributes": {}, "outerHtmlPreview": "..." }
     }
@@ -60,7 +61,7 @@ To read review annotations, parse `inline-review.json` from the project root. Ea
 
 - `pageUrl` — the route path (e.g., `/about`)
 - `note` — the reviewer's comment describing what to change
-- `type: "text"` — includes `selectedText` and `range` for locating the exact text
+- `type: "text"` — includes `selectedText` and `range` for locating the exact text; optionally `replacedText` if the agent changed the text
 - `type: "element"` — includes `elementSelector` with `cssSelector`, `xpath`, and `outerHtmlPreview`
 - `pageNotes` — general notes about a page, not tied to specific elements
 
@@ -73,7 +74,7 @@ Base: `http://localhost:4321/__inline-review/api`
 | GET | `/annotations` | List all (optional `?page=/path` filter) |
 | GET | `/annotations?page=/path` | Filter by page URL |
 | POST | `/annotations` | Create annotation |
-| PATCH | `/annotations/:id` | Update note only |
+| PATCH | `/annotations/:id` | Update note and/or replacedText |
 | DELETE | `/annotations/:id` | Delete annotation |
 | GET | `/page-notes` | List all page notes |
 | POST | `/page-notes` | Create page note |
@@ -95,6 +96,7 @@ The `.mcp.json` file at the project root enables auto-discovery for Claude Code 
 | `get_export` | Get a markdown export of all annotations and page notes |
 | `resolve_annotation` | Mark an annotation as resolved (sets `resolvedAt` timestamp) |
 | `add_agent_reply` | Add a reply to an annotation explaining what action was taken |
+| `update_annotation_target` | Update what text replaced the original annotated text (text annotations only) |
 
 ### Running manually
 
