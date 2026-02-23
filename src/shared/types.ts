@@ -29,6 +29,7 @@ export interface TextAnnotation extends BaseAnnotation {
   type: 'text';
   selectedText: string;
   range: SerializedRange;
+  replacedText?: string;
 }
 
 /** Describes how to locate an annotated element */
