@@ -1042,9 +1042,10 @@ When the page loads (or on SPA navigation), **text** highlights are restored fro
 **Tier 2 — Context Matching** (fallback):
 - Walk all text nodes in `document.body` to build a full-text index
 - Find all occurrences of `selectedText` in the concatenated text
-- Score each match by how well `contextBefore` and `contextAfter` align (see Section 15.3 for the full scoring algorithm)
-- Use the best-scoring match to create a Range
-- Apply highlight
+- Score each match by graduated longest-boundary-match on `contextBefore` and `contextAfter` (see Section 15.3 for the full scoring algorithm)
+- Reject the match if below the minimum confidence threshold (30% of maximum possible context score)
+- If accepted, use the best-scoring match to create a Range and apply highlight
+- If rejected (or no occurrences found), fall through to Tier 3
 
 **Tier 3 — Orphaned** (last resort):
 - The annotation exists in the store but cannot be located in the DOM
@@ -1395,13 +1396,14 @@ The context matching algorithm:
 1. Walks all text nodes in `document.body` using `TreeWalker`
 2. Concatenates all text content into a single string with node boundary tracking
 3. Finds all occurrences of `selectedText` in the concatenated text
-4. Scores each match candidate by context similarity:
-   - If the text immediately preceding the match **ends with** the full `contextBefore` string: +`contextBefore.length` points
-   - Else if the text preceding the match **contains** the last 10 characters of `contextBefore` **anywhere**: +5 points
-   - If the text immediately following the match **starts with** the full `contextAfter` string: +`contextAfter.length` points
-   - Else if the text following the match **contains** the first 10 characters of `contextAfter` **anywhere**: +5 points
+4. Scores each match candidate by graduated context similarity using longest-boundary-match:
+   - `contextBefore` score: the length of the longest suffix of `contextBefore` that matches the end of the text immediately preceding the match (0 to `contextBefore.length` points)
+   - `contextAfter` score: the length of the longest prefix of `contextAfter` that matches the start of the text immediately following the match (0 to `contextAfter.length` points)
+   - Total score ranges from 0 to `contextBefore.length + contextAfter.length` (typically 0–60)
+   - Each matching context character contributes exactly 1 point, providing smooth gradient degradation
 5. The candidate with the highest score is selected. On tie, the first occurrence wins.
-6. Returns the best-scoring match as a Range
+6. **Minimum confidence threshold**: if `maxPossibleScore` (`contextBefore.length + contextAfter.length`) is greater than 0 and the best score is below `maxPossibleScore × MIN_CONFIDENCE_RATIO` (0.3), `null` is returned — the annotation falls through to Tier 3 (orphaned). When both context strings are empty (`maxPossibleScore === 0`), any match is accepted to preserve backward compatibility.
+7. Returns the best-scoring match as a Range, or `null` if below the confidence threshold
 
 **Context length**: Exactly 30 characters are stored (or fewer if insufficient text exists before/after the selection boundary). The `CONTEXT_LENGTH` constant is defined as `30`.
 

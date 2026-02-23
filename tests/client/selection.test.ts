@@ -5,6 +5,8 @@ import {
   serializeRange,
   deserializeRange,
   findRangeByContext,
+  longestMatchingSuffix,
+  longestMatchingPrefix,
 } from '../../src/client/selection.js';
 import type { SerializedRange } from '../../src/shared/types.js';
 
@@ -201,14 +203,13 @@ describe('findRangeByContext', () => {
     expect(result!.startOffset).toBe(15);
   });
 
-  it('falls back to first match when context does not disambiguate', () => {
+  it('returns null when context does not match and threshold is not met', () => {
     document.body.innerHTML = '<p>the the the</p>';
 
     const result = findRangeByContext('the', 'nonexistent', 'context');
 
-    // Should still find "the" even though context doesn't match
-    expect(result).not.toBeNull();
-    expect(result!.toString()).toBe('the');
+    // Non-matching context with maxPossibleScore > 0 falls below confidence threshold
+    expect(result).toBeNull();
   });
 
   it('finds text across element boundaries', () => {
@@ -218,6 +219,180 @@ describe('findRangeByContext', () => {
 
     expect(result).not.toBeNull();
     expect(result!.toString()).toBe('beautiful');
+  });
+});
+
+describe('longestMatchingSuffix', () => {
+  it('returns full length when text ends with exact suffix', () => {
+    expect(longestMatchingSuffix('hello world', 'world')).toBe(5);
+  });
+
+  it('returns partial length when only tail of suffix matches', () => {
+    // ' world' (6 chars including space) is the longest matching suffix
+    expect(longestMatchingSuffix('hello world', 'the world')).toBe(6);
+  });
+
+  it('returns 1 for single character match at end', () => {
+    expect(longestMatchingSuffix('abc', 'xc')).toBe(1);
+  });
+
+  it('returns 0 when no suffix matches', () => {
+    expect(longestMatchingSuffix('abc', 'xyz')).toBe(0);
+  });
+
+  it('returns 0 for empty suffix', () => {
+    expect(longestMatchingSuffix('abc', '')).toBe(0);
+  });
+
+  it('returns 0 for empty text', () => {
+    expect(longestMatchingSuffix('', 'abc')).toBe(0);
+  });
+
+  it('returns 0 when both are empty', () => {
+    expect(longestMatchingSuffix('', '')).toBe(0);
+  });
+
+  it('returns full length when strings are identical', () => {
+    expect(longestMatchingSuffix('abc', 'abc')).toBe(3);
+  });
+
+  it('matches up to text length when suffix is longer', () => {
+    expect(longestMatchingSuffix('bc', 'abc')).toBe(2);
+  });
+});
+
+describe('longestMatchingPrefix', () => {
+  it('returns full length when text starts with exact prefix', () => {
+    expect(longestMatchingPrefix('hello world', 'hello')).toBe(5);
+  });
+
+  it('returns partial length when only head of prefix matches', () => {
+    // 'hello ' (6 chars including space) is the longest matching prefix
+    expect(longestMatchingPrefix('hello world', 'hello there')).toBe(6);
+  });
+
+  it('returns 1 for single character match at start', () => {
+    expect(longestMatchingPrefix('abc', 'ax')).toBe(1);
+  });
+
+  it('returns 0 when no prefix matches', () => {
+    expect(longestMatchingPrefix('abc', 'xyz')).toBe(0);
+  });
+
+  it('returns 0 for empty prefix', () => {
+    expect(longestMatchingPrefix('abc', '')).toBe(0);
+  });
+
+  it('returns 0 for empty text', () => {
+    expect(longestMatchingPrefix('', 'abc')).toBe(0);
+  });
+
+  it('returns 0 when both are empty', () => {
+    expect(longestMatchingPrefix('', '')).toBe(0);
+  });
+
+  it('returns full length when strings are identical', () => {
+    expect(longestMatchingPrefix('abc', 'abc')).toBe(3);
+  });
+
+  it('matches up to text length when prefix is longer', () => {
+    expect(longestMatchingPrefix('ab', 'abc')).toBe(2);
+  });
+});
+
+describe('findRangeByContext — graduated scoring', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('scores partial context match proportionally', () => {
+    // Two occurrences of "fox": one with good context, one without
+    document.body.innerHTML = '<p>The quick brown fox jumps. A sly red fox runs.</p>';
+
+    // Context matches the first "fox" perfectly
+    const result = findRangeByContext('fox', 'quick brown ', ' jumps');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('fox');
+    // Verify it picked the first "fox" (starts at offset 16)
+    // "The quick brown fox jumps..."
+    //  0123456789012345678
+    expect(result!.startOffset).toBe(16);
+  });
+
+  it('selects higher-scoring match when context partially differs', () => {
+    // "the" appears at positions 0 and 19
+    // "the cat sat on --- the mat and more text here"
+    document.body.innerHTML = '<p>the cat sat on --- the mat and more text here</p>';
+
+    // Context "on --- " matches second "the" with 7 chars suffix match
+    // Context " mat" matches second "the" with 4 chars prefix match
+    // First "the" has no context match
+    const result = findRangeByContext('the', 'on --- ', ' mat');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('the');
+    expect(result!.startOffset).toBe(19);
+  });
+
+  it('returns null for single occurrence with low confidence', () => {
+    document.body.innerHTML = '<p>some text with the word here and more padding around it</p>';
+
+    // "word" exists once but context is completely wrong
+    // maxPossibleScore = 10 + 10 = 20, threshold = 6, bestScore = 0
+    const result = findRangeByContext('word', 'xxxxxxxxxx', 'yyyyyyyyyy');
+
+    expect(result).toBeNull();
+  });
+
+  it('accepts match when empty context makes maxPossibleScore zero', () => {
+    document.body.innerHTML = '<p>Hello world</p>';
+
+    // Both contexts empty — maxPossibleScore = 0, threshold check skipped
+    const result = findRangeByContext('Hello', '', '');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('Hello');
+  });
+
+  it('picks first occurrence on tie', () => {
+    // Three identical "abc" with identical surrounding context
+    document.body.innerHTML = '<p>xxxabcyyy xxxabcyyy xxxabcyyy</p>';
+
+    const result = findRangeByContext('abc', 'xxx', 'yyy');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('abc');
+    // First "abc" starts at offset 3
+    expect(result!.startOffset).toBe(3);
+  });
+
+  it('works with very short context (1 char)', () => {
+    document.body.innerHTML = '<p>xAy and zAw</p>';
+
+    // "A" appears at positions 1 and 8
+    // Context "x" / "y" matches first occurrence
+    const result = findRangeByContext('A', 'x', 'y');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('A');
+    expect(result!.startOffset).toBe(1);
+  });
+
+  it('graduated scoring beats no match for disambiguation', () => {
+    // "cat" appears twice with different surrounding text
+    document.body.innerHTML = '<p>the big cat ran and the fat cat sat</p>';
+
+    // Context mostly matches second "cat" — "fat " is 4 chars of suffix match
+    // vs first "cat" where "big " is 4 chars but "sat" only matches second
+    const result = findRangeByContext('cat', 'the fat ', ' sat');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('cat');
+    // Second "cat" starts at offset 27: "the big cat ran and the fat cat sat"
+    //                                    0         1         2         3
+    //                                    0123456789012345678901234567890123456
+    expect(result!.startOffset).toBe(28);
   });
 });
 

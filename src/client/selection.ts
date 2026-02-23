@@ -123,8 +123,40 @@ export function deserializeRange(serialized: SerializedRange): Range | null {
 }
 
 /**
+ * Find the longest suffix of `suffix` that matches the end of `text`.
+ * Returns the length of the matching portion (0 if no match).
+ */
+export function longestMatchingSuffix(text: string, suffix: string): number {
+  const maxLen = Math.min(text.length, suffix.length);
+  for (let len = maxLen; len > 0; len--) {
+    if (text.endsWith(suffix.slice(suffix.length - len))) {
+      return len;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Find the longest prefix of `prefix` that matches the start of `text`.
+ * Returns the length of the matching portion (0 if no match).
+ */
+export function longestMatchingPrefix(text: string, prefix: string): number {
+  const maxLen = Math.min(text.length, prefix.length);
+  for (let len = maxLen; len > 0; len--) {
+    if (text.startsWith(prefix.slice(0, len))) {
+      return len;
+    }
+  }
+  return 0;
+}
+
+/** Minimum proportion of context that must match to accept a result. */
+const MIN_CONFIDENCE_RATIO = 0.3;
+
+/**
  * Fallback: find text in the document using content + context matching.
  * Walks all text nodes and tries to find the selected text with matching context.
+ * Returns null if no match meets the minimum confidence threshold.
  */
 export function findRangeByContext(
   selectedText: string,
@@ -155,25 +187,27 @@ export function findRangeByContext(
 
   if (matches.length === 0) return null;
 
-  // Score each match by context similarity
+  // Score each match by graduated context similarity
   let bestMatch = matches[0];
   let bestScore = -1;
 
   for (const matchIdx of matches) {
-    let score = 0;
     const before = fullText.slice(Math.max(0, matchIdx - contextBefore.length), matchIdx);
     const after = fullText.slice(matchIdx + selectedText.length, matchIdx + selectedText.length + contextAfter.length);
 
-    if (before.endsWith(contextBefore)) score += contextBefore.length;
-    else if (before.includes(contextBefore.slice(-10))) score += 5;
-
-    if (after.startsWith(contextAfter)) score += contextAfter.length;
-    else if (after.includes(contextAfter.slice(0, 10))) score += 5;
+    const score = longestMatchingSuffix(before, contextBefore)
+      + longestMatchingPrefix(after, contextAfter);
 
     if (score > bestScore) {
       bestScore = score;
       bestMatch = matchIdx;
     }
+  }
+
+  // Require minimum confidence to avoid false positives
+  const maxPossibleScore = contextBefore.length + contextAfter.length;
+  if (maxPossibleScore > 0 && bestScore < maxPossibleScore * MIN_CONFIDENCE_RATIO) {
+    return null;
   }
 
   // Convert the character offset back to a Range
