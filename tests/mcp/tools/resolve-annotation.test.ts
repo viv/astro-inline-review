@@ -6,7 +6,7 @@ import { ReviewStorage } from '../../../src/server/storage.js';
 import { createEmptyStore } from '../../../src/shared/types.js';
 import type { ReviewStore } from '../../../src/shared/types.js';
 import { resolveAnnotationHandler } from '../../../src/mcp/tools/resolve-annotation.js';
-import { makeTextAnnotation } from '../helpers/fixtures.js';
+import { makeTextAnnotation, makeElementAnnotation } from '../helpers/fixtures.js';
 
 const TEST_DIR = join(tmpdir(), 'air-mcp-resolve-' + Date.now());
 const TEST_FILE = join(TEST_DIR, 'store.json');
@@ -145,6 +145,111 @@ describe('resolve_annotation handler', () => {
       expect(new Date(persisted.annotations[0].resolvedAt!).toISOString()).toBe(
         persisted.annotations[0].resolvedAt,
       );
+    });
+  });
+
+  describe('replacedText parameter', () => {
+    it('sets replacedText on the annotation when provided', async () => {
+      const store: ReviewStore = {
+        ...createEmptyStore(),
+        annotations: [makeTextAnnotation('ann1', '/', 'update this text')],
+      };
+      await storage.write(store);
+
+      const result = await resolveAnnotationHandler(storage, {
+        id: 'ann1',
+        replacedText: 'updated text',
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.replacedText).toBe('updated text');
+      expect(data.status).toBe('addressed');
+    });
+
+    it('sets replacedText with autoResolve', async () => {
+      const store: ReviewStore = {
+        ...createEmptyStore(),
+        annotations: [makeTextAnnotation('ann1', '/', 'update this text')],
+      };
+      await storage.write(store);
+
+      const result = await resolveAnnotationHandler(storage, {
+        id: 'ann1',
+        replacedText: 'updated text',
+        autoResolve: true,
+      });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.replacedText).toBe('updated text');
+      expect(data.status).toBe('resolved');
+    });
+
+    it('persists replacedText to the JSON file', async () => {
+      const store: ReviewStore = {
+        ...createEmptyStore(),
+        annotations: [makeTextAnnotation('ann1', '/', 'update this text')],
+      };
+      await storage.write(store);
+
+      await resolveAnnotationHandler(storage, { id: 'ann1', replacedText: 'updated text' });
+
+      const persisted = await storage.read();
+      expect(persisted.annotations[0].replacedText).toBe('updated text');
+    });
+
+    it('returns error when replacedText is an empty string', async () => {
+      const store: ReviewStore = {
+        ...createEmptyStore(),
+        annotations: [makeTextAnnotation('ann1', '/', 'fix this')],
+      };
+      await storage.write(store);
+
+      const result = await resolveAnnotationHandler(storage, { id: 'ann1', replacedText: '' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('must not be empty');
+    });
+
+    it('returns error when replacedText is whitespace only', async () => {
+      const store: ReviewStore = {
+        ...createEmptyStore(),
+        annotations: [makeTextAnnotation('ann1', '/', 'fix this')],
+      };
+      await storage.write(store);
+
+      const result = await resolveAnnotationHandler(storage, { id: 'ann1', replacedText: '   ' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('must not be empty');
+    });
+
+    it('returns error when replacedText is used on an element annotation', async () => {
+      const store: ReviewStore = {
+        ...createEmptyStore(),
+        annotations: [makeElementAnnotation('ann1', '/', 'fix this element')],
+      };
+      await storage.write(store);
+
+      const result = await resolveAnnotationHandler(storage, {
+        id: 'ann1',
+        replacedText: 'some text',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('not a text annotation');
+    });
+
+    it('does not set replacedText when the parameter is omitted', async () => {
+      const store: ReviewStore = {
+        ...createEmptyStore(),
+        annotations: [makeTextAnnotation('ann1', '/', 'fix this')],
+      };
+      await storage.write(store);
+
+      const result = await resolveAnnotationHandler(storage, { id: 'ann1' });
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.replacedText).toBeUndefined();
     });
   });
 

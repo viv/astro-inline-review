@@ -2,16 +2,31 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ReviewStorage } from '../../server/storage.js';
 import type { ToolResult, ErrorResult } from '../types.js';
+import { isTextAnnotation } from '../../shared/types.js';
 
 export async function resolveAnnotationHandler(
   storage: ReviewStorage,
-  params: { id: string; autoResolve?: boolean },
+  params: { id: string; autoResolve?: boolean; replacedText?: string },
 ): Promise<ToolResult | ErrorResult> {
+  if (params.replacedText !== undefined && !params.replacedText.trim()) {
+    return {
+      isError: true,
+      content: [{ type: 'text', text: 'replacedText must not be empty' }],
+    };
+  }
+
   try {
     const store = await storage.mutate(s => {
       const annotation = s.annotations.find(a => a.id === params.id);
       if (!annotation) {
         throw new Error(`Annotation with ID "${params.id}" not found`);
+      }
+
+      if (params.replacedText !== undefined) {
+        if (!isTextAnnotation(annotation)) {
+          throw new Error(`Annotation "${params.id}" is not a text annotation — replacedText only applies to text annotations`);
+        }
+        annotation.replacedText = params.replacedText;
       }
 
       const now = new Date().toISOString();
@@ -43,10 +58,11 @@ export async function resolveAnnotationHandler(
 export function register(server: McpServer, storage: ReviewStorage): void {
   server.tool(
     'resolve_annotation',
-    'Mark an annotation as addressed by the agent. By default sets status to "addressed" (human reviewer closes it later). Pass autoResolve: true to skip human review and mark directly as "resolved".',
+    'Mark an annotation as addressed by the agent. By default sets status to "addressed" (human reviewer closes it later). Pass autoResolve: true to skip human review and mark directly as "resolved". Optionally provide replacedText to record the new text that replaced the original — this enables the browser UI to re-locate the annotation after the text has changed.',
     {
       id: z.string().min(1).describe('The annotation ID to mark as addressed'),
       autoResolve: z.boolean().optional().describe('If true, skip human review and mark directly as resolved'),
+      replacedText: z.string().optional().describe('The new text that replaced the original annotated text (text annotations only). Enables Tier 2.5 re-anchoring in the browser UI.'),
     },
     async (params) => resolveAnnotationHandler(storage, params),
   );
