@@ -492,10 +492,19 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         // Tier 1: Try XPath + offset
         let range = deserializeRange(annotation.range);
 
-        // Tier 2: Fall back to context matching
+        // Tier 2: Fall back to context matching with original text
         if (!range) {
           range = findRangeByContext(
             annotation.range.selectedText,
+            annotation.range.contextBefore,
+            annotation.range.contextAfter,
+          );
+        }
+
+        // Tier 2.5: Try context matching with replacement text
+        if (!range && annotation.replacedText) {
+          range = findRangeByContext(
+            annotation.replacedText,
             annotation.range.contextBefore,
             annotation.range.contextAfter,
           );

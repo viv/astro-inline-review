@@ -570,7 +570,81 @@ describe('createAnnotator', () => {
       expect(applyHighlight).toHaveBeenCalledWith(fallbackRange, 'ann-1', false);
     });
 
-    it('leaves annotation as orphan when both tiers fail (Tier 3)', async () => {
+    it('falls back to replacedText context matching when Tier 1 and Tier 2 fail (Tier 2.5)', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({
+        id: 'ann-1',
+        selectedText: 'original text',
+        replacedText: 'replacement text',
+        range: {
+          startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          startOffset: 0,
+          endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          endOffset: 13,
+          selectedText: 'original text',
+          contextBefore: 'before ',
+          contextAfter: ' after',
+        },
+      });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      // Tier 1 fails — XPath resolve returns null
+      (deserializeRange as Mock).mockReturnValue(null);
+
+      // Tier 2 fails — original text not found in page
+      // Tier 2.5 succeeds — replacement text is present
+      const tier25Range = document.createRange();
+      (findRangeByContext as Mock)
+        .mockReturnValueOnce(null)      // Tier 2: original text not found
+        .mockReturnValueOnce(tier25Range); // Tier 2.5: replacement text found
+
+      await annotator.restoreHighlights();
+
+      // Tier 2 call uses original selectedText
+      expect(findRangeByContext).toHaveBeenNthCalledWith(
+        1,
+        ann.range.selectedText,
+        ann.range.contextBefore,
+        ann.range.contextAfter,
+      );
+
+      // Tier 2.5 call uses replacedText
+      expect(findRangeByContext).toHaveBeenNthCalledWith(
+        2,
+        ann.replacedText,
+        ann.range.contextBefore,
+        ann.range.contextAfter,
+      );
+
+      // Highlight applied using the Tier 2.5 range
+      expect(applyHighlight).toHaveBeenCalledWith(tier25Range, 'ann-1', false);
+    });
+
+    it('leaves annotation as orphan when all tiers including Tier 2.5 fail', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({
+        id: 'ann-1',
+        selectedText: 'original text',
+        replacedText: 'replacement text',
+      });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      // All tiers fail
+      (deserializeRange as Mock).mockReturnValue(null);
+      (findRangeByContext as Mock).mockReturnValue(null);
+
+      await annotator.restoreHighlights();
+
+      // No highlight applied — annotation is orphaned
+      expect(applyHighlight).not.toHaveBeenCalled();
+      expect(updateBadge).toHaveBeenCalledWith(badge, 1);
+    });
+
+    it('leaves annotation as orphan when Tier 1 and Tier 2 fail and no replacedText (Tier 3)', async () => {
       initAnnotator();
 
       const ann = makeTextAnnotation({ id: 'ann-1' });
