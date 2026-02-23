@@ -2,6 +2,7 @@ import type http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { Connect } from 'vite';
 import type { Annotation, TextAnnotation, ElementAnnotation, PageNote } from '../types.js';
+import { isTextAnnotation } from '../types.js';
 import { ReviewStorage } from './storage.js';
 import { generateExport } from '../shared/export.js';
 
@@ -152,15 +153,24 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
       const annotationMatch = routePath?.match(/^\/annotations\/([^/]+)$/);
       if (annotationMatch && method === 'PATCH') {
         const id = annotationMatch[1];
-        const body = await readBody<Partial<Annotation>>(req);
+        const body = await readBody<Partial<Annotation> & { replacedText?: string }>(req);
+
+        if (typeof body.replacedText === 'string' && !body.replacedText.trim()) {
+          throw new ValidationError('replacedText must not be empty');
+        }
 
         let updated!: Annotation;
         await storage.mutate(store => {
           const idx = store.annotations.findIndex(a => a.id === id);
           if (idx === -1) throw new NotFoundError('Annotation not found');
+          const existing = store.annotations[idx];
           store.annotations[idx] = {
-            ...store.annotations[idx],
-            note: body.note ?? store.annotations[idx].note, // Allowlist: only 'note' is mutable
+            ...existing,
+            note: body.note ?? existing.note,
+            // Allow replacedText on text annotations only
+            ...(isTextAnnotation(existing) && typeof body.replacedText === 'string'
+              ? { replacedText: body.replacedText }
+              : {}),
             updatedAt: new Date().toISOString(),
           };
           updated = store.annotations[idx];

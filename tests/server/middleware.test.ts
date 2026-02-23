@@ -466,6 +466,111 @@ describe('middleware', () => {
     });
   });
 
+  describe('PATCH /annotations/:id replacedText', () => {
+    it('updates replacedText on a text annotation', async () => {
+      // Create a text annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'original text',
+        note: 'some note',
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 13, selectedText: 'original text', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // PATCH with replacedText
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        replacedText: 'replacement text',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.replacedText).toBe('replacement text');
+      expect(patched.id).toBe(created.id);
+    });
+
+    it('ignores replacedText on an element annotation', async () => {
+      // Create an element annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'element',
+        pageUrl: '/',
+        note: 'element note',
+        elementSelector: { cssSelector: 'div.hero', xpath: '//div[@class="hero"]', description: 'Hero div', tagName: 'div', attributes: {}, outerHtmlPreview: '<div class="hero"></div>' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // PATCH with replacedText — should be silently ignored
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        replacedText: 'should not appear',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.replacedText).toBeUndefined();
+    });
+
+    it('rejects empty replacedText with 400', async () => {
+      // Create a text annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'some text',
+        note: 'a note',
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 9, selectedText: 'some text', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // PATCH with empty replacedText
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        replacedText: '   ',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(400);
+      const body = JSON.parse(patchRes._body);
+      expect(body.error).toContain('replacedText must not be empty');
+    });
+
+    it('updates both note and replacedText on a text annotation', async () => {
+      // Create a text annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/about',
+        selectedText: 'some text',
+        note: 'original note',
+        range: { startXPath: '/p[2]', startOffset: 0, endXPath: '/p[2]', endOffset: 9, selectedText: 'some text', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // PATCH with both fields
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        note: 'updated note',
+        replacedText: 'updated replacement',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.note).toBe('updated note');
+      expect(patched.replacedText).toBe('updated replacement');
+      expect(patched.id).toBe(created.id);
+    });
+  });
+
   describe('POST /page-notes validation', () => {
     it('rejects missing pageUrl with 400', async () => {
       const req = mockRequest('POST', '/__inline-review/api/page-notes', {
