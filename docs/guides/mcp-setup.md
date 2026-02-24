@@ -1,18 +1,15 @@
 # MCP Setup Guide
 
-Step-by-step guide to connecting a coding agent to your review annotations via the Model Context Protocol (MCP) server.
+Connect your coding agent to review annotations via the [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server. MCP is the primary integration path — agents read annotations directly, act on them, and mark them addressed without any copy-paste.
 
-## Prerequisites
+## Before you begin
 
-1. **Build the package** — the MCP server runs from the compiled output:
+- **Node.js** >= 20
+- **astro-inline-review** installed in your Astro project (`npm install -D astro-inline-review`)
+- An **MCP-compatible coding agent** (Claude Code, Cursor, Windsurf, etc.)
+- **Annotations exist** — reviewers create them using the browser UI during `astro dev`, stored in `inline-review.json`
 
-   ```bash
-   npm run build
-   ```
-
-2. **Have annotations** — reviewers create annotations using the browser UI during `astro dev`. These are stored in `inline-review.json` at your project root.
-
-The MCP server reads directly from this JSON file. The Astro dev server does **not** need to be running.
+The MCP server reads directly from `inline-review.json`. The Astro dev server does **not** need to be running.
 
 ## Claude Code
 
@@ -41,7 +38,7 @@ No other configuration is needed — Claude Code reads `.mcp.json` on startup.
 1. Claude Code reads `.mcp.json` on startup
 2. It spawns `node ./node_modules/astro-inline-review/dist/mcp/server.js` as a child process using stdio transport
 3. The MCP server reads `inline-review.json` from disk on every tool call
-4. Claude Code gains access to six tools for listing, reading, resolving, and replying to annotations
+4. Claude Code gains access to seven tools for listing, reading, resolving, replying to, and updating annotations
 
 ### Custom storage path
 
@@ -74,39 +71,45 @@ For agents that don't support `.mcp.json` auto-discovery, configure the stdio tr
 
 The `--storage` flag is optional and defaults to `./inline-review.json` relative to the working directory.
 
-## Typical workflow
+## The feedback loop
 
 ```
-Reviewer (browser)          Coding agent (MCP)
-────────────────────        ──────────────────
+Human reviewer (browser)        AI coding agent (MCP)
+────────────────────────        ─────────────────────
 1. Browse site in astro dev
-2. Select text, add notes
-3. Export or hand off
-                            4. list_annotations → see all feedback
-                            5. Make code changes
-                            6. resolve_annotation → mark done
-                            7. add_agent_reply → explain what changed
-8. See resolved status and
-   agent replies in browser UI
+2. Select text or Alt+click
+   elements, add notes
+                         ──────►
+                                3. list_annotations → see all feedback
+                                4. Make source code changes
+                                5. resolve_annotation → mark addressed
+                                6. add_agent_reply → explain changes
+                                7. update_annotation_target → record
+                                   what text replaced the original
+                         ◄──────
+8. See addressed status and
+   agent replies in panel
+9. Confirm changes (resolved)
+   or re-annotate
 ```
 
-1. **Reviewer annotates** — using the browser overlay during `astro dev`, the reviewer selects text and adds notes describing what needs to change.
+1. **Reviewer annotates** — using the browser overlay during `astro dev`, the reviewer selects text or Alt+clicks elements and adds notes describing what needs to change.
 
 2. **Agent reads annotations** — the coding agent calls `list_annotations` or `get_export` to see all review feedback with page URLs, selected text, and reviewer notes.
 
 3. **Agent makes changes** — using the annotation context (page URL, selected text, reviewer note), the agent locates and modifies the relevant source files.
 
-4. **Agent resolves and replies** — after making changes, the agent calls `resolve_annotation` to mark the item as done, and `add_agent_reply` to explain what was changed.
+4. **Agent marks addressed and replies** — after making changes, the agent calls `resolve_annotation` to mark the item as addressed, `add_agent_reply` to explain what changed, and optionally `update_annotation_target` to record the replacement text.
 
-5. **Reviewer sees responses** — the browser UI shows resolved annotations with a checkmark and displays agent replies inline, so the reviewer can verify the changes.
+5. **Reviewer sees responses** — the browser UI shows addressed annotations with their status and displays agent replies inline, so the reviewer can verify the changes and confirm resolution.
 
 ## Troubleshooting
 
 ### "Server not found" or connection errors
 
-- Ensure you've run `npm run build` — the server runs from `dist/mcp/server.js`
+- Ensure the package is installed — the server runs from `node_modules/astro-inline-review/dist/mcp/server.js`
 - Check that the path in `.mcp.json` is correct relative to the project root
-- Verify Node.js is available in your PATH
+- Verify Node.js >= 20 is available in your PATH
 
 ### Empty results from list_annotations
 
@@ -122,6 +125,6 @@ Reviewer (browser)          Coding agent (MCP)
 ### Tools not appearing in the agent
 
 - Some MCP clients cache tool lists — restart the agent or reconnect the MCP server
-- Verify the server starts without errors: `node ./dist/mcp/server.js` should run silently (output goes to stderr only on errors)
+- Verify the server starts without errors: `node ./node_modules/astro-inline-review/dist/mcp/server.js` should run silently (output goes to stderr only on errors)
 
 See [MCP Tools Reference](./mcp-tools.md) for detailed documentation of each tool.
