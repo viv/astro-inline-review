@@ -14,10 +14,11 @@ tags: [astro, integration, annotation, dev-tools, specification, element-annotat
 
 **astro-inline-review** is a dev-only annotation overlay for Astro projects. It bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback.
 
-A reviewer browses the live dev site and annotates it in two ways: **selecting text** and attaching notes, or **Alt+clicking elements** (cards, images, buttons, layout sections) to annotate non-text targets. Each annotation captures the page URL, the precise location (text range or CSS selector), and the reviewer's instruction — providing both the *what* and the *where*. The result can be consumed by coding agents (Claude Code, Codex, Cursor, etc.) in two ways:
+A reviewer browses the live dev site and annotates it in two ways: **selecting text** and attaching notes, or **Alt+clicking elements** (cards, images, buttons, layout sections) to annotate non-text targets. Each annotation captures the page URL, the precise location (text range or CSS selector), and the reviewer's instruction — providing both the *what* and the *where*. The result can be consumed by coding agents (Claude Code, Cursor, Windsurf, etc.) in three ways:
 
-- **Markdown export** — one-click copy to clipboard, designed for pasting into chat-based agent interfaces
-- **JSON storage file** (`inline-review.json`) — machine-readable with richer location data (XPath ranges, character offsets, surrounding context for text; CSS selectors, XPaths, and attribute snapshots for elements), designed for file-aware agents that can read it directly from the project root
+- **MCP server** (primary) — agents connect via the [Model Context Protocol](https://modelcontextprotocol.io) to read annotations, act on them, mark them addressed, and reply — forming a closed feedback loop with the reviewer
+- **JSON storage file** (`inline-review.json`) — machine-readable with rich location data (XPath ranges, character offsets, surrounding context for text; CSS selectors, XPaths, and attribute snapshots for elements), readable directly from the project root
+- **Markdown export** (secondary) — one-click copy to clipboard, designed for pasting into chat-based agent interfaces that don't support MCP
 
 The integration ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during `astro dev`.
 
@@ -28,7 +29,7 @@ The integration ships **zero bytes** in production builds. All UI, storage, and 
 3. **Non-invasive**: Shadow DOM isolates all UI from site styles; highlights use inline styles
 4. **Persistent**: Annotations survive page reloads, navigation, and dev server restarts
 5. **Multi-page**: Annotations are scoped by URL but viewable across all pages
-6. **Agent-ready**: Both export formats (Markdown and JSON) carry location-aware context so coding agents know exactly where to act
+6. **Agent-ready**: MCP server provides structured tool access; Markdown export and JSON file offer additional consumption paths
 
 
 ## 2. Integration Lifecycle
