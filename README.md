@@ -31,13 +31,6 @@ Human reviewer                    AI coding agent
 7. Confirm or re-annotate
 ```
 
-### Dev-only, zero production footprint
-
-- Install as a **devDependency** (`npm install -D`)
-- The integration **only activates** during `astro dev`
-- No scripts injected, no middleware registered, no host elements in production builds
-- Zero bytes shipped to production — guaranteed
-
 ## Why MCP-First
 
 The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is the primary integration path. MCP lets your coding agent connect to the annotation store and work through feedback autonomously:
@@ -47,15 +40,11 @@ The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is the prima
 - **Closed loop** — the agent marks annotations as addressed, adds reply messages, and updates replaced text — the reviewer sees all of this in the browser panel
 - **Status lifecycle** — annotations progress through `open` → `addressed` (agent acted) → `resolved` (reviewer confirmed)
 
-A secondary **Markdown export** is also available for agents that don't support MCP, or for sharing feedback outside agent workflows. See [Markdown Export](#markdown-export-secondary).
+A secondary **Markdown export** is also available for agents that don't support MCP, or for sharing feedback outside agent workflows. See [Markdown Export](#markdown-export).
 
 ## Quickstart
 
-### Before you begin
-
-- **Node.js** >= 20
-- An **Astro** project (v5+)
-- An **MCP-compatible coding agent** (Claude Code, Cursor, Windsurf, etc.)
+**Prerequisites:** Node.js >= 20, an Astro v5+ project, and an MCP-compatible coding agent (Claude Code, Cursor, Windsurf, etc.)
 
 ### 1. Install
 
@@ -74,6 +63,8 @@ export default defineConfig({
   integrations: [inlineReview()],
 });
 ```
+
+The only option is `storagePath` (defaults to `'inline-review.json'` in the project root). Annotations are persisted to this file — commit it for shared review, or add it to `.gitignore` for personal use. The browser UI, REST API, and MCP server all read and write the same file.
 
 ### 3. Connect your agent via MCP
 
@@ -95,25 +86,18 @@ Add a `.mcp.json` file to your Astro project root:
 }
 ```
 
-Claude Code reads `.mcp.json` on startup and discovers the annotation tools automatically. For other MCP clients, see [MCP Setup Guide](docs/guides/mcp-setup.md).
+Claude Code reads `.mcp.json` on startup and discovers the annotation tools automatically. The `--storage` flag is optional and defaults to `./inline-review.json`. For other MCP clients, see [MCP Setup Guide](docs/guides/mcp-setup.md).
 
 ### 4. Annotate and go
 
 1. Run `astro dev` and browse your site
 2. **Select text** — a popup appears to add a note about what needs changing
 3. **Alt+click elements** — annotate cards, images, buttons, or layout sections
-4. Your agent reads the annotations via MCP and starts working
-5. Check the **slide-out panel** (click the FAB or `Cmd/Ctrl+Shift+.`) to see agent replies and status updates
+4. **Add page notes** for broader feedback (via the panel or `Cmd/Ctrl+Shift+N`)
+5. Your agent reads the annotations via MCP and starts working
+6. Check the **slide-out panel** (click the FAB or `Cmd/Ctrl+Shift+.`) to see agent replies and status updates
 
 ## Usage
-
-### Annotation workflow
-
-1. Run `astro dev` and browse your site
-2. **Select text** and a popup appears to add a note
-3. **Alt+click elements** to annotate non-text targets (images, buttons, layout sections)
-4. **Add page notes** for broader feedback (via the panel or `Cmd/Ctrl+Shift+N`)
-5. Review annotations in the **slide-out panel** (click the FAB or `Cmd/Ctrl+Shift+.`)
 
 ### Agent workflow (MCP)
 
@@ -148,70 +132,17 @@ Shortcuts are suppressed when focus is in an input, textarea, or contentEditable
 - **Persistent.** Annotations survive page reloads, navigation, and dev server restarts.
 - **Multi-page.** Annotations are scoped by URL but viewable across all pages.
 - **Shadow DOM isolation.** All UI is isolated from your site's styles.
-- **Zero-config.** Works with a single line in `astro.config.mjs`.
-
-## Configuration
-
-Add the integration to your Astro config:
-
-```javascript
-// astro.config.mjs
-import { defineConfig } from 'astro/config';
-import inlineReview from 'astro-inline-review';
-
-export default defineConfig({
-  integrations: [inlineReview()],
-});
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `storagePath` | `string` | `'inline-review.json'` in project root | Path to the JSON storage file |
-
-### Storage
-
-Annotations are persisted to `inline-review.json` in your project root (or the configured `storagePath`). This file is meant to be committed alongside your project for shared review, or added to `.gitignore` for personal use.
-
-The browser UI, REST API, and MCP server all read and write the same file. Changes made by one are immediately visible to the others.
 
 ## MCP Server
 
-The package includes an [MCP](https://modelcontextprotocol.io) server that lets coding agents read and respond to annotations directly. The reviewer annotates in the browser; the agent reads via MCP, makes changes, and marks them addressed.
+The MCP server lets coding agents read and respond to annotations directly — no dev server required. Setup is covered in [Quickstart step 3](#3-connect-your-agent-via-mcp).
 
-### Claude Code
-
-Add a `.mcp.json` file to your Astro project root:
-
-```json
-{
-  "mcpServers": {
-    "astro-inline-review": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "./node_modules/astro-inline-review/dist/mcp/server.js",
-        "--storage",
-        "./inline-review.json"
-      ]
-    }
-  }
-}
-```
-
-Claude Code reads `.mcp.json` on startup and discovers the seven annotation tools automatically. The `--storage` flag is optional and defaults to `./inline-review.json` relative to the project root.
-
-### Other MCP clients
-
-Configure the stdio transport manually:
+For MCP clients other than Claude Code, configure the stdio transport manually:
 
 - **Command**: `node`
 - **Arguments**: `["./node_modules/astro-inline-review/dist/mcp/server.js", "--storage", "./inline-review.json"]`
 - **Transport**: stdio
 - **Working directory**: your Astro project root
-
-The `--storage` flag is optional (defaults to `./inline-review.json`). Paths resolve relative to the working directory.
 
 ### Available tools
 
@@ -227,7 +158,7 @@ The `--storage` flag is optional (defaults to `./inline-review.json`). Paths res
 
 See [MCP Setup Guide](docs/guides/mcp-setup.md) for detailed setup and [MCP Tools Reference](docs/guides/mcp-tools.md) for the full tool reference.
 
-## Markdown Export (Secondary)
+## Markdown Export
 
 For agents that don't support MCP, or for sharing feedback outside agent workflows, a Markdown export is available via keyboard shortcut (`Cmd/Ctrl+Shift+E`) or the MCP `get_export` tool.
 
@@ -282,7 +213,6 @@ See [docs/spec/specification.md](docs/spec/specification.md) for the full compon
 - Check that `inline-review.json` exists and contains annotations
 - If using a custom `--storage` path, verify it points to the correct file
 - The MCP server reads from disk on every call — if the file was just created, it should be picked up immediately
-- Paths in `--storage` are resolved relative to the current working directory, not the server script location
 
 ### Panel not showing
 
