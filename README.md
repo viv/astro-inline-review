@@ -263,6 +263,23 @@ The acceptance test suite lives in a separate repository: [astro-inline-review-t
 
 **Choose astro-annotate** if you're collecting UI/layout feedback from clients or stakeholders and want device-tagged element-level annotations.
 
+---
+
+[Vibe Annotations](https://www.vibe-annotations.com/) is a Chrome extension + MCP server that takes a framework-agnostic approach to the same problem:
+
+| | astro-inline-review | Vibe Annotations |
+|---|---|---|
+| **Delivery** | Framework integration (zero-config, auto-injected) | Chrome extension + separate MCP server |
+| **Framework support** | Astro only (Vite and Express adapters planned) | Any localhost dev server |
+| **Selection model** | Text selection + element selection (Alt+click) | Element click only |
+| **MCP transport** | stdio | SSE |
+| **Status lifecycle** | open → addressed → resolved, with agent replies | Read → implement → delete (batch cycle) |
+| **Persistence** | JSON file in project root (survives restarts, committable) | Server-side (cleared per cycle) |
+
+**Choose astro-inline-review** if you need text-level precision for copy review, a persistent status lifecycle with agent replies, or zero-install setup for Astro projects.
+
+**Choose Vibe Annotations** if you need framework-agnostic coverage today and element-level annotation is sufficient for your workflow.
+
 ## Licence
 
 [MIT](LICENSE)
