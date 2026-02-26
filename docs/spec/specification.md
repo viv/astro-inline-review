@@ -475,7 +475,24 @@ Same CRUD semantics as annotation endpoints (POST creates with server-generated 
 
 **Client usage**: The client exclusively uses `GET /annotations` as its store-fetch endpoint. The response from `GET /annotations` includes both the `annotations` and `pageNotes` arrays, making `GET /page-notes` redundant for normal client operation. The `GET /page-notes` endpoint exists for API completeness and potential external tool use (e.g. curl-based debugging).
 
-#### 4.2.3 Export Endpoint
+#### 4.2.3 Version Endpoint
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `GET` | `/version` | Return a lightweight store fingerprint | 200 |
+
+**Response shape**:
+```json
+{ "fingerprint": "5:2026-02-26T10:30:00.000Z" }
+```
+
+The fingerprint is `<totalCount>:<latestUpdatedAt>` where:
+- `totalCount` is the sum of all annotations and page notes (not page-filtered)
+- `latestUpdatedAt` is the most recent `updatedAt` ISO 8601 timestamp across all annotations and page notes, or empty string if the store is empty
+
+Any mutation — create, update, delete, status change — modifies either the count or the latest `updatedAt`, causing the fingerprint to change. This endpoint is designed for lightweight polling by the client's store poller (see Section 5.7).
+
+#### 4.2.4 Export Endpoint
 
 | Method | Path | Description | Content-Type |
 |--------|------|-------------|--------------|
@@ -483,7 +500,7 @@ Same CRUD semantics as annotation endpoints (POST creates with server-generated 
 
 Returns raw Markdown text (not JSON). See [Section 9: Markdown Export](#9-markdown-export) for format details.
 
-#### 4.2.4 Error Handling
+#### 4.2.5 Error Handling
 
 - **400**: Returned when a POST request body fails validation (missing or invalid required fields)
 - **404**: Returned for unknown API routes or when an annotation/note ID is not found
@@ -587,6 +604,7 @@ The client entry point runs on every page during dev. The bootstrap sequence is:
 7. **Register shortcuts**: `registerShortcuts(handlers)` — keyboard shortcuts
 8. **Restore highlights**: `annotator.restoreHighlights()` — restore persisted highlights for the current page
 9. **Listen for page transitions**: `document.addEventListener('astro:page-load', ...)` — re-restore highlights on SPA navigation
+10. **Start store poller**: `createStorePoller({ onStoreChanged })` — poll for external changes (e.g. MCP agent updates) and refresh highlights/panel
 
 The bootstrap runs when `DOMContentLoaded` fires, or immediately if the document is already loaded.
 
@@ -646,6 +664,7 @@ The client communicates with the server via fetch requests to `/__inline-review/
 - `POST /page-notes` — create page note
 - `PATCH /page-notes/:id` — update page note
 - `DELETE /page-notes/:id` — delete page note
+- `GET /version` — lightweight fingerprint for change detection polling (see Section 5.7)
 
 **Endpoints NOT used by the client**: `GET /page-notes` (page notes are included in the `GET /annotations` response), `GET /export` (client generates Markdown locally via `shared/export.ts`).
 
@@ -713,7 +732,50 @@ Panel note CRUD → call mediator.refreshPanel() → re-render panel content
 Annotator save/delete → call refreshCacheAndBadge → update FAB badge
 Shortcuts → call togglePanel/closeActive/export/addPageNote → affect Panel/Popup
 Clear All → call mediator.restoreHighlights() → clean up marks/outlines
+Store Poller → detects fingerprint change → restoreHighlights + refreshPanel (if open)
 ```
+
+
+### 5.7 Auto-Refresh (Store Polling)
+
+The client automatically detects external changes to the annotation store (e.g. when an MCP agent resolves or updates an annotation) and refreshes the UI without requiring the reviewer to manually close and reopen the panel.
+
+#### 5.7.1 Mechanism
+
+A lightweight poller (`createStorePoller`) runs continuously after bootstrap:
+
+1. Every 2 seconds (configurable), fetches `GET /__inline-review/api/version` — returns only a fingerprint string (`<count>:<latestUpdatedAt>`), not the full store
+2. Compares the server fingerprint with the last known value
+3. On the first poll, stores the fingerprint as a baseline without triggering any refresh
+4. On subsequent polls, if the fingerprint has changed:
+   - **Always** calls `restoreHighlights()` — updates DOM highlights regardless of panel state
+   - **Only** calls `mediator.refreshPanel()` when the panel is currently open — avoids unnecessary DOM re-rendering for an invisible panel
+
+#### 5.7.2 Performance Characteristics
+
+- **Idle cost**: One lightweight HTTP request every 2 seconds (tiny JSON payload: `{ "fingerprint": "5:2026-02-26T10:00:00Z" }`)
+- **On change**: Full store fetch via `restoreHighlights()` (same as page load), plus panel re-render if panel is open
+- **Panel closed**: Only `restoreHighlights()` runs on change. When the panel is subsequently opened via `togglePanel()`, it fetches fresh data as part of its normal open flow.
+- **No change**: Zero additional work beyond the fingerprint fetch
+
+#### 5.7.3 Fingerprint Design
+
+The fingerprint `<count>:<latestUpdatedAt>` captures all meaningful mutations:
+- **Create** → count increases
+- **Update/PATCH** → `updatedAt` changes (server sets `updatedAt = now` on every PATCH)
+- **Delete** → count decreases
+- **Status change** → `updatedAt` changes (status PATCH updates `updatedAt`)
+
+The fingerprint is computed from ALL annotations and page notes globally (not page-filtered), so changes on any page are detected regardless of which page the reviewer is viewing.
+
+#### 5.7.4 Error Handling
+
+Network errors and non-OK HTTP responses are silently ignored. The poller continues on its next interval. This handles:
+- Dev server restarts (temporary connection refused)
+- Network hiccups
+- Server errors (500, etc.)
+
+The `onStoreChanged` callback is never invoked on error — the last known fingerprint is preserved, and the next successful poll will detect any accumulated changes.
 
 
 ## 6. UI Components
@@ -1552,6 +1614,7 @@ The context matching algorithm:
 | CSS selector matches zero elements | Element annotation becomes orphaned (Tier 3) |
 | CSS selector matches multiple elements | First match is used (no uniqueness re-verification at resolution time) |
 | Alt+click on excluded element | Silently ignored (no popup shown) |
+| Store poller network error | Silently ignored, continues polling on next interval (see 5.7.4) |
 | Clipboard API unavailable | Fall back to execCommand, return false on total failure |
 | Status update fails | Console error, toast notification "Failed to update status" |
 | Invalid status value in PATCH | 400 error: "status must be one of: open, addressed, resolved" |
@@ -1729,5 +1792,5 @@ The following accessibility features are not yet implemented:
 | Press Cmd/Ctrl+Shift+N | Open panel and add-note form | 10.1, 11.2 |
 | Page reload | Highlights restored from server (text + element) | 8.4, 8.5.4, 8.7 |
 | Navigate to different page | Badge updates, highlights re-applied | 12.2 |
-| Agent calls `resolve_annotation` MCP tool | Annotation status set to addressed (or resolved with `autoResolve`) | 4.3.2, 3.2.5 |
+| Agent calls `resolve_annotation` MCP tool | Annotation status set to addressed (or resolved with `autoResolve`); store poller detects fingerprint change within 2s, restores highlights and refreshes panel if open | 4.3.2, 3.2.5, 5.7 |
 | `astro build` | Zero traces in output | 13 |
