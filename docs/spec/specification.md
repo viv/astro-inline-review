@@ -295,7 +295,7 @@ When restoring element annotations on page load:
 
 ### 3.5 SerializedRange
 
-Captures enough information for three-tier highlight restoration:
+Captures enough information for four-tier highlight restoration:
 
 ```typescript
 interface SerializedRange {
@@ -304,8 +304,8 @@ interface SerializedRange {
   endXPath: string;        // XPath to the end text node
   endOffset: number;       // Character offset within end node
   selectedText: string;    // Verbatim selected text (for XPath validation — see note below)
-  contextBefore: string;   // Exactly 30 characters before selection (or fewer if insufficient text exists)
-  contextAfter: string;    // Exactly 30 characters after selection (or fewer if insufficient text exists)
+  contextBefore: string;   // Up to 80 characters before selection within the same block-level ancestor
+  contextAfter: string;    // Up to 80 characters after selection within the same block-level ancestor
 }
 ```
 
@@ -833,7 +833,7 @@ Each text annotation item in the panel shows:
 
 **Delete button**: Each text annotation item has a "Delete" button (`data-air-el="annotation-delete"`) with a two-click confirmation flow matching the Clear All pattern (section 6.2.5). First click changes the button text to "Sure?" and sets `data-air-state="confirming"`. A second click within 3 seconds executes the delete (calls the API, removes highlight marks, refreshes badge and panel). If no second click occurs within 3 seconds, the button reverts to "Delete".
 
-**Orphan indicator**: If the annotation's text cannot be located on the page (Tier 3 orphan per section 8.4), a red indicator is shown with the text "Could not locate on page" (class `.air-annotation-item__orphan`). The item container receives the `.air-annotation-item--orphan` modifier class, which adds a red left border and reduced opacity. Orphan detection only applies to annotations on the current page — annotations for other pages (shown in the "All Pages" tab) do not show an orphan indicator since their DOM is not available.
+**Orphan indicator**: If the annotation's text cannot be located on the page (Tier 4 orphan per section 8.4), a red indicator is shown with the text "Could not locate on page" (class `.air-annotation-item__orphan`). The item container receives the `.air-annotation-item--orphan` modifier class, which adds a red left border and reduced opacity. Orphan detection only applies to annotations on the current page — annotations for other pages (shown in the "All Pages" tab) do not show an orphan indicator since their DOM is not available.
 
 **Click behaviour**: Scrolls the page to the corresponding highlight and triggers a pulse animation. Uses `scrollIntoView({ behavior: 'smooth', block: 'center' })`.
 
@@ -1168,7 +1168,17 @@ When the page loads (or on SPA navigation), **text** highlights are restored fro
 - Same graduated scoring and confidence threshold as Tier 2
 - If accepted: apply highlight. If rejected: fall through to Tier 3
 
-**Tier 3 — Orphaned** (last resort):
+**Tier 3 — Context-Seam Matching** (structural fallback):
+- Attempted when the annotated text has been completely rewritten but the surrounding text is intact
+- Finds where `contextBefore` ends and `contextAfter` begins in the document, without requiring the annotated text itself to exist
+- Searches for exact substring matches of the full `contextBefore` and `contextAfter` in the concatenated page text
+- For each pair of matches, computes the gap between the end of `contextBefore` and the start of `contextAfter`
+- Selects the pair with the smallest valid gap (at least 1 character, at most 500 characters)
+- Requires both `contextBefore` and `contextAfter` to be at least 3 characters long
+- If a valid seam is found: create a Range covering the gap text and apply highlight
+- If no valid seam: fall through to Tier 4
+
+**Tier 4 — Orphaned** (last resort):
 - The annotation exists in the store but cannot be located in the DOM
 - It is **visible in the review panel** (listed as an annotation item)
 - No highlight is applied on the page
@@ -1222,7 +1232,7 @@ On page load or SPA navigation, element annotations are restored:
 2. For each element annotation:
    a. **Tier 1**: `document.querySelector(cssSelector)` — returns first match (no uniqueness re-verification)
    b. **Tier 2**: `document.evaluate(xpath)` — positional fallback
-   c. **Tier 3**: Orphaned — no highlight applied, visible only in panel
+   c. **Tier 3**: Orphaned — no highlight applied, visible only in panel (element annotations use 3 tiers; text annotations have 4 — see Section 8.4)
 3. If resolved: apply outline style and `data-air-element-id` attribute
 
 Element highlights are removed before re-applying (same as text highlights) by querying all elements with `data-air-element-id` and removing their styles/attributes.
@@ -1246,7 +1256,7 @@ Highlights must not break the page layout:
 The integration provides two complementary formats for feeding review feedback to coding agents:
 
 - **Markdown export** (section 9.1–9.3): Human-readable, designed for pasting into coding agents (Claude Code, Codex, Cursor, etc.). Each annotation includes the page URL and selected text, giving the agent enough context to locate and act on the feedback.
-- **JSON storage file** (section 4.1): Machine-readable, designed for file-aware agents that can read `inline-review.json` directly from the project root. Contains richer location data — XPath ranges, character offsets, and 30-character context windows before and after each selection — enabling more precise source-text matching.
+- **JSON storage file** (section 4.1): Machine-readable, designed for file-aware agents that can read `inline-review.json` directly from the project root. Contains richer location data — XPath ranges, character offsets, and 80-character context windows before and after each selection — enabling more precise source-text matching.
 
 ### 9.1 Export Format
 
@@ -1522,15 +1532,28 @@ The context matching algorithm:
 4. Scores each match candidate by graduated context similarity using longest-boundary-match:
    - `contextBefore` score: the length of the longest suffix of `contextBefore` that matches the end of the text immediately preceding the match (0 to `contextBefore.length` points)
    - `contextAfter` score: the length of the longest prefix of `contextAfter` that matches the start of the text immediately following the match (0 to `contextAfter.length` points)
-   - Total score ranges from 0 to `contextBefore.length + contextAfter.length` (typically 0–60)
+   - Total score ranges from 0 to `contextBefore.length + contextAfter.length` (typically 0–160)
    - Each matching context character contributes exactly 1 point, providing smooth gradient degradation
 5. The candidate with the highest score is selected. On tie, the first occurrence wins.
-6. **Minimum confidence threshold**: if `maxPossibleScore` (`contextBefore.length + contextAfter.length`) is greater than 0 and the best score is below `maxPossibleScore × MIN_CONFIDENCE_RATIO` (0.3), `null` is returned — the annotation falls through to Tier 3 (orphaned). When both context strings are empty (`maxPossibleScore === 0`), any match is accepted to preserve backward compatibility.
+6. **Minimum confidence threshold**: if `maxPossibleScore` (`contextBefore.length + contextAfter.length`) is greater than 0 and the best score is below `maxPossibleScore × MIN_CONFIDENCE_RATIO` (0.3), `null` is returned — the annotation falls through to Tier 3 (context-seam matching). When both context strings are empty (`maxPossibleScore === 0`), any match is accepted to preserve backward compatibility.
 7. Returns the best-scoring match as a Range, or `null` if below the confidence threshold
 
-**Context length**: Exactly 30 characters are stored (or fewer if insufficient text exists before/after the selection boundary). The `CONTEXT_LENGTH` constant is defined as `30`.
+**Context length**: Up to 80 characters are stored before and after the selection boundary. The `CONTEXT_LENGTH` constant is defined as `80`.
 
-**Context extraction limitation**: `contextBefore` is extracted solely from the text node containing the start of the selection (`range.startContainer`). It does not walk backwards across preceding DOM nodes. Similarly, `contextAfter` is extracted solely from the text node containing the end of the selection. This means if the selection starts at offset 0 in a text node, `contextBefore` will be an empty string even if preceding elements contain text. When both context strings are empty, all candidates score 0 and the first occurrence is selected.
+**Context extraction**: `contextBefore` and `contextAfter` are extracted by walking all text nodes within the nearest **block-level ancestor** of the selection boundary (e.g. `<p>`, `<div>`, `<li>`, `<h1>`–`<h6>`). Text content is concatenated across inline element boundaries (`<strong>`, `<em>`, `<a>`, `<code>`, etc.) but does not cross block-level boundaries. This means an annotation on "bold" inside `<p>Before <strong>bold</strong> after</p>` produces `contextBefore="Before "` and `contextAfter=" after"`. Text nodes inside `<script>`, `<style>`, and `<noscript>` elements are excluded from context extraction and all text node walks.
+
+### 15.4 Context-Seam Matching
+
+When context matching fails for both the original and replacement text, the context-seam algorithm provides a structural fallback that locates the annotation's position even when the annotated text has been completely rewritten:
+
+1. Requires both `contextBefore` and `contextAfter` to be at least 3 characters long
+2. Walks all text nodes in `document.body` (excluding `<script>`, `<style>`, `<noscript>`)
+3. Concatenates all text content into a single string with node boundary tracking
+4. Finds all positions where the full `contextBefore` string ends (exact substring match)
+5. Finds all positions where the full `contextAfter` string begins (exact substring match)
+6. For each (start, end) pair, computes the gap: `end - start`
+7. Selects the pair with the smallest valid gap (at least 1 character, at most `MAX_GAP` of 500 characters)
+8. Returns a Range covering the text between the two context anchors, or `null` if no valid pair exists
 
 
 ## 16. Error Handling
@@ -1544,8 +1567,9 @@ The context matching algorithm:
 | JSON file corrupted | Return empty store (silent recovery) |
 | JSON schema invalid | Return empty store (silent recovery) |
 | XPath resolution fails | Return null, try context matching |
-| Context matching fails (original text) | Try replacement text if `replacedText` is set, otherwise orphaned |
-| Context matching fails (replacement text) | Annotation becomes orphaned |
+| Context matching fails (original text) | Try replacement text if `replacedText` is set, otherwise try context-seam |
+| Context matching fails (replacement text) | Try context-seam matching |
+| Context-seam matching fails | Annotation becomes orphaned (Tier 4) |
 | localStorage full | Silently ignore write error |
 | Concurrent file writes | Queued via promise chain |
 | Highlight application fails | Console error logged, continue with other annotations |
