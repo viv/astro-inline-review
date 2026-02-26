@@ -216,32 +216,84 @@ export function findRangeByContext(
 
 // --- Helpers ---
 
-function extractContextBefore(range: Range): string {
-  const container = range.startContainer;
-  if (container.nodeType === Node.TEXT_NODE) {
-    const text = container.textContent ?? '';
-    const start = Math.max(0, range.startOffset - CONTEXT_LENGTH);
-    return text.slice(start, range.startOffset);
+const BLOCK_TAGS = new Set([
+  'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DD', 'DETAILS',
+  'DIV', 'DL', 'DT', 'FIELDSET', 'FIGCAPTION', 'FIGURE', 'FOOTER',
+  'FORM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HEADER', 'HGROUP',
+  'HR', 'LI', 'MAIN', 'NAV', 'OL', 'P', 'PRE', 'SECTION', 'SUMMARY',
+  'TABLE', 'UL',
+]);
+
+export function getBlockAncestor(node: Node): Element {
+  let current = node.nodeType === Node.ELEMENT_NODE
+    ? node as Element
+    : node.parentElement;
+  while (current && current !== document.body) {
+    if (BLOCK_TAGS.has(current.tagName)) return current;
+    current = current.parentElement;
   }
-  return '';
+  return document.body;
+}
+
+function extractContextBefore(range: Range): string {
+  const blockAncestor = getBlockAncestor(range.startContainer);
+  const textNodes = getTextNodes(blockAncestor);
+
+  let fullText = '';
+  let rangeStartOffset = -1;
+
+  for (const node of textNodes) {
+    if (node === range.startContainer) {
+      rangeStartOffset = fullText.length + range.startOffset;
+    }
+    fullText += node.textContent ?? '';
+  }
+
+  if (rangeStartOffset < 0) return '';
+
+  const start = Math.max(0, rangeStartOffset - CONTEXT_LENGTH);
+  return fullText.slice(start, rangeStartOffset);
 }
 
 function extractContextAfter(range: Range): string {
-  const container = range.endContainer;
-  if (container.nodeType === Node.TEXT_NODE) {
-    const text = container.textContent ?? '';
-    const end = Math.min(text.length, range.endOffset + CONTEXT_LENGTH);
-    return text.slice(range.endOffset, end);
+  const blockAncestor = getBlockAncestor(range.endContainer);
+  const textNodes = getTextNodes(blockAncestor);
+
+  let fullText = '';
+  let rangeEndOffset = -1;
+
+  for (const node of textNodes) {
+    if (node === range.endContainer) {
+      rangeEndOffset = fullText.length + range.endOffset;
+    }
+    fullText += node.textContent ?? '';
   }
-  return '';
+
+  if (rangeEndOffset < 0) return '';
+
+  const end = Math.min(fullText.length, rangeEndOffset + CONTEXT_LENGTH);
+  return fullText.slice(rangeEndOffset, end);
 }
 
-function getTextNodes(root: Node): Text[] {
+const EXCLUDED_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT']);
+
+function isInsideExcludedTag(node: Node, root: Node): boolean {
+  let el = node.parentElement;
+  while (el && el !== root) {
+    if (EXCLUDED_TAGS.has(el.tagName)) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
+
+export function getTextNodes(root: Node): Text[] {
   const nodes: Text[] = [];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node: Text | null;
   while ((node = walker.nextNode() as Text | null)) {
-    nodes.push(node);
+    if (!isInsideExcludedTag(node, root)) {
+      nodes.push(node);
+    }
   }
   return nodes;
 }

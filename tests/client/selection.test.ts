@@ -7,6 +7,8 @@ import {
   findRangeByContext,
   longestMatchingSuffix,
   longestMatchingPrefix,
+  getTextNodes,
+  getBlockAncestor,
 } from '../../src/client/selection.js';
 import type { SerializedRange } from '../../src/shared/types.js';
 
@@ -496,5 +498,219 @@ describe('deserializeRange', () => {
 
     const result = deserializeRange(serialized);
     expect(result).toBeNull();
+  });
+});
+
+describe('getTextNodes', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('returns text nodes from regular elements', () => {
+    document.body.innerHTML = '<p>Hello <strong>world</strong></p>';
+    const nodes = getTextNodes(document.body);
+    const texts = nodes.map(n => n.textContent);
+    expect(texts).toEqual(['Hello ', 'world']);
+  });
+
+  it('ignores text inside <script> elements', () => {
+    document.body.innerHTML = '<p>Visible</p><script>var x = 1;</script>';
+    const nodes = getTextNodes(document.body);
+    const texts = nodes.map(n => n.textContent);
+    expect(texts).toEqual(['Visible']);
+  });
+
+  it('ignores text inside <style> elements', () => {
+    document.body.innerHTML = '<p>Visible</p><style>.foo { color: red; }</style>';
+    const nodes = getTextNodes(document.body);
+    const texts = nodes.map(n => n.textContent);
+    expect(texts).toEqual(['Visible']);
+  });
+
+  it('ignores text inside <noscript> elements', () => {
+    document.body.innerHTML = '<p>Visible</p><noscript>Enable JS</noscript>';
+    const nodes = getTextNodes(document.body);
+    const texts = nodes.map(n => n.textContent);
+    expect(texts).toEqual(['Visible']);
+  });
+
+  it('ignores nested text within excluded elements', () => {
+    document.body.innerHTML = '<p>Before</p><script><span>nested</span></script><p>After</p>';
+    const nodes = getTextNodes(document.body);
+    const texts = nodes.map(n => n.textContent);
+    expect(texts).toEqual(['Before', 'After']);
+  });
+});
+
+describe('serializeRange — cross-node context', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('extracts context across inline element boundaries', () => {
+    document.body.innerHTML = '<p>Before <strong>bold</strong> after</p>';
+    const strongText = document.querySelector('strong')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(strongText, 0);
+    range.setEnd(strongText, 4);
+
+    const result = serializeRange(range);
+
+    expect(result.selectedText).toBe('bold');
+    expect(result.contextBefore).toBe('Before ');
+    expect(result.contextAfter).toBe(' after');
+  });
+
+  it('extracts context across multiple inline elements', () => {
+    document.body.innerHTML = '<p>Start <em>italic</em> middle <strong>bold</strong> end</p>';
+    const emText = document.querySelector('em')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(emText, 0);
+    range.setEnd(emText, 6);
+
+    const result = serializeRange(range);
+
+    expect(result.selectedText).toBe('italic');
+    expect(result.contextBefore).toBe('Start ');
+    expect(result.contextAfter).toBe(' middle bold end');
+  });
+
+  it('does not cross block-level boundaries for context', () => {
+    document.body.innerHTML = '<p>First paragraph content</p><p>Second <strong>target</strong> content</p>';
+    const strongText = document.querySelectorAll('strong')[0].firstChild!;
+
+    const range = document.createRange();
+    range.setStart(strongText, 0);
+    range.setEnd(strongText, 6);
+
+    const result = serializeRange(range);
+
+    expect(result.selectedText).toBe('target');
+    // Context should come from within the second <p>, not from the first
+    expect(result.contextBefore).toBe('Second ');
+    expect(result.contextAfter).toBe(' content');
+  });
+
+  it('handles annotation at start of block (empty context before)', () => {
+    document.body.innerHTML = '<p><strong>bold</strong> text after</p>';
+    const strongText = document.querySelector('strong')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(strongText, 0);
+    range.setEnd(strongText, 4);
+
+    const result = serializeRange(range);
+
+    expect(result.selectedText).toBe('bold');
+    expect(result.contextBefore).toBe('');
+    expect(result.contextAfter).toBe(' text after');
+  });
+
+  it('handles annotation at end of block (empty context after)', () => {
+    document.body.innerHTML = '<p>text before <strong>bold</strong></p>';
+    const strongText = document.querySelector('strong')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(strongText, 0);
+    range.setEnd(strongText, 4);
+
+    const result = serializeRange(range);
+
+    expect(result.selectedText).toBe('bold');
+    expect(result.contextBefore).toBe('text before ');
+    expect(result.contextAfter).toBe('');
+  });
+});
+
+describe('getBlockAncestor', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('returns the nearest block ancestor', () => {
+    document.body.innerHTML = '<div><p>Hello <strong>world</strong></p></div>';
+    const strongText = document.querySelector('strong')!.firstChild!;
+
+    const block = getBlockAncestor(strongText);
+    expect(block.tagName).toBe('P');
+  });
+
+  it('returns body when no block ancestor exists', () => {
+    document.body.innerHTML = '<span><em>inline only</em></span>';
+    const emText = document.querySelector('em')!.firstChild!;
+
+    const block = getBlockAncestor(emText);
+    expect(block).toBe(document.body);
+  });
+
+  it('returns the element itself if it is a block element', () => {
+    document.body.innerHTML = '<div><p>content</p></div>';
+    const p = document.querySelector('p')!;
+
+    const block = getBlockAncestor(p);
+    expect(block.tagName).toBe('P');
+  });
+});
+
+describe('findRangeByContext — Tier 2.5 round-trip with inline context', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('re-finds text after DOM change using cross-node context', () => {
+    // Step 1: Original DOM — serialize annotation on "bold"
+    document.body.innerHTML = '<p>Before <strong>bold</strong> after</p>';
+    const strongText = document.querySelector('strong')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(strongText, 0);
+    range.setEnd(strongText, 4);
+
+    const serialized = serializeRange(range);
+
+    // Verify cross-node context was captured
+    expect(serialized.contextBefore).toBe('Before ');
+    expect(serialized.contextAfter).toBe(' after');
+
+    // Step 2: Simulate agent edit — replace "bold" with "updated"
+    document.body.innerHTML = '<p>Before <strong>updated</strong> after</p>';
+
+    // Step 3: Tier 2.5 — find replacement text using original context
+    const found = findRangeByContext(
+      'updated',
+      serialized.contextBefore,
+      serialized.contextAfter,
+    );
+
+    expect(found).not.toBeNull();
+    expect(found!.toString()).toBe('updated');
+  });
+
+  it('disambiguates replacement text using cross-node context', () => {
+    // Two paragraphs with the same replacement text
+    document.body.innerHTML =
+      '<p>Unrelated <strong>updated</strong> stuff</p>' +
+      '<p>Before <strong>updated</strong> after</p>';
+
+    // Context matches the second paragraph
+    const found = findRangeByContext(
+      'updated',
+      'Before ',
+      ' after',
+    );
+
+    expect(found).not.toBeNull();
+    expect(found!.toString()).toBe('updated');
+
+    // Verify it picked the second occurrence (in the second <p>)
+    // Full text: "Unrelated updated stuffBefore updated after"
+    //             0         1         2         3         4
+    //             0123456789012345678901234567890123456789012345
+    // Second "updated" starts at index 30
+    const fullText = document.body.textContent ?? '';
+    const secondIdx = fullText.indexOf('updated', fullText.indexOf('updated') + 1);
+    expect(secondIdx).toBeGreaterThan(0);
   });
 });

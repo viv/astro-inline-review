@@ -16,6 +16,7 @@ import { showToast } from './ui/toast.js';
 import { api } from './api.js';
 import { writeCache } from './cache.js';
 import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByAnnotationId, removeHighlight, removeElementHighlight } from './highlights.js';
+import { createStorePoller } from './store-poller.js';
 
 // Idempotency guard
 const INIT_FLAG = '__astro_inline_review_init';
@@ -211,6 +212,15 @@ function init(): void {
   document.addEventListener('astro:page-load', () => {
     annotator.restoreHighlights();
   });
+
+  // Poll for external store changes (e.g. MCP tool updates)
+  const poller = createStorePoller({
+    onStoreChanged: () => {
+      annotator.restoreHighlights();
+      mediator.refreshPanel();
+    },
+  });
+  poller.start();
 }
 
 // Bootstrap on DOM ready
