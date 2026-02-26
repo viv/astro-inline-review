@@ -18,6 +18,25 @@ import { writeCache } from './cache.js';
 import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByAnnotationId, removeHighlight, removeElementHighlight } from './highlights.js';
 import { createStorePoller } from './store-poller.js';
 
+const SCROLL_TO_KEY = 'air-scroll-to';
+
+/** Scroll to and pulse an annotation highlight on the current page. */
+function scrollToAnnotation(id: string): void {
+  // Try text highlight first
+  const marks = getHighlightMarks(id);
+  if (marks.length > 0) {
+    marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    pulseHighlight(id);
+    return;
+  }
+  // Try element highlight
+  const element = getElementByAnnotationId(id);
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    pulseElementHighlight(id);
+  }
+}
+
 // Idempotency guard
 const INIT_FLAG = '__astro_inline_review_init';
 
@@ -55,20 +74,15 @@ function init(): void {
 
   // Panel
   const panel: PanelElements = createPanel(shadowRoot, {
-    onAnnotationClick: (id) => {
-      // Try text highlight first
-      const marks = getHighlightMarks(id);
-      if (marks.length > 0) {
-        marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        pulseHighlight(id);
+    onAnnotationClick: (id, pageUrl) => {
+      // Cross-page navigation: store target and navigate
+      if (pageUrl !== window.location.pathname) {
+        sessionStorage.setItem(SCROLL_TO_KEY, id);
+        window.location.href = pageUrl;
         return;
       }
-      // Try element highlight
-      const element = getElementByAnnotationId(id);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        pulseElementHighlight(id);
-      }
+
+      scrollToAnnotation(id);
     },
     onAnnotationDelete: async (id) => {
       try {
@@ -205,12 +219,24 @@ function init(): void {
     },
   });
 
-  // Restore highlights for the current page
-  annotator.restoreHighlights();
+  // Restore highlights for the current page, then handle pending scroll-to
+  annotator.restoreHighlights().then(() => {
+    const pendingId = sessionStorage.getItem(SCROLL_TO_KEY);
+    if (pendingId) {
+      sessionStorage.removeItem(SCROLL_TO_KEY);
+      scrollToAnnotation(pendingId);
+    }
+  });
 
-  // Re-restore on Astro page transitions
+  // Re-restore on Astro page transitions (also handles pending scroll-to)
   document.addEventListener('astro:page-load', () => {
-    annotator.restoreHighlights();
+    annotator.restoreHighlights().then(() => {
+      const pendingId = sessionStorage.getItem(SCROLL_TO_KEY);
+      if (pendingId) {
+        sessionStorage.removeItem(SCROLL_TO_KEY);
+        scrollToAnnotation(pendingId);
+      }
+    });
   });
 
   // Poll for external store changes (e.g. MCP tool updates)

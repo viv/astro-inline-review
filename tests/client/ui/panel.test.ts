@@ -888,7 +888,7 @@ describe('createPanel — ARIA semantics', () => {
     const item = shadowRoot.querySelector('[data-air-el="annotation-item"]') as HTMLElement;
     item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
-    expect(callbacks.onAnnotationClick).toHaveBeenCalledWith('kbd-test');
+    expect(callbacks.onAnnotationClick).toHaveBeenCalledWith('kbd-test', '/');
   });
 
   it('annotation items respond to Space key', async () => {
@@ -903,7 +903,7 @@ describe('createPanel — ARIA semantics', () => {
     const item = shadowRoot.querySelector('[data-air-el="annotation-item"]') as HTMLElement;
     item.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
 
-    expect(callbacks.onAnnotationClick).toHaveBeenCalledWith('space-test');
+    expect(callbacks.onAnnotationClick).toHaveBeenCalledWith('space-test', '/');
   });
 });
 

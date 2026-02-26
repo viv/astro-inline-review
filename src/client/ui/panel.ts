@@ -23,7 +23,7 @@ export interface PanelElements {
 }
 
 export interface PanelCallbacks {
-  onAnnotationClick: (annotationId: string) => void;
+  onAnnotationClick: (annotationId: string, pageUrl: string) => void;
   onAnnotationDelete: (annotationId: string) => Promise<void>;
   onAnnotationStatusChange: (annotationId: string, status: AnnotationStatus) => Promise<void>;
   isAnnotationOrphaned: (annotationId: string, pageUrl: string) => boolean;
@@ -427,12 +427,12 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 
   item.setAttribute('tabindex', '0');
   item.addEventListener('click', () => {
-    callbacks.onAnnotationClick(annotation.id);
+    callbacks.onAnnotationClick(annotation.id, annotation.pageUrl);
   });
   item.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      callbacks.onAnnotationClick(annotation.id);
+      callbacks.onAnnotationClick(annotation.id, annotation.pageUrl);
     }
   });
 
@@ -491,12 +491,12 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
 
   item.setAttribute('tabindex', '0');
   item.addEventListener('click', () => {
-    callbacks.onAnnotationClick(annotation.id);
+    callbacks.onAnnotationClick(annotation.id, annotation.pageUrl);
   });
   item.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      callbacks.onAnnotationClick(annotation.id);
+      callbacks.onAnnotationClick(annotation.id, annotation.pageUrl);
     }
   });
 
