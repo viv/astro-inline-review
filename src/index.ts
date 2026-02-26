@@ -34,6 +34,13 @@ export default function inlineReview(options: InlineReviewOptions = {}): AstroIn
                 name: 'astro-inline-review-middleware',
                 configureServer(server) {
                   server.middlewares.use(createMiddleware(storage));
+
+                  // Prevent Vite from triggering page reloads when the
+                  // annotation store is written by an external process
+                  // (e.g. MCP server). The client poller detects changes
+                  // independently via the /version endpoint.
+                  server.watcher.unwatch(storagePath);
+                  server.watcher.unwatch(storagePath + '.tmp');
                 },
               },
             ],
