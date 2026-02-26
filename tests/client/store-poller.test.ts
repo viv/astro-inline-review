@@ -4,11 +4,6 @@ import { createStorePoller } from '../../src/client/store-poller.js';
 describe('createStorePoller', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // Mock window.location.pathname
-    Object.defineProperty(window, 'location', {
-      value: { pathname: '/test-page' },
-      writable: true,
-    });
   });
 
   afterEach(() => {
@@ -16,20 +11,16 @@ describe('createStorePoller', () => {
     vi.restoreAllMocks();
   });
 
-  function mockFetchResponse(store: object) {
+  function mockVersionResponse(fingerprint: string) {
     return vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve(store),
+      json: () => Promise.resolve({ fingerprint }),
     });
   }
 
   it('first poll sets fingerprint without triggering callback', async () => {
     const onStoreChanged = vi.fn();
-    const store = {
-      annotations: [{ updatedAt: '2026-01-01T00:00:00Z' }],
-      pageNotes: [],
-    };
-    globalThis.fetch = mockFetchResponse(store);
+    globalThis.fetch = mockVersionResponse('1:2026-01-01T00:00:00Z');
 
     const poller = createStorePoller({ onStoreChanged, interval: 1000 });
     poller.start();
@@ -38,30 +29,21 @@ describe('createStorePoller', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(onStoreChanged).not.toHaveBeenCalled();
+    expect(globalThis.fetch).toHaveBeenCalledWith('/__inline-review/api/version');
     poller.stop();
   });
 
   it('triggers callback when fingerprint changes', async () => {
     const onStoreChanged = vi.fn();
-    const store1 = {
-      annotations: [{ updatedAt: '2026-01-01T00:00:00Z' }],
-      pageNotes: [],
-    };
-    const store2 = {
-      annotations: [
-        { updatedAt: '2026-01-01T00:00:00Z' },
-        { updatedAt: '2026-01-01T01:00:00Z' },
-      ],
-      pageNotes: [],
-    };
-
     let callCount = 0;
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++;
-      const store = callCount === 1 ? store1 : store2;
+      const fingerprint = callCount === 1
+        ? '1:2026-01-01T00:00:00Z'
+        : '2:2026-01-01T01:00:00Z';
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(store),
+        json: () => Promise.resolve({ fingerprint }),
       });
     });
 
@@ -81,11 +63,7 @@ describe('createStorePoller', () => {
 
   it('does not trigger callback when fingerprint stays the same', async () => {
     const onStoreChanged = vi.fn();
-    const store = {
-      annotations: [{ updatedAt: '2026-01-01T00:00:00Z' }],
-      pageNotes: [],
-    };
-    globalThis.fetch = mockFetchResponse(store);
+    globalThis.fetch = mockVersionResponse('1:2026-01-01T00:00:00Z');
 
     const poller = createStorePoller({ onStoreChanged, interval: 1000 });
     poller.start();
@@ -134,12 +112,7 @@ describe('createStorePoller', () => {
 
   it('stop prevents further polling', async () => {
     const onStoreChanged = vi.fn();
-    const store1 = {
-      annotations: [{ updatedAt: '2026-01-01T00:00:00Z' }],
-      pageNotes: [],
-    };
-
-    globalThis.fetch = mockFetchResponse(store1);
+    globalThis.fetch = mockVersionResponse('1:2026-01-01T00:00:00Z');
 
     const poller = createStorePoller({ onStoreChanged, interval: 1000 });
     poller.start();
@@ -150,39 +123,26 @@ describe('createStorePoller', () => {
     // Stop the poller
     poller.stop();
 
-    // Now change the mock to return different data
-    const store2 = {
-      annotations: [
-        { updatedAt: '2026-01-01T00:00:00Z' },
-        { updatedAt: '2026-01-01T01:00:00Z' },
-      ],
-      pageNotes: [],
-    };
-    globalThis.fetch = mockFetchResponse(store2);
+    // Now change the mock to return a different fingerprint
+    globalThis.fetch = mockVersionResponse('2:2026-01-01T01:00:00Z');
 
     // Advance time — should NOT trigger callback
     await vi.advanceTimersByTimeAsync(5000);
     expect(onStoreChanged).not.toHaveBeenCalled();
   });
 
-  it('includes page notes in fingerprint', async () => {
+  it('detects changes from page note additions via fingerprint', async () => {
     const onStoreChanged = vi.fn();
-    const store1 = {
-      annotations: [{ updatedAt: '2026-01-01T00:00:00Z' }],
-      pageNotes: [],
-    };
-    const store2 = {
-      annotations: [{ updatedAt: '2026-01-01T00:00:00Z' }],
-      pageNotes: [{ updatedAt: '2026-01-01T02:00:00Z' }],
-    };
-
     let callCount = 0;
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++;
-      const store = callCount === 1 ? store1 : store2;
+      // Fingerprint changes: count goes from 1 to 2 (page note added)
+      const fingerprint = callCount === 1
+        ? '1:2026-01-01T00:00:00Z'
+        : '2:2026-01-01T02:00:00Z';
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(store),
+        json: () => Promise.resolve({ fingerprint }),
       });
     });
 
@@ -193,10 +153,54 @@ describe('createStorePoller', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(onStoreChanged).not.toHaveBeenCalled();
 
-    // Second poll — page note added, fingerprint changed
+    // Second poll — fingerprint changed (page note added)
     await vi.advanceTimersByTimeAsync(1000);
     expect(onStoreChanged).toHaveBeenCalledTimes(1);
 
+    poller.stop();
+  });
+
+  it('uses default interval of 2000ms', async () => {
+    const onStoreChanged = vi.fn();
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ fingerprint: `${callCount}:ts` }),
+      });
+    });
+
+    const poller = createStorePoller({ onStoreChanged });
+    poller.start();
+
+    // First poll fires immediately
+    await vi.advanceTimersByTimeAsync(0);
+    expect(callCount).toBe(1);
+
+    // At 1000ms — no second poll yet (default is 2000ms)
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(callCount).toBe(1);
+
+    // At 2000ms — second poll fires
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(callCount).toBe(2);
+
+    poller.stop();
+  });
+
+  it('start is idempotent — calling start twice does not create duplicate timers', async () => {
+    const onStoreChanged = vi.fn();
+    globalThis.fetch = mockVersionResponse('1:2026-01-01T00:00:00Z');
+
+    const poller = createStorePoller({ onStoreChanged, interval: 1000 });
+    poller.start();
+    poller.start(); // Second call should be no-op
+
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Should have been called once, not twice
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     poller.stop();
   });
 });

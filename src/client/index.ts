@@ -257,8 +257,12 @@ function init(): void {
   // Poll for external store changes (e.g. MCP tool updates)
   const poller = createStorePoller({
     onStoreChanged: () => {
+      // Always update DOM highlights — they're visible regardless of panel state
       annotator.restoreHighlights();
-      mediator.refreshPanel();
+      // Only refresh the panel if it's currently open — avoids unnecessary DOM work
+      if (isPanelOpen(panel)) {
+        mediator.refreshPanel();
+      }
     },
   });
   poller.start();

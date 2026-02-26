@@ -122,6 +122,20 @@ describe('api', () => {
     expect(result.note).toBe('updated feedback');
   });
 
+  it('getVersion calls GET /version', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ fingerprint: '3:2026-02-26T10:00:00Z' }), { status: 200 }),
+    );
+
+    const result = await api.getVersion();
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/__inline-review/api/version',
+      expect.objectContaining({ headers: { 'Content-Type': 'application/json' } }),
+    );
+    expect(result.fingerprint).toBe('3:2026-02-26T10:00:00Z');
+  });
+
   it('deletePageNote calls DELETE /page-notes/:id', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), { status: 200 }),

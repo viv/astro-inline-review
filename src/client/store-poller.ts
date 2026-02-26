@@ -1,10 +1,10 @@
 /**
  * Lightweight store-change poller.
  *
- * Periodically fetches the annotation store and compares a fingerprint
- * (annotation count + latest updatedAt timestamp). When the fingerprint
- * changes — e.g. after an MCP tool updates inline-review.json — fires
- * the onStoreChanged callback so the UI can re-restore highlights.
+ * Periodically fetches a fingerprint from the server's /version endpoint
+ * and compares it to the last known value. When the fingerprint changes —
+ * e.g. after an MCP tool updates inline-review.json — fires the
+ * onStoreChanged callback so the UI can re-restore highlights.
  */
 
 const DEFAULT_INTERVAL = 2000;
@@ -15,23 +15,6 @@ export interface StorePollerOptions {
   interval?: number;
   /** Called when the store fingerprint changes */
   onStoreChanged: () => void;
-}
-
-interface StoreShape {
-  annotations: Array<{ updatedAt?: string }>;
-  pageNotes?: Array<{ updatedAt?: string }>;
-}
-
-function computeFingerprint(store: StoreShape): string {
-  const count = store.annotations.length + (store.pageNotes?.length ?? 0);
-  let latest = '';
-  for (const a of store.annotations) {
-    if (a.updatedAt && a.updatedAt > latest) latest = a.updatedAt;
-  }
-  for (const n of store.pageNotes ?? []) {
-    if (n.updatedAt && n.updatedAt > latest) latest = n.updatedAt;
-  }
-  return `${count}:${latest}`;
 }
 
 export interface StorePoller {
@@ -46,21 +29,19 @@ export function createStorePoller(options: StorePollerOptions): StorePoller {
 
   async function poll(): Promise<void> {
     try {
-      const page = encodeURIComponent(window.location.pathname);
-      const res = await fetch(`${API_BASE}/annotations?page=${page}`);
+      const res = await fetch(`${API_BASE}/version`);
       if (!res.ok) return;
 
-      const store: StoreShape = await res.json();
-      const fingerprint = computeFingerprint(store);
+      const data: { fingerprint: string } = await res.json();
 
       if (lastFingerprint === null) {
         // First poll — set baseline without triggering callback
-        lastFingerprint = fingerprint;
+        lastFingerprint = data.fingerprint;
         return;
       }
 
-      if (fingerprint !== lastFingerprint) {
-        lastFingerprint = fingerprint;
+      if (data.fingerprint !== lastFingerprint) {
+        lastFingerprint = data.fingerprint;
         options.onStoreChanged();
       }
     } catch {
