@@ -81,6 +81,7 @@ function validatePageNoteBody(body: Record<string, unknown>): string | null {
  *   POST   /page-notes         — create
  *   PATCH  /page-notes/:id     — update
  *   DELETE /page-notes/:id     — delete
+ *   GET    /version            — lightweight fingerprint for polling
  *   GET    /export             — markdown export
  */
 export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunction {
@@ -284,6 +285,20 @@ export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunc
         });
 
         return sendJson(res, { ok: true });
+      }
+
+      // --- Version (lightweight fingerprint for polling) ---
+      if (routePath === '/version' && method === 'GET') {
+        const store = await storage.read();
+        const count = store.annotations.length + store.pageNotes.length;
+        let latest = '';
+        for (const a of store.annotations) {
+          if (a.updatedAt > latest) latest = a.updatedAt;
+        }
+        for (const n of store.pageNotes) {
+          if (n.updatedAt > latest) latest = n.updatedAt;
+        }
+        return sendJson(res, { fingerprint: `${count}:${latest}` });
       }
 
       // --- Export ---

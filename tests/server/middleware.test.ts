@@ -782,4 +782,140 @@ describe('middleware', () => {
       expect(patched.pageUrl).toBe('/test'); // Must not be overwritten
     });
   });
+
+  describe('GET /version', () => {
+    it('returns fingerprint for empty store', async () => {
+      const req = mockRequest('GET', '/__inline-review/api/version');
+      const res = mockResponse();
+
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(200);
+      const data = JSON.parse(res._body);
+      expect(data.fingerprint).toBe('0:');
+    });
+
+    it('returns fingerprint reflecting annotation count and latest timestamp', async () => {
+      // Create two annotations
+      for (const text of ['first', 'second']) {
+        const req = mockRequest('POST', '/__inline-review/api/annotations', {
+          type: 'text',
+          pageUrl: '/',
+          selectedText: text,
+          note: '',
+          range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+        });
+        const res = mockResponse();
+        await middleware(req as any, res as any, () => {});
+      }
+
+      const req = mockRequest('GET', '/__inline-review/api/version');
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      const data = JSON.parse(res._body);
+      expect(data.fingerprint).toMatch(/^2:/);
+      // Timestamp portion should be an ISO string
+      const timestamp = data.fingerprint.split(':').slice(1).join(':');
+      expect(new Date(timestamp).toISOString()).toBe(timestamp);
+    });
+
+    it('fingerprint changes when an annotation is updated', async () => {
+      // Create an annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'test',
+        note: 'original',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // Get initial fingerprint
+      const versionReq1 = mockRequest('GET', '/__inline-review/api/version');
+      const versionRes1 = mockResponse();
+      await middleware(versionReq1 as any, versionRes1 as any, () => {});
+      const fp1 = JSON.parse(versionRes1._body).fingerprint;
+
+      // Update the annotation (with a small delay to ensure different timestamp)
+      await new Promise(r => setTimeout(r, 10));
+      const updateReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'addressed',
+      });
+      const updateRes = mockResponse();
+      await middleware(updateReq as any, updateRes as any, () => {});
+
+      // Get new fingerprint
+      const versionReq2 = mockRequest('GET', '/__inline-review/api/version');
+      const versionRes2 = mockResponse();
+      await middleware(versionReq2 as any, versionRes2 as any, () => {});
+      const fp2 = JSON.parse(versionRes2._body).fingerprint;
+
+      expect(fp1).not.toBe(fp2);
+    });
+
+    it('fingerprint includes page notes in count', async () => {
+      // Create an annotation
+      const annotationReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'test',
+        note: '',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+      });
+      const annotationRes = mockResponse();
+      await middleware(annotationReq as any, annotationRes as any, () => {});
+
+      // Create a page note
+      const noteReq = mockRequest('POST', '/__inline-review/api/page-notes', {
+        pageUrl: '/',
+        note: 'a page note',
+      });
+      const noteRes = mockResponse();
+      await middleware(noteReq as any, noteRes as any, () => {});
+
+      const req = mockRequest('GET', '/__inline-review/api/version');
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      const data = JSON.parse(res._body);
+      expect(data.fingerprint).toMatch(/^2:/);
+    });
+
+    it('fingerprint changes when an annotation is deleted', async () => {
+      // Create an annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'delete me',
+        note: '',
+        range: { startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: '', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // Get fingerprint with 1 annotation
+      const versionReq1 = mockRequest('GET', '/__inline-review/api/version');
+      const versionRes1 = mockResponse();
+      await middleware(versionReq1 as any, versionRes1 as any, () => {});
+      const fp1 = JSON.parse(versionRes1._body).fingerprint;
+
+      // Delete the annotation
+      const deleteReq = mockRequest('DELETE', `/__inline-review/api/annotations/${created.id}`);
+      const deleteRes = mockResponse();
+      await middleware(deleteReq as any, deleteRes as any, () => {});
+
+      // Get fingerprint after deletion
+      const versionReq2 = mockRequest('GET', '/__inline-review/api/version');
+      const versionRes2 = mockResponse();
+      await middleware(versionReq2 as any, versionRes2 as any, () => {});
+      const fp2 = JSON.parse(versionRes2._body).fingerprint;
+
+      expect(fp1).not.toBe(fp2);
+      expect(fp2).toBe('0:');
+    });
+  });
 });

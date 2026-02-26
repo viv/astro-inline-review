@@ -83,6 +83,7 @@ Base: `http://localhost:4321/__inline-review/api`
 | POST | `/page-notes` | Create page note |
 | PATCH | `/page-notes/:id` | Update note only |
 | DELETE | `/page-notes/:id` | Delete page note |
+| GET | `/version` | Lightweight fingerprint for polling (`{ fingerprint: "count:timestamp" }`) |
 | GET | `/export` | Markdown export (text/markdown) |
 
 ## MCP Server — Structured Agent Access

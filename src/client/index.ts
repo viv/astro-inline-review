@@ -129,10 +129,12 @@ function init(): void {
   const fab: FabElements = createFab(shadowRoot, () => {
     const isOpen = togglePanel(panel);
     if (isOpen) {
+      sessionStorage.setItem(PANEL_STATE_KEY, 'open');
       // Move focus to first focusable element in panel
       const firstFocusable = panel.container.querySelector<HTMLElement>('button, [tabindex="0"]');
       if (firstFocusable) firstFocusable.focus();
     } else {
+      sessionStorage.removeItem(PANEL_STATE_KEY);
       fab.button.focus();
     }
   });
@@ -180,8 +182,10 @@ function init(): void {
     togglePanel: () => {
       const isOpen = togglePanel(panel);
       if (isOpen) {
+        sessionStorage.setItem(PANEL_STATE_KEY, 'open');
         openFab(fab);
       } else {
+        sessionStorage.removeItem(PANEL_STATE_KEY);
         resetFab(fab);
       }
     },
@@ -195,6 +199,7 @@ function init(): void {
       }
       if (isPanelOpen(panel)) {
         closePanel(panel);
+        sessionStorage.removeItem(PANEL_STATE_KEY);
         resetFab(fab);
         fab.button.focus();
         return true;
@@ -215,20 +220,23 @@ function init(): void {
       if (!isPanelOpen(panel)) {
         panel.container.classList.add('air-panel--open');
         panel.container.setAttribute('data-air-state', 'open');
+        sessionStorage.setItem(PANEL_STATE_KEY, 'open');
         await panel.mediator.refreshPanel();
       }
       panel.addNoteBtn.click();
     },
   });
 
-  // Restore panel state after cross-page navigation
+  // Restore panel state — survives page reloads and cross-page navigation.
+  // The key persists until the user explicitly closes the panel.
   const pendingPanelState = sessionStorage.getItem(PANEL_STATE_KEY);
   if (pendingPanelState) {
-    sessionStorage.removeItem(PANEL_STATE_KEY);
     panel.container.classList.add('air-panel--open');
     panel.container.setAttribute('data-air-state', 'open');
     if (pendingPanelState === 'all-pages') {
       panel.allPagesTab.click();
+      // Reset to 'open' — the all-pages tab switch is a one-shot action
+      sessionStorage.setItem(PANEL_STATE_KEY, 'open');
     } else {
       mediator.refreshPanel();
     }
@@ -257,8 +265,12 @@ function init(): void {
   // Poll for external store changes (e.g. MCP tool updates)
   const poller = createStorePoller({
     onStoreChanged: () => {
+      // Always update DOM highlights — they're visible regardless of panel state
       annotator.restoreHighlights();
-      mediator.refreshPanel();
+      // Only refresh the panel if it's currently open — avoids unnecessary DOM work
+      if (isPanelOpen(panel)) {
+        mediator.refreshPanel();
+      }
     },
   });
   poller.start();

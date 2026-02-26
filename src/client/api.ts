@@ -59,6 +59,10 @@ export const api = {
     await request(`/page-notes/${id}`, { method: 'DELETE' });
   },
 
+  async getVersion(): Promise<{ fingerprint: string }> {
+    return request<{ fingerprint: string }>('/version');
+  },
+
   async getExport(): Promise<string> {
     const res = await fetch(`${API_BASE}/export`);
     if (!res.ok) {
