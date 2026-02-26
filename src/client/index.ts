@@ -19,6 +19,7 @@ import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByA
 import { createStorePoller } from './store-poller.js';
 
 const SCROLL_TO_KEY = 'air-scroll-to';
+const PANEL_STATE_KEY = 'air-panel-state';
 
 /** Scroll to and pulse an annotation highlight on the current page. */
 function scrollToAnnotation(id: string): void {
@@ -75,9 +76,10 @@ function init(): void {
   // Panel
   const panel: PanelElements = createPanel(shadowRoot, {
     onAnnotationClick: (id, pageUrl) => {
-      // Cross-page navigation: store target and navigate
+      // Cross-page navigation: store target and panel state, then navigate
       if (pageUrl !== window.location.pathname) {
         sessionStorage.setItem(SCROLL_TO_KEY, id);
+        sessionStorage.setItem(PANEL_STATE_KEY, 'all-pages');
         window.location.href = pageUrl;
         return;
       }
@@ -218,6 +220,19 @@ function init(): void {
       panel.addNoteBtn.click();
     },
   });
+
+  // Restore panel state after cross-page navigation
+  const pendingPanelState = sessionStorage.getItem(PANEL_STATE_KEY);
+  if (pendingPanelState) {
+    sessionStorage.removeItem(PANEL_STATE_KEY);
+    panel.container.classList.add('air-panel--open');
+    panel.container.setAttribute('data-air-state', 'open');
+    if (pendingPanelState === 'all-pages') {
+      panel.allPagesTab.click();
+    } else {
+      mediator.refreshPanel();
+    }
+  }
 
   // Restore highlights for the current page, then handle pending scroll-to
   annotator.restoreHighlights().then(() => {
