@@ -12,7 +12,7 @@ tags: [astro, integration, annotation, dev-tools, specification, element-annotat
 
 ## 1. Overview
 
-**astro-inline-review** is a dev-only annotation overlay for Astro projects. It bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback.
+**astro-inline-review** is a dev-only annotation overlay that bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback. It supports Astro, any Vite-based framework (SvelteKit, Nuxt, Remix), and Express/Connect servers.
 
 A reviewer browses the live dev site and annotates it in two ways: **selecting text** and attaching notes, or **Alt+clicking elements** (cards, images, buttons, layout sections) to annotate non-text targets. Each annotation captures the page URL, the precise location (text range or CSS selector), and the reviewer's instruction — providing both the *what* and the *where*. The result can be consumed by coding agents (Claude Code, Codex, Cursor, etc.) in three ways:
 
@@ -20,12 +20,12 @@ A reviewer browses the live dev site and annotates it in two ways: **selecting t
 - **JSON storage file** (`inline-review.json`) — machine-readable with rich location data (XPath ranges, character offsets, surrounding context for text; CSS selectors, XPaths, and attribute snapshots for elements), readable directly from the project root
 - **Markdown export** (secondary) — one-click copy to clipboard, designed for pasting into chat-based agent interfaces that don't support MCP
 
-The integration ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during `astro dev`.
+The integration ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during dev.
 
 ### 1.1 Design Principles
 
 1. **Dev-only**: No traces in production builds (no scripts, no host elements, no API references)
-2. **Zero-config**: Works with a single line in `astro.config.mjs`
+2. **Zero-config**: Works with a single line of configuration
 3. **Non-invasive**: Shadow DOM isolates all UI from site styles; highlights use inline styles
 4. **Persistent**: Annotations survive page reloads, navigation, and dev server restarts
 5. **Multi-page**: Annotations are scoped by URL but viewable across all pages
@@ -64,12 +64,24 @@ Additional configuration options (theme, position, keybindings, storage backend)
 
 ### 2.5 What Happens on Activation
 
-During `astro dev`, the integration:
+During `astro dev`, the Astro integration:
 
 1. Resolves the storage file path relative to the project root
 2. Creates a `ReviewStorage` instance for JSON file I/O
 3. Registers a Vite dev server middleware plugin that serves the REST API
 4. Injects the client script on every page via `injectScript('page', ...)`
+
+### 2.6 Adapter Model
+
+The core functionality (REST API middleware, client overlay, JSON storage, MCP server) is framework-agnostic. Three thin adapters wire these components into different frameworks:
+
+| Entry point | Framework | Client injection | Notes |
+|---|---|---|---|
+| `astro-inline-review` | Astro | `injectScript('page', ...)` | Default export, wraps Vite plugin inside Astro integration |
+| `astro-inline-review/vite` | Vite (SvelteKit, Nuxt, Remix) | `transformIndexHtml` | Standalone Vite `Plugin`, `apply: 'serve'` |
+| `astro-inline-review/express` | Express/Connect | Manual `<script>` tag | Returns `{ apiMiddleware, clientMiddleware }` |
+
+All adapters share `ReviewStorage` and `createMiddleware` directly — no shared setup abstraction. Each adapter is 15-50 lines. The `createMiddleware` function uses native `http.IncomingMessage`/`http.ServerResponse` types, making it compatible with any Node.js HTTP framework.
 
 
 ## 3. Data Model

@@ -1,6 +1,5 @@
 import type http from 'node:http';
 import { randomUUID } from 'node:crypto';
-import type { Connect } from 'vite';
 import type { Annotation, TextAnnotation, ElementAnnotation, PageNote, AnnotationStatus } from '../types.js';
 import { isTextAnnotation } from '../types.js';
 import { ReviewStorage } from './storage.js';
@@ -70,7 +69,7 @@ function validatePageNoteBody(body: Record<string, unknown>): string | null {
 }
 
 /**
- * Creates Vite dev server middleware that serves the REST API.
+ * Creates HTTP middleware that serves the REST API.
  *
  * Routes:
  *   GET    /annotations        — list (optional ?page= filter)
@@ -84,7 +83,9 @@ function validatePageNoteBody(body: Record<string, unknown>): string | null {
  *   GET    /version            — lightweight fingerprint for polling
  *   GET    /export             — markdown export
  */
-export function createMiddleware(storage: ReviewStorage): Connect.NextHandleFunction {
+export type MiddlewareHandler = (req: http.IncomingMessage, res: http.ServerResponse, next: (err?: unknown) => void) => void;
+
+export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
   // CORS note: This API inherits Vite's CORS configuration, which is permissive
   // by default in dev mode (server.cors: true). Any website open in the same browser
   // could potentially access these endpoints. The impact is limited to annotation
@@ -345,7 +346,7 @@ function sendError(res: http.ServerResponse, status: number, message: string): v
 
 const MAX_BODY_SIZE = 1_048_576; // 1 MB
 
-function readBody<T>(req: Connect.IncomingMessage): Promise<T> {
+function readBody<T>(req: http.IncomingMessage): Promise<T> {
   return new Promise((resolve, reject) => {
     let body = '';
     let aborted = false;
