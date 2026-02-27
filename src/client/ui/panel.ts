@@ -25,7 +25,7 @@ export interface PanelElements {
 export interface PanelCallbacks {
   onAnnotationClick: (annotationId: string, pageUrl: string) => void;
   onAnnotationDelete: (annotationId: string) => Promise<void>;
-  onAnnotationStatusChange: (annotationId: string, status: AnnotationStatus) => Promise<void>;
+  onAnnotationStatusChange: (annotationId: string, status: AnnotationStatus, replyMessage?: string) => Promise<void>;
   isAnnotationOrphaned: (annotationId: string, pageUrl: string) => boolean;
   onRefreshBadge: () => Promise<void>;
   onExport: () => Promise<void>;
@@ -418,7 +418,7 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
   const actions = document.createElement('div');
   actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
 
-  appendStatusActions(actions, annotation.id, status, callbacks);
+  appendStatusActions(actions, annotation.id, status, callbacks, item);
 
   if (status === 'open') {
     const deleteBtn = createDeleteButton(annotation.id, callbacks);
@@ -484,7 +484,7 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
   const actions = document.createElement('div');
   actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
 
-  appendStatusActions(actions, annotation.id, status, callbacks);
+  appendStatusActions(actions, annotation.id, status, callbacks, item);
 
   if (status === 'open') {
     const deleteBtn = createDeleteButton(annotation.id, callbacks);
@@ -702,6 +702,7 @@ function appendStatusActions(
   annotationId: string,
   status: AnnotationStatus,
   callbacks: PanelCallbacks,
+  item: HTMLElement,
 ): void {
   if (status === 'addressed') {
     const acceptBtn = document.createElement('button');
@@ -724,10 +725,65 @@ function appendStatusActions(
     reopenBtn.style.fontSize = '11px';
     reopenBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      callbacks.onAnnotationStatusChange(annotationId, 'open');
+      showReopenForm(item, annotationId, callbacks);
     });
     container.appendChild(reopenBtn);
   }
+}
+
+/** Show inline form for adding a follow-up note when reopening an annotation. */
+function showReopenForm(
+  item: HTMLElement,
+  annotationId: string,
+  callbacks: PanelCallbacks,
+): void {
+  // Don't show multiple forms
+  if (item.querySelector('.air-reopen-form')) return;
+
+  const form = document.createElement('div');
+  form.className = 'air-reopen-form';
+  form.setAttribute('data-air-el', 'reopen-form');
+  form.style.cssText = 'padding: 8px 0; margin-top: 8px;';
+
+  const textarea = document.createElement('textarea');
+  textarea.className = 'air-popup__textarea';
+  textarea.setAttribute('data-air-el', 'reopen-textarea');
+  textarea.placeholder = 'Add a follow-up note (optional)…';
+  textarea.style.minHeight = '60px';
+  form.appendChild(textarea);
+
+  const footer = document.createElement('div');
+  footer.style.cssText = 'display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'air-popup__btn air-popup__btn--cancel';
+  cancelBtn.setAttribute('data-air-el', 'reopen-cancel');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    form.remove();
+  });
+  footer.appendChild(cancelBtn);
+
+  const reopenBtn = document.createElement('button');
+  reopenBtn.className = 'air-popup__btn air-popup__btn--save';
+  reopenBtn.setAttribute('data-air-el', 'reopen-submit');
+  reopenBtn.textContent = 'Reopen';
+  reopenBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const message = textarea.value.trim();
+    callbacks.onAnnotationStatusChange(annotationId, 'open', message || undefined);
+    form.remove();
+  });
+  footer.appendChild(reopenBtn);
+
+  form.appendChild(footer);
+
+  // Prevent clicks inside the form from triggering the item's click handler
+  form.addEventListener('click', (e) => e.stopPropagation());
+
+  item.appendChild(form);
+  textarea.focus();
 }
 
 /** Two-click clear: first click shows confirmation, second click deletes. */
@@ -823,13 +879,14 @@ function createStatusBadge(status: AnnotationStatus, addressedAt?: string, resol
 }
 
 function createReplyBlock(reply: AgentReply): HTMLDivElement {
+  const isReviewer = reply.role === 'reviewer';
   const block = document.createElement('div');
   block.className = 'air-annotation-item__reply';
-  block.setAttribute('data-air-el', 'agent-reply');
+  block.setAttribute('data-air-el', isReviewer ? 'reviewer-reply' : 'agent-reply');
 
   const prefix = document.createElement('div');
   prefix.className = 'air-annotation-item__reply-prefix';
-  prefix.textContent = 'Agent:';
+  prefix.textContent = isReviewer ? 'Reviewer:' : 'Agent:';
 
   if (reply.createdAt) {
     const time = document.createElement('span');

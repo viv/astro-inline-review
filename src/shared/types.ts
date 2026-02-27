@@ -5,10 +5,11 @@ export interface ReviewStore {
   pageNotes: PageNote[];
 }
 
-/** A reply added by a coding agent via MCP */
+/** A reply from an agent (via MCP) or a reviewer (via panel UI) */
 export interface AgentReply {
   message: string;
   createdAt: string;
+  role?: 'agent' | 'reviewer';
 }
 
 /** Annotation lifecycle status */

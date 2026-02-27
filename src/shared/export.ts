@@ -67,7 +67,8 @@ export function generateExport(store: ReviewStore): string {
         }
         if (a.replies && a.replies.length > 0) {
           for (const reply of a.replies) {
-            lines.push(`   > **Agent:** ${reply.message}`);
+            const prefix = reply.role === 'reviewer' ? 'Reviewer' : 'Agent';
+            lines.push(`   > **${prefix}:** ${reply.message}`);
           }
         }
         lines.push('');
@@ -91,7 +92,8 @@ export function generateExport(store: ReviewStore): string {
         }
         if (a.replies && a.replies.length > 0) {
           for (const reply of a.replies) {
-            lines.push(`   > **Agent:** ${reply.message}`);
+            const prefix = reply.role === 'reviewer' ? 'Reviewer' : 'Agent';
+            lines.push(`   > **${prefix}:** ${reply.message}`);
           }
         }
         lines.push('');
