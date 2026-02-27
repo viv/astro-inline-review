@@ -189,11 +189,12 @@ open → addressed → resolved
 |--------|---------|--------|
 | `open` | Annotation is new or has been reopened | Default on creation; human reviewer via Reopen button |
 | `addressed` | An agent has acted on the annotation | Agent via MCP `resolve_annotation` tool (default behaviour) |
-| `resolved` | A human reviewer has accepted the agent's work | Human reviewer via Accept button in panel; or agent via MCP with `autoResolve: true` |
+| `resolved` | Agent's work has been auto-resolved (skipping human review) | Agent via MCP `resolve_annotation` with `autoResolve: true` |
 
 **Status transitions**:
 - `open` → `addressed`: Agent calls `resolve_annotation` MCP tool (default, without `autoResolve`)
-- `addressed` → `resolved`: Human reviewer clicks Accept button in panel; or agent calls `resolve_annotation` with `autoResolve: true`
+- `open` → `resolved`: Agent calls `resolve_annotation` with `autoResolve: true` (skips human review step)
+- `addressed` or `resolved` → *(deleted)*: Human reviewer clicks Accept button in panel — annotation is removed entirely
 - `resolved` → `open`: Human reviewer clicks Reopen button in panel (clears `addressedAt` and `resolvedAt`)
 
 **Timestamp semantics**:
@@ -954,9 +955,9 @@ Each annotation item includes contextual action buttons based on its effective s
 |--------|--------------|-------|---------------|--------|
 | `open` | Delete | "Delete" | `annotation-delete` | Two-click delete (see section 6.2.3d) |
 | `addressed` | Accept | "Accept" | `annotation-accept` | Deletes annotation entirely via `DELETE /annotations/:id` |
-| `resolved` | Reopen | "Reopen" | `annotation-reopen` | Shows inline reopen form (see below) |
+| `resolved` | Accept, Reopen | "Accept", "Reopen" | `annotation-accept`, `annotation-reopen` | Accept deletes annotation; Reopen shows inline form (see below) |
 
-**Accept button**: Green background (`#166534`), green text (`#86EFAC`). Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `DELETE /annotations/:id`, removes highlights, refreshes badge, and refreshes panel. The annotation is removed entirely — accepting means the reviewer is happy with the change and the annotation has served its purpose.
+**Accept button**: Green background (`#166534`), green text (`#86EFAC`). Shown on both `addressed` and `resolved` annotations. Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `DELETE /annotations/:id`, removes highlights, refreshes badge, and refreshes panel. The annotation is removed entirely — accepting means the reviewer is happy with the change and the annotation has served its purpose.
 
 **Reopen button**: Styled as a cancel-type button. Used when the reviewer disagrees with the resolution and wants to re-open the annotation. Instead of immediately changing status, clicking Reopen shows an inline form (`data-air-el="reopen-form"`) with:
 - A textarea (`data-air-el="reopen-textarea"`) for an optional follow-up note, placeholder: "Add a follow-up note (optional)…"
@@ -1567,7 +1568,7 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `element-annotation-item` | Element annotation list item in panel | Shadow DOM | Present when panel is open and element annotations exist |
 | `panel-content` | Panel content area (scrollable) | Shadow DOM | Always present (child of panel) |
 | `status-badge` | Status badge on annotation (addressed or resolved) | Shadow DOM | Present on non-open annotations |
-| `annotation-accept` | Accept button on addressed annotation | Shadow DOM | Present on addressed annotations |
+| `annotation-accept` | Accept button on addressed or resolved annotation | Shadow DOM | Present on addressed and resolved annotations |
 | `annotation-reopen` | Reopen button on resolved annotation | Shadow DOM | Present on resolved annotations |
 | `agent-reply` | Agent reply block on annotation | Shadow DOM | Present when annotation has replies with `role !== 'reviewer'` |
 | `reviewer-reply` | Reviewer reply block on annotation | Shadow DOM | Present when annotation has replies with `role === 'reviewer'` |
@@ -1833,7 +1834,7 @@ The following accessibility features are not yet implemented:
 | Click element annotation in panel | Page scrolls to element, outline pulses | 6.2.3a, 8.5.3 |
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
 | Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
-| Click Accept on addressed annotation | Annotation is deleted entirely (removed from store, highlights cleared) | 6.2.3c |
+| Click Accept on addressed or resolved annotation | Annotation is deleted entirely (removed from store, highlights cleared) | 6.2.3c |
 | Click Reopen on resolved annotation | Shows inline form for optional follow-up note, then reopens | 6.2.3c |
 | Click Delete on annotation in panel | Two-click confirmation: first click shows "Sure?", second click deletes | 6.2.3, 6.2.3a |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |

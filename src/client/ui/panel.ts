@@ -704,7 +704,7 @@ function appendStatusActions(
   callbacks: PanelCallbacks,
   item: HTMLElement,
 ): void {
-  if (status === 'addressed') {
+  if (status === 'addressed' || status === 'resolved') {
     const acceptBtn = document.createElement('button');
     acceptBtn.className = 'air-popup__btn air-popup__btn--accept';
     acceptBtn.setAttribute('data-air-el', 'annotation-accept');

@@ -1007,6 +1007,34 @@ describe('createPanel — status lifecycle buttons', () => {
     expect(reopenBtn!.tagName.toLowerCase()).toBe('button');
   });
 
+  it('shows Accept button on resolved annotation alongside Reopen', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]');
+    expect(acceptBtn).not.toBeNull();
+    expect(acceptBtn!.textContent).toBe('Accept');
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
+    expect(reopenBtn).not.toBeNull();
+  });
+
+  it('Accept button on resolved annotation calls onAnnotationDelete', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'resolved-accept', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]') as HTMLButtonElement;
+    acceptBtn.click();
+
+    expect(callbacks.onAnnotationDelete).toHaveBeenCalledWith('resolved-accept');
+  });
+
   it('does not show Reopen button on open annotation', async () => {
     await renderWithStore({
       version: 1,
