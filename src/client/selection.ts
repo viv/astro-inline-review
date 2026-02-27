@@ -9,7 +9,7 @@
 
 import type { SerializedRange } from '../shared/types.js';
 
-const CONTEXT_LENGTH = 30;
+const CONTEXT_LENGTH = 80;
 
 /**
  * Generate an XPath expression for a DOM node.
@@ -212,6 +212,77 @@ export function findRangeByContext(
 
   // Convert the character offset back to a Range
   return createRangeFromOffset(segments, bestMatch, bestMatch + selectedText.length);
+}
+
+/**
+ * Last-resort fallback: find where contextBefore and contextAfter meet
+ * in the document, without requiring the annotated text itself to exist.
+ *
+ * Handles the case where annotated text has been completely rewritten
+ * but the surrounding text is still intact. Returns the range covering
+ * the text between the two context anchors.
+ */
+export function findRangeByContextSeam(
+  contextBefore: string,
+  contextAfter: string,
+): Range | null {
+  // Need meaningful context on both sides to form a reliable seam
+  if (contextBefore.length < 3 || contextAfter.length < 3) return null;
+
+  const textNodes = getTextNodes(document.body);
+  const segments: Array<{ node: Text; start: number }> = [];
+  let fullText = '';
+
+  for (const node of textNodes) {
+    segments.push({ node, start: fullText.length });
+    fullText += node.textContent ?? '';
+  }
+
+  if (fullText.length === 0) return null;
+
+  const MAX_GAP = 500;
+
+  // Find all positions where contextBefore ends (exact substring match)
+  const seamStarts: number[] = [];
+  let from = 0;
+  while (true) {
+    const idx = fullText.indexOf(contextBefore, from);
+    if (idx === -1) break;
+    seamStarts.push(idx + contextBefore.length);
+    from = idx + 1;
+  }
+
+  // Find all positions where contextAfter starts (exact substring match)
+  const seamEnds: number[] = [];
+  from = 0;
+  while (true) {
+    const idx = fullText.indexOf(contextAfter, from);
+    if (idx === -1) break;
+    seamEnds.push(idx);
+    from = idx + 1;
+  }
+
+  if (seamStarts.length === 0 || seamEnds.length === 0) return null;
+
+  // Find the best pair: valid gap with at least 1 char, prefer tightest fit
+  let bestStart = -1;
+  let bestEnd = -1;
+  let bestGap = MAX_GAP + 1;
+
+  for (const start of seamStarts) {
+    for (const end of seamEnds) {
+      const gap = end - start;
+      if (gap >= 1 && gap < bestGap) {
+        bestGap = gap;
+        bestStart = start;
+        bestEnd = end;
+      }
+    }
+  }
+
+  if (bestStart < 0 || bestEnd <= bestStart) return null;
+
+  return createRangeFromOffset(segments, bestStart, bestEnd);
 }
 
 // --- Helpers ---

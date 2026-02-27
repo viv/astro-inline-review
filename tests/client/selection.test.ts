@@ -5,6 +5,7 @@ import {
   serializeRange,
   deserializeRange,
   findRangeByContext,
+  findRangeByContextSeam,
   longestMatchingSuffix,
   longestMatchingPrefix,
   getTextNodes,
@@ -148,8 +149,8 @@ describe('serializeRange', () => {
     const result = serializeRange(range);
 
     expect(result.selectedText).toBe('TARGET');
-    expect(result.contextBefore.length).toBeLessThanOrEqual(30);
-    expect(result.contextAfter.length).toBeLessThanOrEqual(30);
+    expect(result.contextBefore.length).toBeLessThanOrEqual(80);
+    expect(result.contextAfter.length).toBeLessThanOrEqual(80);
   });
 
   it('handles cross-element ranges', () => {
@@ -712,5 +713,149 @@ describe('findRangeByContext — Tier 2.5 round-trip with inline context', () =>
     const fullText = document.body.textContent ?? '';
     const secondIdx = fullText.indexOf('updated', fullText.indexOf('updated') + 1);
     expect(secondIdx).toBeGreaterThan(0);
+  });
+});
+
+describe('serializeRange — context length', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('captures up to 80 characters of context', () => {
+    const before = 'A'.repeat(100);
+    const after = 'B'.repeat(100);
+    document.body.innerHTML = `<p>${before}TARGET${after}</p>`;
+    const textNode = document.querySelector('p')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(textNode, 100);
+    range.setEnd(textNode, 106);
+
+    const result = serializeRange(range);
+
+    expect(result.selectedText).toBe('TARGET');
+    expect(result.contextBefore.length).toBe(80);
+    expect(result.contextAfter.length).toBe(80);
+  });
+});
+
+describe('findRangeByContextSeam', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('finds rewritten text using surrounding context as anchors', () => {
+    // Original annotation was on "fix bug" with context "Please " and " soon"
+    // Text was completely rewritten to "resolve the critical issue"
+    document.body.innerHTML = '<p>Please resolve the critical issue soon</p>';
+
+    const result = findRangeByContextSeam('Please ', ' soon');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('resolve the critical issue');
+  });
+
+  it('handles text rewritten inside inline elements', () => {
+    document.body.innerHTML = '<p>Before <strong>completely new text</strong> after</p>';
+
+    const result = findRangeByContextSeam('Before ', ' after');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('completely new text');
+  });
+
+  it('disambiguates when context appears multiple times', () => {
+    // "the " and " is" appear multiple times, but together they bracket different text
+    document.body.innerHTML = '<p>the cat is cute and the dog is big</p>';
+
+    // Context that matches "dog" (second occurrence of "the ... is" pair)
+    const result = findRangeByContextSeam('and the ', ' is big');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('dog');
+  });
+
+  it('returns null when contextBefore is not found', () => {
+    document.body.innerHTML = '<p>Hello world</p>';
+
+    const result = findRangeByContextSeam('nonexistent context ', ' world');
+    expect(result).toBeNull();
+  });
+
+  it('returns null when contextAfter is not found', () => {
+    document.body.innerHTML = '<p>Hello world</p>';
+
+    const result = findRangeByContextSeam('Hello ', ' nonexistent context');
+    expect(result).toBeNull();
+  });
+
+  it('returns null when both contexts are too short', () => {
+    document.body.innerHTML = '<p>Hello world</p>';
+
+    const result = findRangeByContextSeam('ab', 'cd');
+    expect(result).toBeNull();
+  });
+
+  it('returns null when contexts are adjacent (zero-length target)', () => {
+    // contextBefore ends right where contextAfter starts — nothing in between
+    document.body.innerHTML = '<p>beforeafter</p>';
+
+    const result = findRangeByContextSeam('before', 'after');
+    expect(result).toBeNull();
+  });
+
+  it('returns null when gap between contexts exceeds MAX_GAP', () => {
+    const hugeMiddle = 'x'.repeat(600);
+    document.body.innerHTML = `<p>before${hugeMiddle}after</p>`;
+
+    const result = findRangeByContextSeam('before', 'after');
+    expect(result).toBeNull();
+  });
+
+  it('prefers the tightest gap when multiple pairings exist', () => {
+    // "start " appears once, " end" appears twice
+    // The tighter gap should win
+    document.body.innerHTML = '<p>start target end and more text end</p>';
+
+    const result = findRangeByContextSeam('start ', ' end');
+
+    expect(result).not.toBeNull();
+    expect(result!.toString()).toBe('target');
+  });
+
+  it('works as a full round-trip: serialize → rewrite → seam restore', () => {
+    // Step 1: Serialize an annotation
+    const longBefore = 'The quick brown fox jumps over the lazy dog near the riverbank where ';
+    const longAfter = ' bloomed in the warm spring sunshine under the clear blue sky above';
+    document.body.innerHTML = `<p>${longBefore}wildflowers${longAfter}</p>`;
+    const textNode = document.querySelector('p')!.firstChild!;
+
+    const range = document.createRange();
+    range.setStart(textNode, longBefore.length);
+    range.setEnd(textNode, longBefore.length + 'wildflowers'.length);
+
+    const serialized = serializeRange(range);
+    expect(serialized.contextBefore.length).toBeGreaterThan(30);
+    expect(serialized.contextAfter.length).toBeGreaterThan(30);
+
+    // Step 2: Completely rewrite the annotated text
+    document.body.innerHTML = `<p>${longBefore}a stunning array of colourful native plants${longAfter}</p>`;
+
+    // Step 3: Tier 2 fails (original text gone), Tier 2.5 fails (no replacedText)
+    const tier2 = findRangeByContext(
+      serialized.selectedText,
+      serialized.contextBefore,
+      serialized.contextAfter,
+    );
+    expect(tier2).toBeNull();
+
+    // Step 4: Context-seam finds the rewritten text
+    const seam = findRangeByContextSeam(
+      serialized.contextBefore,
+      serialized.contextAfter,
+    );
+
+    expect(seam).not.toBeNull();
+    expect(seam!.toString()).toBe('a stunning array of colourful native plants');
   });
 });
