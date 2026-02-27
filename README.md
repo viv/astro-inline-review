@@ -285,6 +285,18 @@ Yes. Annotations are stored in `inline-review.json`. Commit the file for shared 
 **What agents support MCP?**
 Claude Code, Cursor, Windsurf, and other MCP-compatible agents. See [modelcontextprotocol.io](https://modelcontextprotocol.io) for an up-to-date list.
 
+## Examples
+
+The `examples/` directory contains minimal projects for each supported framework:
+
+| Directory | Framework | How to run |
+|-----------|-----------|------------|
+| `examples/astro/` | Astro | `npm install && npm run dev` |
+| `examples/vite/` | Vite (plain) | `npm install && npm run dev` |
+| `examples/express/` | Express | `npm install && npm run dev` |
+
+Each example includes two pages with navigation links so you can test multi-page annotation (annotations scoped by URL, panel showing all pages).
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss what you'd like to change.

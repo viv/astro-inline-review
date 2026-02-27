@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inline Review - Vite Example</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.6;
+      color: #1a1a1a;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      background: #fafafa;
+    }
+    .card h3 { margin-top: 0; }
+    button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #999;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    button:hover { background: #f0f0f0; }
+    img { max-width: 100%; height: auto; border-radius: 4px; }
+    footer { margin-top: 3rem; border-top: 1px solid #ddd; padding-top: 1rem; color: #666; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav><a href="/about.html">Go to About Page &rarr;</a></nav>
+    <h1>Inline Review - Vite Test Page</h1>
+    <p>This page exists to manually test the annotation overlay provided by astro-inline-review when used as a Vite plugin.</p>
+  </header>
+
+  <main>
+    <h2>Text Selection Test</h2>
+    <p>Select any portion of this paragraph to test text annotation. The overlay should appear after you release the mouse button, allowing you to attach a note to the selected text. Try selecting a single word, a phrase, or an entire sentence to verify different selection sizes work correctly.</p>
+    <p>Here is a second paragraph with different content. Annotations on adjacent paragraphs should remain independent and not interfere with one another. Each annotation stores its own XPath range and selected text context.</p>
+
+    <h2>Element Annotation Test</h2>
+    <p>Hold Alt (or Option on macOS) and click any element below to create an element-level annotation.</p>
+
+    <div class="card" data-testid="feature-card">
+      <h3>Feature Card</h3>
+      <p>This card component can be annotated as an element. Alt+click the card itself, or Alt+click the heading or paragraph inside it to test nested element selection.</p>
+      <button type="button">Primary Action</button>
+      <button type="button">Secondary Action</button>
+    </div>
+
+    <div class="card" data-testid="image-card">
+      <h3>Image Card</h3>
+      <img src="https://picsum.photos/600/200" alt="Random placeholder image for testing element annotation on img tags" />
+      <p>Alt+click the image above to annotate it. The annotation should capture the CSS selector, XPath, and a preview of the outer HTML.</p>
+    </div>
+
+    <h2>Mixed Content</h2>
+    <ul>
+      <li>List item one - select this text to annotate it</li>
+      <li>List item two - or Alt+click the list item element</li>
+      <li>List item three - annotations should work on any element type</li>
+    </ul>
+
+    <blockquote>
+      This is a blockquote element. It provides another distinct HTML element type to verify that the annotation overlay handles various tag names correctly.
+    </blockquote>
+  </main>
+
+  <footer>
+    <p>astro-inline-review Vite example. Annotations are stored in <code>inline-review.json</code> in this directory.</p>
+  </footer>
+</body>
+</html>

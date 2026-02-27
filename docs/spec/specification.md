@@ -340,8 +340,9 @@ IDs are generated server-side using `crypto.randomUUID()` from `node:crypto`, pr
 - **Reads** always come from disk (no in-memory cache). This means external edits to the JSON file are picked up immediately.
 - **Writes** are queued via a promise chain to prevent concurrent file corruption. Each write serialises the entire store as pretty-printed JSON.
 - **Missing file**: Returns an empty store (`{ version: 1, annotations: [], pageNotes: [] }`)
-- **Corrupted JSON**: Returns an empty store (silent recovery)
+- **Corrupted JSON**: Returns an empty store (silent recovery, with `console.warn` for debuggability)
 - **Invalid schema** (wrong version, non-array fields): Returns an empty store (silent recovery)
+- **Partially corrupt entries**: Individual annotations missing required fields (`id`, `pageUrl`, or `note`) are filtered out with a `console.warn`. Valid annotations in the same file are preserved. This is more resilient than returning an empty store for the entire file.
 
 #### 4.1.1 Annotation Type Migration
 
@@ -443,8 +444,8 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 | `resolvedAt` | No | Server-generated as side-effect of `status` change |
 
 **Status side-effects on PATCH**: When `status` is included in the request body, the server automatically manages the related timestamp fields:
-- `status: 'addressed'` → sets `addressedAt` to current timestamp
-- `status: 'resolved'` → sets `resolvedAt` to current timestamp
+- `status: 'addressed'` → sets `addressedAt` to current timestamp, clears `resolvedAt` (handles `resolved → addressed` transition cleanly)
+- `status: 'resolved'` → sets `resolvedAt` to current timestamp (preserves `addressedAt` — shows when the agent first acted)
 - `status: 'open'` → clears both `addressedAt` and `resolvedAt` (sets to `undefined`)
 
 **Validation**: `POST /annotations` validates required fields and returns 400 with a descriptive error message on failure:
@@ -517,7 +518,8 @@ Returns raw Markdown text (not JSON). See [Section 9: Markdown Export](#9-markdo
 - **400**: Returned when a POST request body fails validation (missing or invalid required fields)
 - **404**: Returned for unknown API routes or when an annotation/note ID is not found
 - **413**: Returned when the request body exceeds 1 MB
-- **500**: Returned for internal errors (e.g. JSON parse failure on request body)
+- **400**: Also returned when the request body contains malformed JSON (invalid JSON is a client error)
+- **500**: Returned for unexpected internal errors (e.g. file I/O failure)
 - Error response shape: `{ "error": "message" }`
 - Non-API requests (URLs not starting with `/__inline-review/api`) are passed through to the next middleware via `next()`
 
@@ -563,10 +565,10 @@ All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters
 
 **`resolve_annotation` behaviour**: By default, this tool sets the annotation's status to `'addressed'` and records an `addressedAt` timestamp. This reflects the intended workflow: the agent marks its work as done, and a human reviewer later accepts it via the UI. Passing `autoResolve: true` skips the human review step and sets the status directly to `'resolved'` with a `resolvedAt` timestamp — useful for trivial fixes or automated pipelines where human confirmation is unnecessary.
 
-| `autoResolve` | Status set | Timestamp set |
-|---------------|-----------|---------------|
-| `false` (default) | `'addressed'` | `addressedAt` |
-| `true` | `'resolved'` | `resolvedAt` |
+| `autoResolve` | Status set | Timestamp set | Side-effects |
+|---------------|-----------|---------------|-------------|
+| `false` (default) | `'addressed'` | `addressedAt` | Clears `resolvedAt` |
+| `true` | `'resolved'` | `resolvedAt` | Preserves `addressedAt` |
 
 **Return format:** All tools return `{ content: [{ type: 'text', text: '...' }] }`. Read tools return JSON-stringified data. `get_export` returns markdown text. Error responses include `isError: true` with a descriptive message.
 
@@ -1044,7 +1046,7 @@ Tests should use `data-air-state` (the automation contract) rather than CSS disp
 - Fades in with opacity + translateY transition
 - Auto-dismisses after 2.5 seconds (default)
 - Multiple calls reuse the same element and restart the timer
-- `z-index: 10002` (above everything)
+- `z-index: 10003` (above everything — see Section 17.2)
 - `pointer-events: none` (non-interactive)
 
 **Data attributes**: `data-air-el="toast"`
@@ -1553,6 +1555,7 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `agent-reply` | Agent reply block on annotation | Shadow DOM | Present when annotation has agent replies |
 | `first-use-tooltip` | First-use tooltip near FAB | Shadow DOM | Shown once on first visit, then dismissed |
 | `empty-arrow` | Directional arrow in empty state | Shadow DOM | Present when "This Page" tab has no annotations |
+| `shortcuts-help` | Keyboard shortcuts footer in panel | Shadow DOM | Always present (child of panel) |
 | `inspector-overlay` | Inspector overlay during Alt+hover | Light DOM | Present only while Alt is held and mouse is over an element |
 | `inspector-label` | Tag label on inspector overlay | Light DOM | Child of inspector overlay |
 
@@ -1604,7 +1607,9 @@ The context matching algorithm:
 
 **Context length**: Exactly 30 characters are stored (or fewer if insufficient text exists before/after the selection boundary). The `CONTEXT_LENGTH` constant is defined as `30`.
 
-**Context extraction limitation**: `contextBefore` is extracted solely from the text node containing the start of the selection (`range.startContainer`). It does not walk backwards across preceding DOM nodes. Similarly, `contextAfter` is extracted solely from the text node containing the end of the selection. This means if the selection starts at offset 0 in a text node, `contextBefore` will be an empty string even if preceding elements contain text. When both context strings are empty, all candidates score 0 and the first occurrence is selected.
+**Context extraction scope**: `contextBefore` and `contextAfter` are extracted from the **block ancestor** of the selection boundary, not from the entire document. The `getBlockAncestor()` helper walks up from the selection's start/end container until it finds a block-level element (e.g. `<p>`, `<div>`, `<section>`, `<li>`) or reaches `document.body`. All text nodes within that block are concatenated, and up to 30 characters are extracted before/after the selection boundary within this concatenated text.
+
+This means context can span across sibling inline elements (e.g. `<em>`, `<a>`, `<strong>`) within the same block, providing richer context than extracting from a single text node. However, context does not cross block boundaries — if the selection starts at the beginning of a paragraph, `contextBefore` will not include text from the preceding paragraph. When both context strings are empty (e.g. selection fills the entire block), all candidates score 0 and the first occurrence is selected.
 
 
 ## 16. Error Handling
