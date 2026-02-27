@@ -1,0 +1,81 @@
+---
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inline Review Test Page</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 640px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.6;
+        color: #333;
+      }
+      h1 { color: #1a1a2e; }
+      h2 { color: #16213e; margin-top: 2rem; }
+      .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+        background: #fafafa;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+      }
+      a { color: #e94560; }
+    </style>
+  </head>
+  <body>
+    <nav><a href="/about">Go to About Page &rarr;</a></nav>
+
+    <h1>Inline Review Test Page</h1>
+
+    <p>
+      This is a minimal page for testing the astro-inline-review overlay.
+      Select any text on this page and add an annotation, or Alt+click an
+      element to annotate it directly.
+    </p>
+
+    <h2>Text Selection Test</h2>
+    <p>
+      Here is a paragraph with enough content to test text selection. You
+      should be able to highlight a portion of this sentence and create a
+      text annotation with a note describing what needs to change.
+    </p>
+    <p>
+      A second paragraph provides additional text for testing multi-paragraph
+      selection and verifying that highlights render correctly across
+      different DOM nodes.
+    </p>
+
+    <h2>Element Annotation Test</h2>
+    <div class="card" id="sample-card">
+      <h3>Sample Card</h3>
+      <p>Alt+click this card to annotate the entire element.</p>
+    </div>
+
+    <button id="sample-button">Example Button</button>
+    <a href="#" id="sample-link">Example Link</a>
+
+    <h2>Longer Content</h2>
+    <p>
+      This section exists so you can test scroll-based behaviours. When you
+      scroll away from a popup, it should dismiss after a short threshold.
+      Keep scrolling to verify.
+    </p>
+    <p>
+      Final paragraph. Use the floating action button in the bottom-right
+      corner to open the annotations panel and review everything you have
+      added during this session.
+    </p>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 {
   "name": "astro-inline-review",
   "version": "0.1.0",
-  "description": "Bridge between human reviewers and coding agents for Astro sites — annotate rendered pages and export location-aware feedback",
+  "description": "Bridge between human reviewers and coding agents — annotate rendered pages in-browser and export location-aware feedback. Works with Astro, Vite, and Express.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,7 +11,15 @@
       "import": "./dist/index.js"
     },
     "./client": "./dist/client.js",
-    "./mcp": "./dist/mcp/server.js"
+    "./mcp": "./dist/mcp/server.js",
+    "./vite": {
+      "types": "./dist/integrations/vite.d.ts",
+      "import": "./dist/integrations/vite.js"
+    },
+    "./express": {
+      "types": "./dist/integrations/express.d.ts",
+      "import": "./dist/integrations/express.js"
+    }
   },
   "bin": {
     "astro-inline-review-mcp": "./dist/mcp/server.js"
@@ -21,6 +29,8 @@
   ],
   "keywords": [
     "astro-integration",
+    "vite-plugin",
+    "express-middleware",
     "annotation",
     "review",
     "developer-tools",
@@ -50,7 +60,12 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "vite": "^5.0.0 || ^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "astro": { "optional": true },
+    "vite": { "optional": true }
   },
   "devDependencies": {
     "@types/node": "^25.3.0",

@@ -3,7 +3,7 @@ import { defineConfig } from 'tsup';
 export default defineConfig([
   // Server/integration entry — Node APIs, not bundled
   {
-    entry: { index: 'src/index.ts' },
+    entry: { index: 'src/index.ts', 'integrations/vite': 'src/integrations/vite.ts', 'integrations/express': 'src/integrations/express.ts' },
     format: ['esm'],
     dts: true,
     clean: true,

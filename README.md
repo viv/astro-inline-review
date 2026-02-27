@@ -5,9 +5,9 @@
 [![npm version](https://img.shields.io/npm/v/astro-inline-review)](https://www.npmjs.com/package/astro-inline-review)
 [![licence](https://img.shields.io/npm/l/astro-inline-review)](LICENSE)
 
-A dev-only annotation overlay for [Astro](https://astro.build) sites that bridges human reviewers and AI coding agents. Browse your rendered site, annotate what needs changing, and let your coding agent act on the feedback directly via [MCP](https://modelcontextprotocol.io) — no copy-paste, no hunting through source files.
+A dev-only annotation overlay that bridges human reviewers and AI coding agents. Browse your rendered site, annotate what needs changing, and let your coding agent act on the feedback directly via [MCP](https://modelcontextprotocol.io) — no copy-paste, no hunting through source files.
 
-Ships **zero bytes** in production. Install as a `devDependency`, and all UI, storage, and API infrastructure exists only during `astro dev`.
+Works with [Astro](https://astro.build), any [Vite](https://vite.dev)-based framework (SvelteKit, Nuxt, Remix), and [Express](https://expressjs.com)/Connect servers. Ships **zero bytes** in production.
 
 ## Overview
 
@@ -18,7 +18,7 @@ Reviewing a live site and turning that into actionable code changes is tedious. 
 ```
 Human reviewer                    AI coding agent
 ──────────────                    ───────────────
-1. Browse site during astro dev
+1. Browse site during dev
 2. Select text or Alt+click
    elements, attach notes
                           ───────►
@@ -44,7 +44,7 @@ A secondary **Markdown export** is also available for agents that don't support 
 
 ## Quickstart
 
-**Prerequisites:** Node.js >= 20, an Astro v5+ project, and an MCP-compatible coding agent (Claude Code, Cursor, Windsurf, etc.)
+**Prerequisites:** Node.js >= 20 and an MCP-compatible coding agent (Claude Code, Cursor, Windsurf, etc.)
 
 ### 1. Install
 
@@ -53,6 +53,9 @@ npm install -D astro-inline-review
 ```
 
 ### 2. Add the integration
+
+<details open>
+<summary><strong>Astro</strong></summary>
 
 ```javascript
 // astro.config.mjs
@@ -64,11 +67,51 @@ export default defineConfig({
 });
 ```
 
+</details>
+
+<details>
+<summary><strong>Vite</strong> (SvelteKit, Nuxt, Remix, etc.)</summary>
+
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite';
+import inlineReview from 'astro-inline-review/vite';
+
+export default defineConfig({
+  plugins: [inlineReview()],
+});
+```
+
+The Vite plugin uses `transformIndexHtml` to inject the client script automatically.
+
+</details>
+
+<details>
+<summary><strong>Express / Connect</strong></summary>
+
+```javascript
+import express from 'express';
+import { inlineReview } from 'astro-inline-review/express';
+
+const app = express();
+const { apiMiddleware, clientMiddleware } = inlineReview();
+
+app.use(apiMiddleware);
+app.use(clientMiddleware);
+
+// Add to your HTML template:
+// <script type="module" src="/__inline-review/client.js"></script>
+```
+
+Express users add a single `<script>` tag to their HTML template — the `clientMiddleware` serves the bundled client JS. In monorepo setups where `process.cwd()` may differ from the project root, pass `storagePath` explicitly.
+
+</details>
+
 The only option is `storagePath` (defaults to `'inline-review.json'` in the project root). Annotations are persisted to this file — commit it for shared review, or add it to `.gitignore` for personal use. The browser UI, REST API, and MCP server all read and write the same file.
 
 ### 3. Connect your agent via MCP
 
-Add a `.mcp.json` file to your Astro project root:
+Add a `.mcp.json` file to your project root:
 
 ```json
 {
@@ -90,7 +133,7 @@ Claude Code reads `.mcp.json` on startup and discovers the annotation tools auto
 
 ### 4. Annotate and go
 
-1. Run `astro dev` and browse your site
+1. Start your dev server and browse your site
 2. **Select text** — a popup appears to add a note about what needs changing
 3. **Alt+click elements** — annotate cards, images, buttons, or layout sections
 4. **Add page notes** for broader feedback (via the panel or `Cmd/Ctrl+Shift+N`)
@@ -216,20 +259,22 @@ See [docs/spec/specification.md](docs/spec/specification.md) for the full compon
 
 ### Panel not showing
 
-- Ensure you're running `astro dev` — the overlay is not injected in production or preview builds
+- Ensure you're running in dev mode — the overlay is not injected in production or preview builds
 - Look for an orange floating action button in the bottom-right corner
+- For Express: check that both `apiMiddleware` and `clientMiddleware` are registered, and the `<script>` tag is in your HTML
 - Check the browser console for errors
 
 ### Common environment issues
 
 - **Node version**: requires >= 20. Check with `node --version`
-- **Astro version**: requires ^5.0.0
+- **Astro version**: requires ^5.0.0 (Astro adapter only)
+- **Vite version**: requires ^5.0.0 or ^6.0.0 (Vite adapter only)
 - **ESM-only**: the package uses `"type": "module"` — ensure your tooling supports ESM
 
 ## FAQ
 
 **Does this ship anything to production?**
-No. The integration only activates during `astro dev`. Production and preview builds include zero bytes from this package.
+No. The Astro and Vite adapters only activate during dev. For Express, you control when the middleware is mounted — simply don't use it in production.
 
 **Do I need the dev server running for MCP to work?**
 No. The MCP server reads directly from `inline-review.json`. The dev server is only needed for the browser annotation UI.
@@ -239,6 +284,18 @@ Yes. Annotations are stored in `inline-review.json`. Commit the file for shared 
 
 **What agents support MCP?**
 Claude Code, Cursor, Windsurf, and other MCP-compatible agents. See [modelcontextprotocol.io](https://modelcontextprotocol.io) for an up-to-date list.
+
+## Examples
+
+The `examples/` directory contains minimal projects for each supported framework:
+
+| Directory | Framework | How to run |
+|-----------|-----------|------------|
+| `examples/astro/` | Astro | `npm install && npm run dev` |
+| `examples/vite/` | Vite (plain) | `npm install && npm run dev` |
+| `examples/express/` | Express | `npm install && npm run dev` |
+
+Each example includes two pages with navigation links so you can test multi-page annotation (annotations scoped by URL, panel showing all pages).
 
 ## Contributing
 
@@ -270,7 +327,7 @@ The acceptance test suite lives in a separate repository: [astro-inline-review-t
 | | astro-inline-review | Vibe Annotations |
 |---|---|---|
 | **Delivery** | Framework integration (zero-config, auto-injected) | Chrome extension + separate MCP server |
-| **Framework support** | Astro only (Vite and Express adapters planned) | Any localhost dev server |
+| **Framework support** | Astro, Vite (SvelteKit/Nuxt/Remix), Express/Connect | Any localhost dev server |
 | **Selection model** | Text selection + element selection (Alt+click) | Element click only |
 | **MCP transport** | stdio | SSE |
 | **Status lifecycle** | open → addressed → resolved, with agent replies | Read → implement → delete (batch cycle) |

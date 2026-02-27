@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About - Inline Review Vite Example</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.6;
+      color: #1a1a1a;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      background: #fafafa;
+    }
+    .card h3 { margin-top: 0; }
+    footer { margin-top: 3rem; border-top: 1px solid #ddd; padding-top: 1rem; color: #666; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav><a href="/">&larr; Back to Home</a></nav>
+    <h1>About - Vite Test Page</h1>
+    <p>This second page tests multi-page annotation. Annotations here should be scoped to <code>/about.html</code> and appear separately in the panel.</p>
+  </header>
+
+  <main>
+    <h2>Why Multi-Page Matters</h2>
+    <p>Reviewers often annotate across multiple pages of a site. Each page's annotations are stored with their page URL, so switching between pages should show only the relevant annotations in context while the panel displays all annotations across pages.</p>
+
+    <h2>More Content to Annotate</h2>
+    <p>Select this text to create a text annotation on the about page. Verify that it does not appear as a highlight on the home page, and vice versa.</p>
+
+    <div class="card">
+      <h3>Project Details</h3>
+      <p>This project demonstrates the Vite plugin adapter for astro-inline-review. The plugin uses <code>transformIndexHtml</code> to inject the client script and <code>configureServer</code> to register the REST API middleware.</p>
+    </div>
+
+    <div class="card">
+      <h3>Technical Notes</h3>
+      <p>The annotation store is a single JSON file shared between both pages. The MCP server also reads this same file, enabling coding agents to see all annotations regardless of which page they were created on.</p>
+    </div>
+
+    <blockquote>
+      Multi-page annotation is a core feature. Without it, reviewers would need separate annotation sessions for each page of a site.
+    </blockquote>
+  </main>
+
+  <footer>
+    <p>astro-inline-review Vite example — about page.</p>
+  </footer>
+</body>
+</html>

@@ -37,6 +37,13 @@ export default defineConfig({
           include: ['tests/mcp/**/*.test.ts'],
         },
       },
+      {
+        test: {
+          name: 'integrations',
+          environment: 'node',
+          include: ['tests/integrations/**/*.test.ts'],
+        },
+      },
     ],
   },
 });

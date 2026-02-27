@@ -12,7 +12,7 @@ tags: [astro, integration, annotation, dev-tools, specification, element-annotat
 
 ## 1. Overview
 
-**astro-inline-review** is a dev-only annotation overlay for Astro projects. It bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback.
+**astro-inline-review** is a dev-only annotation overlay that bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback. It supports Astro, any Vite-based framework (SvelteKit, Nuxt, Remix), and Express/Connect servers.
 
 A reviewer browses the live dev site and annotates it in two ways: **selecting text** and attaching notes, or **Alt+clicking elements** (cards, images, buttons, layout sections) to annotate non-text targets. Each annotation captures the page URL, the precise location (text range or CSS selector), and the reviewer's instruction — providing both the *what* and the *where*. The result can be consumed by coding agents (Claude Code, Codex, Cursor, etc.) in three ways:
 
@@ -20,12 +20,12 @@ A reviewer browses the live dev site and annotates it in two ways: **selecting t
 - **JSON storage file** (`inline-review.json`) — machine-readable with rich location data (XPath ranges, character offsets, surrounding context for text; CSS selectors, XPaths, and attribute snapshots for elements), readable directly from the project root
 - **Markdown export** (secondary) — one-click copy to clipboard, designed for pasting into chat-based agent interfaces that don't support MCP
 
-The integration ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during `astro dev`.
+The integration ships **zero bytes** in production builds. All UI, storage, and API infrastructure exists only during dev.
 
 ### 1.1 Design Principles
 
 1. **Dev-only**: No traces in production builds (no scripts, no host elements, no API references)
-2. **Zero-config**: Works with a single line in `astro.config.mjs`
+2. **Zero-config**: Works with a single line of configuration
 3. **Non-invasive**: Shadow DOM isolates all UI from site styles; highlights use inline styles
 4. **Persistent**: Annotations survive page reloads, navigation, and dev server restarts
 5. **Multi-page**: Annotations are scoped by URL but viewable across all pages
@@ -64,12 +64,24 @@ Additional configuration options (theme, position, keybindings, storage backend)
 
 ### 2.5 What Happens on Activation
 
-During `astro dev`, the integration:
+During `astro dev`, the Astro integration:
 
 1. Resolves the storage file path relative to the project root
 2. Creates a `ReviewStorage` instance for JSON file I/O
 3. Registers a Vite dev server middleware plugin that serves the REST API
 4. Injects the client script on every page via `injectScript('page', ...)`
+
+### 2.6 Adapter Model
+
+The core functionality (REST API middleware, client overlay, JSON storage, MCP server) is framework-agnostic. Three thin adapters wire these components into different frameworks:
+
+| Entry point | Framework | Client injection | Notes |
+|---|---|---|---|
+| `astro-inline-review` | Astro | `injectScript('page', ...)` | Default export, wraps Vite plugin inside Astro integration |
+| `astro-inline-review/vite` | Vite (SvelteKit, Nuxt, Remix) | `transformIndexHtml` | Standalone Vite `Plugin`, `apply: 'serve'` |
+| `astro-inline-review/express` | Express/Connect | Manual `<script>` tag | Returns `{ apiMiddleware, clientMiddleware }` |
+
+All adapters share `ReviewStorage` and `createMiddleware` directly — no shared setup abstraction. Each adapter is 15-50 lines. The `createMiddleware` function uses native `http.IncomingMessage`/`http.ServerResponse` types, making it compatible with any Node.js HTTP framework.
 
 
 ## 3. Data Model
@@ -328,8 +340,9 @@ IDs are generated server-side using `crypto.randomUUID()` from `node:crypto`, pr
 - **Reads** always come from disk (no in-memory cache). This means external edits to the JSON file are picked up immediately.
 - **Writes** are queued via a promise chain to prevent concurrent file corruption. Each write serialises the entire store as pretty-printed JSON.
 - **Missing file**: Returns an empty store (`{ version: 1, annotations: [], pageNotes: [] }`)
-- **Corrupted JSON**: Returns an empty store (silent recovery)
+- **Corrupted JSON**: Returns an empty store (silent recovery, with `console.warn` for debuggability)
 - **Invalid schema** (wrong version, non-array fields): Returns an empty store (silent recovery)
+- **Partially corrupt entries**: Individual annotations missing required fields (`id`, `pageUrl`, or `note`) are filtered out with a `console.warn`. Valid annotations in the same file are preserved. This is more resilient than returning an empty store for the entire file.
 
 #### 4.1.1 Annotation Type Migration
 
@@ -431,8 +444,8 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 | `resolvedAt` | No | Server-generated as side-effect of `status` change |
 
 **Status side-effects on PATCH**: When `status` is included in the request body, the server automatically manages the related timestamp fields:
-- `status: 'addressed'` → sets `addressedAt` to current timestamp
-- `status: 'resolved'` → sets `resolvedAt` to current timestamp
+- `status: 'addressed'` → sets `addressedAt` to current timestamp, clears `resolvedAt` (handles `resolved → addressed` transition cleanly)
+- `status: 'resolved'` → sets `resolvedAt` to current timestamp (preserves `addressedAt` — shows when the agent first acted)
 - `status: 'open'` → clears both `addressedAt` and `resolvedAt` (sets to `undefined`)
 
 **Validation**: `POST /annotations` validates required fields and returns 400 with a descriptive error message on failure:
@@ -505,7 +518,8 @@ Returns raw Markdown text (not JSON). See [Section 9: Markdown Export](#9-markdo
 - **400**: Returned when a POST request body fails validation (missing or invalid required fields)
 - **404**: Returned for unknown API routes or when an annotation/note ID is not found
 - **413**: Returned when the request body exceeds 1 MB
-- **500**: Returned for internal errors (e.g. JSON parse failure on request body)
+- **400**: Also returned when the request body contains malformed JSON (invalid JSON is a client error)
+- **500**: Returned for unexpected internal errors (e.g. file I/O failure)
 - Error response shape: `{ "error": "message" }`
 - Non-API requests (URLs not starting with `/__inline-review/api`) are passed through to the next middleware via `next()`
 
@@ -551,10 +565,10 @@ All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters
 
 **`resolve_annotation` behaviour**: By default, this tool sets the annotation's status to `'addressed'` and records an `addressedAt` timestamp. This reflects the intended workflow: the agent marks its work as done, and a human reviewer later accepts it via the UI. Passing `autoResolve: true` skips the human review step and sets the status directly to `'resolved'` with a `resolvedAt` timestamp — useful for trivial fixes or automated pipelines where human confirmation is unnecessary.
 
-| `autoResolve` | Status set | Timestamp set |
-|---------------|-----------|---------------|
-| `false` (default) | `'addressed'` | `addressedAt` |
-| `true` | `'resolved'` | `resolvedAt` |
+| `autoResolve` | Status set | Timestamp set | Side-effects |
+|---------------|-----------|---------------|-------------|
+| `false` (default) | `'addressed'` | `addressedAt` | Clears `resolvedAt` |
+| `true` | `'resolved'` | `resolvedAt` | Preserves `addressedAt` |
 
 **Return format:** All tools return `{ content: [{ type: 'text', text: '...' }] }`. Read tools return JSON-stringified data. `get_export` returns markdown text. Error responses include `isError: true` with a descriptive message.
 
@@ -1032,7 +1046,7 @@ Tests should use `data-air-state` (the automation contract) rather than CSS disp
 - Fades in with opacity + translateY transition
 - Auto-dismisses after 2.5 seconds (default)
 - Multiple calls reuse the same element and restart the timer
-- `z-index: 10002` (above everything)
+- `z-index: 10003` (above everything — see Section 17.2)
 - `pointer-events: none` (non-interactive)
 
 **Data attributes**: `data-air-el="toast"`
@@ -1551,6 +1565,7 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `agent-reply` | Agent reply block on annotation | Shadow DOM | Present when annotation has agent replies |
 | `first-use-tooltip` | First-use tooltip near FAB | Shadow DOM | Shown once on first visit, then dismissed |
 | `empty-arrow` | Directional arrow in empty state | Shadow DOM | Present when "This Page" tab has no annotations |
+| `shortcuts-help` | Keyboard shortcuts footer in panel | Shadow DOM | Always present (child of panel) |
 | `inspector-overlay` | Inspector overlay during Alt+hover | Light DOM | Present only while Alt is held and mouse is over an element |
 | `inspector-label` | Tag label on inspector overlay | Light DOM | Child of inspector overlay |
 

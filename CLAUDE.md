@@ -1,6 +1,6 @@
 # astro-inline-review
 
-Dev-only Astro integration that provides a browser-based annotation overlay during `astro dev`. Reviewers annotate the site in-browser; annotations persist to a JSON file. Ships zero bytes in production.
+Dev-only annotation overlay that bridges human reviewers and AI coding agents. Works with Astro, Vite-based frameworks (SvelteKit, Nuxt, Remix), and Express/Connect. Reviewers annotate the site in-browser; annotations persist to a JSON file. Ships zero bytes in production.
 
 ## Architecture
 
@@ -138,7 +138,10 @@ git push origin main --tags
 - `src/server/storage.ts` — `ReviewStorage` class (JSON file I/O)
 - `src/server/middleware.ts` — REST API middleware + server-side export
 - `src/client/export.ts` — client-side markdown export
-- `src/index.ts` — Astro integration entry point
+- `src/index.ts` — main entry point (re-exports Astro adapter)
+- `src/integrations/astro.ts` — Astro integration adapter
+- `src/integrations/vite.ts` — standalone Vite plugin adapter (`astro-inline-review/vite`)
+- `src/integrations/express.ts` — Express/Connect adapter (`astro-inline-review/express`)
 - `src/mcp/server.ts` — MCP server entry point (CLI argument parsing, tool registration)
 - `src/mcp/types.ts` — shared MCP tool result types (ToolResult, ErrorResult)
 - `src/mcp/tools/` — individual MCP tool handlers
