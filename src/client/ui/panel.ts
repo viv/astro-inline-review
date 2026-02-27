@@ -420,8 +420,10 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 
   appendStatusActions(actions, annotation.id, status, callbacks);
 
-  const deleteBtn = createDeleteButton(annotation.id, callbacks);
-  actions.appendChild(deleteBtn);
+  if (status === 'open') {
+    const deleteBtn = createDeleteButton(annotation.id, callbacks);
+    actions.appendChild(deleteBtn);
+  }
 
   item.appendChild(actions);
 
@@ -484,8 +486,10 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
 
   appendStatusActions(actions, annotation.id, status, callbacks);
 
-  const deleteBtn = createDeleteButton(annotation.id, callbacks);
-  actions.appendChild(deleteBtn);
+  if (status === 'open') {
+    const deleteBtn = createDeleteButton(annotation.id, callbacks);
+    actions.appendChild(deleteBtn);
+  }
 
   item.appendChild(actions);
 
@@ -707,7 +711,7 @@ function appendStatusActions(
     acceptBtn.style.fontSize = '11px';
     acceptBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      callbacks.onAnnotationStatusChange(annotationId, 'resolved');
+      callbacks.onAnnotationDelete(annotationId);
     });
     container.appendChild(acceptBtn);
   }

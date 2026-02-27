@@ -907,7 +907,7 @@ Each text annotation item in the panel shows:
 
 **Status action buttons**: Each annotation item includes contextual action buttons based on its status (see 6.2.3c).
 
-**Delete button**: Each text annotation item has a "Delete" button (`data-air-el="annotation-delete"`) with a two-click confirmation flow matching the Clear All pattern (section 6.2.5). First click changes the button text to "Sure?" and sets `data-air-state="confirming"`. A second click within 3 seconds executes the delete (calls the API, removes highlight marks, refreshes badge and panel). If no second click occurs within 3 seconds, the button reverts to "Delete".
+**Delete button**: Each text annotation item in `open` status has a "Delete" button (`data-air-el="annotation-delete"`) with a two-click confirmation flow matching the Clear All pattern (section 6.2.5). First click changes the button text to "Sure?" and sets `data-air-state="confirming"`. A second click within 3 seconds executes the delete (calls the API, removes highlight marks, refreshes badge and panel). If no second click occurs within 3 seconds, the button reverts to "Delete". The Delete button is hidden when workflow buttons (Accept, Reopen) are present — see section 6.2.3c.
 
 **Orphan indicator**: If the annotation's text cannot be located on the page (Tier 4 orphan per section 8.4), a red indicator is shown with the text "Could not locate on page" (class `.air-annotation-item__orphan`). The item container receives the `.air-annotation-item--orphan` modifier class, which adds a red left border and reduced opacity. Orphan detection only applies to annotations on the current page — annotations for other pages (shown in the "All Pages" tab) do not show an orphan indicator since their DOM is not available.
 
@@ -926,7 +926,7 @@ Each element annotation item in the panel shows:
 
 **Status action buttons**: Same contextual action buttons as text annotations (see 6.2.3c).
 
-**Delete button**: Each element annotation item has a "Delete" button (`data-air-el="annotation-delete"`) with the same two-click confirmation flow as text annotations (section 6.2.3). First click shows "Sure?" with `data-air-state="confirming"`, second click within 3 seconds executes the delete.
+**Delete button**: Each element annotation item in `open` status has a "Delete" button (`data-air-el="annotation-delete"`) with the same two-click confirmation flow as text annotations (section 6.2.3). First click shows "Sure?" with `data-air-state="confirming"`, second click within 3 seconds executes the delete. Hidden when workflow buttons are present — see section 6.2.3c.
 
 **Orphan indicator**: If the annotated element cannot be found on the page (its highlight was not restored), a red indicator is shown with the text "Could not locate on page". The item receives the `.air-annotation-item--orphan` modifier class. Same current-page-only restriction as text annotations (section 6.2.3).
 
@@ -946,15 +946,15 @@ The badge appears at the top of the annotation item, above the selected text/ele
 
 #### 6.2.3c Status Action Buttons
 
-Each annotation item includes contextual action buttons based on its effective status:
+Each annotation item includes contextual action buttons based on its effective status. The Delete button (section 6.2.3d) is only shown when no workflow buttons are present (i.e., in `open` status):
 
-| Status | Button shown | Label | `data-air-el` | Action |
-|--------|-------------|-------|---------------|--------|
-| `addressed` | Accept | "Accept" | `annotation-accept` | Transitions annotation to `resolved` via `PATCH` with `status: 'resolved'` |
+| Status | Buttons shown | Label | `data-air-el` | Action |
+|--------|--------------|-------|---------------|--------|
+| `open` | Delete | "Delete" | `annotation-delete` | Two-click delete (see section 6.2.3d) |
+| `addressed` | Accept | "Accept" | `annotation-accept` | Deletes annotation entirely via `DELETE /annotations/:id` |
 | `resolved` | Reopen | "Reopen" | `annotation-reopen` | Transitions annotation to `open` via `PATCH` with `status: 'open'` |
-| `open` | — | — | — | No status action button |
 
-**Accept button**: Green background (`#166534`), green text (`#86EFAC`). Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `PATCH /annotations/:id` with `{ "status": "resolved" }`, then restores highlights (to update colours), refreshes badge, and refreshes panel.
+**Accept button**: Green background (`#166534`), green text (`#86EFAC`). Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `DELETE /annotations/:id`, removes highlights, refreshes badge, and refreshes panel. The annotation is removed entirely — accepting means the reviewer is happy with the change and the annotation has served its purpose.
 
 **Reopen button**: Styled as a cancel-type button. Used when the reviewer disagrees with the resolution and wants to re-open the annotation. Sends `PATCH /annotations/:id` with `{ "status": "open" }`, then restores highlights, refreshes badge, and refreshes panel.
 
@@ -1556,7 +1556,7 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `page-note-save` | Page note form save button | Shadow DOM | Present when add/edit note form is open |
 | `clear-all` | "Clear All" button | Shadow DOM | Always present (child of panel header) |
 | `toast` | Toast notification | Shadow DOM | Created on first toast, then reused |
-| `annotation-delete` | Annotation delete button | Shadow DOM | Present on each annotation item when panel shows annotations |
+| `annotation-delete` | Annotation delete button | Shadow DOM | Present on open-status annotation items only (hidden when workflow buttons shown) |
 | `element-annotation-item` | Element annotation list item in panel | Shadow DOM | Present when panel is open and element annotations exist |
 | `panel-content` | Panel content area (scrollable) | Shadow DOM | Always present (child of panel) |
 | `status-badge` | Status badge on annotation (addressed or resolved) | Shadow DOM | Present on non-open annotations |
@@ -1821,7 +1821,7 @@ The following accessibility features are not yet implemented:
 | Click element annotation in panel | Page scrolls to element, outline pulses | 6.2.3a, 8.5.3 |
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
 | Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
-| Click Accept on addressed annotation | Annotation status changes to resolved, highlights update colours | 6.2.3c, 3.2.5 |
+| Click Accept on addressed annotation | Annotation is deleted entirely (removed from store, highlights cleared) | 6.2.3c |
 | Click Reopen on resolved annotation | Annotation status changes to open, highlights update colours | 6.2.3c, 3.2.5 |
 | Click Delete on annotation in panel | Two-click confirmation: first click shows "Sure?", second click deletes | 6.2.3, 6.2.3a |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |
