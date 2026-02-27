@@ -4,3 +4,6 @@ coverage/
 *.tgz
 .DS_Store
 assets/
+.astro/
+inline-review.json
+examples/*/package-lock.json
