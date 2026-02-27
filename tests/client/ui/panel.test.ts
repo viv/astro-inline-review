@@ -1018,7 +1018,7 @@ describe('createPanel — status lifecycle buttons', () => {
     expect(reopenBtn).toBeNull();
   });
 
-  it('Accept button calls onAnnotationStatusChange with resolved', async () => {
+  it('Accept button calls onAnnotationDelete to remove annotation', async () => {
     await renderWithStore({
       version: 1,
       annotations: [makeTextAnnotation({ id: 'accept-me', status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
@@ -1028,7 +1028,47 @@ describe('createPanel — status lifecycle buttons', () => {
     const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]') as HTMLButtonElement;
     acceptBtn.click();
 
-    expect(callbacks.onAnnotationStatusChange).toHaveBeenCalledWith('accept-me', 'resolved');
+    expect(callbacks.onAnnotationDelete).toHaveBeenCalledWith('accept-me');
+    expect(callbacks.onAnnotationStatusChange).not.toHaveBeenCalled();
+  });
+
+  it('hides Delete button when Accept button is shown (addressed status)', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]');
+    expect(deleteBtn).toBeNull();
+  });
+
+  it('hides Delete button when Reopen button is shown (resolved status)', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]');
+    expect(deleteBtn).toBeNull();
+  });
+
+  it('shows Delete button only on open annotations', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]');
+    expect(deleteBtn).not.toBeNull();
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]');
+    expect(acceptBtn).toBeNull();
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
+    expect(reopenBtn).toBeNull();
   });
 
   it('Reopen button calls onAnnotationStatusChange with open', async () => {
