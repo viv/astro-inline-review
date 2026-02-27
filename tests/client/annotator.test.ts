@@ -67,6 +67,7 @@ vi.mock('../../src/client/selection.js', () => ({
   })),
   deserializeRange: vi.fn(),
   findRangeByContext: vi.fn(),
+  findRangeByContextSeam: vi.fn(),
 }));
 
 vi.mock('../../src/client/ui/fab.js', () => ({

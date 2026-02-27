@@ -7,7 +7,7 @@
  * element-selector.ts, highlights.ts, popup.ts, and api.ts.
  */
 
-import { serializeRange, deserializeRange, findRangeByContext } from './selection.js';
+import { serializeRange, deserializeRange, findRangeByContext, findRangeByContextSeam } from './selection.js';
 import {
   applyHighlight,
   removeHighlight,
@@ -510,7 +510,16 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           );
         }
 
-        // Tier 3: Orphaned — no highlight, visible only in panel
+        // Tier 3: Context-seam — find where contextBefore and contextAfter
+        // meet, even if the annotated text has been completely rewritten
+        if (!range) {
+          range = findRangeByContextSeam(
+            annotation.range.contextBefore,
+            annotation.range.contextAfter,
+          );
+        }
+
+        // Tier 4: Orphaned — no highlight, visible only in panel
         if (range) {
           applyHighlight(range, annotation.id, status);
         }
