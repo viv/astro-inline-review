@@ -1297,18 +1297,24 @@ All element highlights share:
 When an element annotation is deleted:
 
 1. Find the element with `data-air-element-id="<id>"`
-2. Remove the inline `outline`, `outline-offset`, and `cursor` styles
-3. Remove the `data-air-element-id` attribute
+2. Remove the `data-air-element-id` and `data-air-pulse` attributes
+3. Remove the inline `outline`, `outline-offset`, and `cursor` styles
+4. Defensively clear `backgroundColor`, `boxShadow`, and `transition` (may be set by a mid-flight pulse animation)
 
 #### 8.5.3 Element Highlight Pulse
 
-When scrolling to an element annotation from the panel:
+When scrolling to an element annotation from the panel, the element "pulses" with a background flash and box-shadow glow (matching the visual impact of the text highlight pulse):
 
 1. Set `data-air-pulse` attribute on the element (same test hook as text highlights)
-2. Set `transition: outline-color 0.3s ease`
-3. Change outline to `rgba(217,119,6,1)` (fully opaque)
-4. After 600ms: revert to `rgba(217,119,6,0.8)` (normal)
-5. After 900ms: remove the transition and `data-air-pulse` attribute
+2. Save original `backgroundColor` and `boxShadow` values (to restore after animation)
+3. Set `transition: background-color 0.3s ease, box-shadow 0.3s ease, outline-color 0.3s ease`
+4. Change outline to `rgba(217,119,6,1)` (fully opaque)
+5. Set `backgroundColor` to `rgba(217,119,6,0.15)` (subtle amber flash)
+6. Set `boxShadow` to `0 0 0 4px rgba(217,119,6,0.3)` (amber glow)
+7. After 600ms: revert outline to `rgba(217,119,6,0.8)`, restore original `backgroundColor` and `boxShadow`
+8. After 900ms: remove the transition and `data-air-pulse` attribute
+
+**Design rationale**: The previous implementation only animated `outline-color` from 80% to 100% opacity — a 25% relative change on a thin dashed border that was nearly imperceptible. The background flash and box-shadow glow provide a filled-area visual cue that matches the noticeability of the text highlight pulse (see Section 8.3).
 
 #### 8.5.4 Element Highlight Restoration
 
@@ -1702,7 +1708,9 @@ Errors are logged with the prefix `[astro-inline-review]` for easy filtering. No
 | Inspector label text | `white` | White text on tag label |
 | Element highlight outline (open) | `rgba(217,119,6,0.8)` | Dashed amber outline on open annotated elements |
 | Element highlight outline (addressed) | `rgba(59,130,246,0.5)` | Dashed blue outline on addressed annotated elements |
-| Element highlight pulse | `rgba(217,119,6,1)` | Fully opaque amber outline during pulse |
+| Element highlight pulse outline | `rgba(217,119,6,1)` | Fully opaque amber outline during pulse |
+| Element highlight pulse background | `rgba(217,119,6,0.15)` | Subtle amber background flash during pulse |
+| Element highlight pulse glow | `rgba(217,119,6,0.3)` | Amber box-shadow glow during pulse (`0 0 0 4px`) |
 | In-progress text highlight | `rgba(139,92,246,0.2)` | Purple background on in-progress text annotations |
 | Addressed text highlight | `rgba(59,130,246,0.2)` | Blue background on addressed text annotations |
 | In-progress element outline | `rgba(139,92,246,0.5)` | Dashed purple outline on in-progress annotated elements |

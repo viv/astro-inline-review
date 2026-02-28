@@ -5,6 +5,7 @@ import {
   getHighlightMarks,
   pulseHighlight,
   applyElementHighlight,
+  removeElementHighlight,
   pulseElementHighlight,
   HIGHLIGHT_ATTR,
   ELEMENT_HIGHLIGHT_ATTR,
@@ -320,5 +321,41 @@ describe('pulseElementHighlight', () => {
     // After 600ms, original background is restored
     vi.advanceTimersByTime(600);
     expect(el.style.backgroundColor).toBe('rgb(240, 240, 240)');
+  });
+});
+
+describe('removeElementHighlight — mid-pulse cleanup', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('clears pulse styles when highlight is removed mid-animation', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    // Start pulse
+    pulseElementHighlight('el-1');
+    const el = document.querySelector('div') as HTMLElement;
+
+    // Verify pulse styles are active
+    expect(el.style.backgroundColor).toBe('rgba(217, 119, 6, 0.15)');
+    expect(el.style.boxShadow).toBe('0 0 0 4px rgba(217,119,6,0.3)');
+
+    // Remove highlight mid-pulse (simulates user deleting annotation quickly)
+    removeElementHighlight('el-1');
+
+    // All styles should be cleared, including pulse properties
+    expect(el.style.outline).toBe('');
+    expect(el.style.outlineOffset).toBe('');
+    expect(el.style.cursor).toBe('');
+    expect(el.style.backgroundColor).toBe('');
+    expect(el.style.boxShadow).toBe('');
+    expect(el.style.transition).toBe('');
+    expect(el.hasAttribute('data-air-pulse')).toBe(false);
+    expect(el.hasAttribute('data-air-element-id')).toBe(false);
   });
 });

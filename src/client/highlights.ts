@@ -128,9 +128,14 @@ export function removeElementHighlight(id: string): void {
   const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${CSS.escape(id)}"]`) as HTMLElement | null;
   if (!el) return;
   el.removeAttribute(ELEMENT_HIGHLIGHT_ATTR);
+  el.removeAttribute('data-air-pulse');
   el.style.outline = '';
   el.style.outlineOffset = '';
   el.style.cursor = '';
+  // Clear properties that may be set by a mid-flight pulse animation
+  el.style.backgroundColor = '';
+  el.style.boxShadow = '';
+  el.style.transition = '';
 }
 
 /**
