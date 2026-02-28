@@ -11,6 +11,7 @@ vi.mock('../../src/client/api.js', () => ({
     createAnnotation: vi.fn(),
     updateAnnotation: vi.fn(),
     deleteAnnotation: vi.fn(),
+    reanchorAnnotation: vi.fn(() => Promise.resolve({})),
   },
 }));
 
@@ -97,7 +98,7 @@ import {
 } from '../../src/client/highlights.js';
 import { readCache, writeCache } from '../../src/client/cache.js';
 import { buildElementSelector, resolveElement } from '../../src/client/element-selector.js';
-import { deserializeRange, findRangeByContext } from '../../src/client/selection.js';
+import { serializeRange, deserializeRange, findRangeByContext, findRangeByContextSeam } from '../../src/client/selection.js';
 import { updateBadge } from '../../src/client/ui/fab.js';
 
 // --- Helpers ---
@@ -694,6 +695,221 @@ describe('createAnnotator', () => {
 
       expect(removeHighlight).toHaveBeenCalledWith('old-1');
       expect(removeAllElementHighlights).toHaveBeenCalled();
+    });
+
+    it('re-anchors annotation after Tier 2.5 match (replacedText)', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({
+        id: 'ann-1',
+        selectedText: 'original text',
+        replacedText: 'replacement text',
+        range: {
+          startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          startOffset: 0,
+          endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          endOffset: 13,
+          selectedText: 'original text',
+          contextBefore: 'before ',
+          contextAfter: ' after',
+        },
+      });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      // Tier 1 fails
+      (deserializeRange as Mock).mockReturnValue(null);
+
+      // Tier 2 fails, Tier 2.5 succeeds
+      const tier25Range = document.createRange();
+      (findRangeByContext as Mock)
+        .mockReturnValueOnce(null)       // Tier 2
+        .mockReturnValueOnce(tier25Range); // Tier 2.5
+
+      const freshRange = {
+        startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+        startOffset: 7,
+        endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+        endOffset: 23,
+        selectedText: 'replacement text',
+        contextBefore: 'before ',
+        contextAfter: ' after',
+      };
+      (serializeRange as Mock).mockReturnValue(freshRange);
+      (api.reanchorAnnotation as Mock).mockResolvedValue({});
+
+      await annotator.restoreHighlights();
+
+      expect(serializeRange).toHaveBeenCalledWith(tier25Range);
+      expect(api.reanchorAnnotation).toHaveBeenCalledWith('ann-1', freshRange, true);
+    });
+
+    it('re-anchors annotation after Tier 3 match (context seam)', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({
+        id: 'ann-1',
+        selectedText: 'original text',
+        range: {
+          startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          startOffset: 0,
+          endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          endOffset: 13,
+          selectedText: 'original text',
+          contextBefore: 'before ',
+          contextAfter: ' after',
+        },
+      });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      // Tier 1, 2 fail — no replacedText so Tier 2.5 is skipped
+      (deserializeRange as Mock).mockReturnValue(null);
+      (findRangeByContext as Mock).mockReturnValue(null);
+
+      // Tier 3 succeeds
+      const tier3Range = document.createRange();
+      (findRangeByContextSeam as Mock).mockReturnValue(tier3Range);
+
+      const freshRange = {
+        startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+        startOffset: 7,
+        endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+        endOffset: 20,
+        selectedText: 'rewritten text',
+        contextBefore: 'before ',
+        contextAfter: ' after',
+      };
+      (serializeRange as Mock).mockReturnValue(freshRange);
+      (api.reanchorAnnotation as Mock).mockResolvedValue({});
+
+      await annotator.restoreHighlights();
+
+      expect(serializeRange).toHaveBeenCalledWith(tier3Range);
+      // No replacedText on this annotation, so clearReplacedText should be false
+      expect(api.reanchorAnnotation).toHaveBeenCalledWith('ann-1', freshRange, false);
+    });
+
+    it('does NOT re-anchor after Tier 1 match', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({ id: 'ann-1' });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      // Tier 1 succeeds
+      const tier1Range = document.createRange();
+      (deserializeRange as Mock).mockReturnValue(tier1Range);
+
+      await annotator.restoreHighlights();
+
+      expect(applyHighlight).toHaveBeenCalledWith(tier1Range, 'ann-1', 'open');
+      expect(api.reanchorAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('does NOT re-anchor after Tier 2 match (original text found by context)', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({ id: 'ann-1' });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      // Tier 1 fails
+      (deserializeRange as Mock).mockReturnValue(null);
+
+      // Tier 2 succeeds — original text found by context matching
+      const tier2Range = document.createRange();
+      (findRangeByContext as Mock).mockReturnValue(tier2Range);
+
+      await annotator.restoreHighlights();
+
+      expect(applyHighlight).toHaveBeenCalledWith(tier2Range, 'ann-1', 'open');
+      // Tier 2 matches the original text so range data is still semantically valid
+      expect(api.reanchorAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('clears replacedText when re-anchoring annotation that has replacedText', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({
+        id: 'ann-1',
+        replacedText: 'new text',
+        range: {
+          startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          startOffset: 0,
+          endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          endOffset: 8,
+          selectedText: 'old text',
+          contextBefore: 'before ',
+          contextAfter: ' after',
+        },
+      });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      (deserializeRange as Mock).mockReturnValue(null);
+      const tier25Range = document.createRange();
+      (findRangeByContext as Mock)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(tier25Range);
+
+      (serializeRange as Mock).mockReturnValue({ startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'new text', contextBefore: 'before ', contextAfter: ' after' });
+      (api.reanchorAnnotation as Mock).mockResolvedValue({});
+
+      await annotator.restoreHighlights();
+
+      // clearReplacedText should be true since annotation has replacedText
+      expect(api.reanchorAnnotation).toHaveBeenCalledWith(
+        'ann-1',
+        expect.any(Object),
+        true,
+      );
+    });
+
+    it('debounces re-anchoring — does not re-anchor same annotation twice', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({
+        id: 'ann-1',
+        replacedText: 'new text',
+        range: {
+          startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          startOffset: 0,
+          endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+          endOffset: 8,
+          selectedText: 'old text',
+          contextBefore: 'before ',
+          contextAfter: ' after',
+        },
+      });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      (deserializeRange as Mock).mockReturnValue(null);
+      const tier25Range = document.createRange();
+      (findRangeByContext as Mock)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(tier25Range);
+
+      (serializeRange as Mock).mockReturnValue({ startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'new text', contextBefore: '', contextAfter: '' });
+      (api.reanchorAnnotation as Mock).mockResolvedValue({});
+
+      // First restore
+      await annotator.restoreHighlights();
+      expect(api.reanchorAnnotation).toHaveBeenCalledTimes(1);
+
+      // Reset mocks for second restore, but keep same mock behaviour
+      vi.clearAllMocks();
+      (api.getStore as Mock).mockResolvedValue(store);
+      (deserializeRange as Mock).mockReturnValue(null);
+      (findRangeByContext as Mock)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(tier25Range);
+      (serializeRange as Mock).mockReturnValue({ startXPath: '', startOffset: 0, endXPath: '', endOffset: 0, selectedText: 'new text', contextBefore: '', contextAfter: '' });
+
+      // Second restore — should NOT re-anchor again
+      await annotator.restoreHighlights();
+      expect(api.reanchorAnnotation).not.toHaveBeenCalled();
     });
 
     it('falls back to cache on API error', async () => {

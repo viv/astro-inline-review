@@ -1,4 +1,4 @@
-import type { Annotation, TextAnnotation, ElementAnnotation, PageNote, ReviewStore } from './types.js';
+import type { Annotation, TextAnnotation, ElementAnnotation, PageNote, ReviewStore, SerializedRange } from './types.js';
 
 const API_BASE = '/__inline-review/api';
 
@@ -39,6 +39,17 @@ export const api = {
 
   async deleteAnnotation(id: string): Promise<void> {
     await request(`/annotations/${id}`, { method: 'DELETE' });
+  },
+
+  /** Re-anchor a text annotation with fresh range data after fallback match */
+  async reanchorAnnotation(id: string, range: SerializedRange, clearReplacedText: boolean): Promise<Annotation> {
+    return request<Annotation>(`/annotations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        range,
+        ...(clearReplacedText ? { replacedText: null } : {}),
+      }),
+    });
   },
 
   async createPageNote(data: Omit<PageNote, 'id' | 'createdAt' | 'updatedAt'>): Promise<PageNote> {

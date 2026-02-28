@@ -75,6 +75,9 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
   // Track scroll position when popup was shown (for scroll-threshold dismissal)
   let popupScrollY: number | null = null;
 
+  // Track annotations that have been re-anchored this session to avoid redundant PATCHes
+  const reanchoredIds = new Set<string>();
+
   // --- Text Selection Detection ---
 
   function onMouseUp(e: MouseEvent): void {
@@ -488,6 +491,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       const textAnnotations = pageAnnotations.filter(isTextAnnotation);
       for (const annotation of textAnnotations) {
         const status = getAnnotationStatus(annotation);
+        let needsReanchor = false;
 
         // Tier 1: Try XPath + offset
         let range = deserializeRange(annotation.range);
@@ -508,6 +512,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
             annotation.range.contextBefore,
             annotation.range.contextAfter,
           );
+          if (range) needsReanchor = true;
         }
 
         // Tier 3: Context-seam — find where contextBefore and contextAfter
@@ -517,11 +522,25 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
             annotation.range.contextBefore,
             annotation.range.contextAfter,
           );
+          if (range) needsReanchor = true;
         }
 
         // Tier 4: Orphaned — no highlight, visible only in panel
         if (range) {
           applyHighlight(range, annotation.id, status);
+
+          // Re-anchor: update stored range data so future restores use Tier 1
+          if (needsReanchor && !reanchoredIds.has(annotation.id)) {
+            reanchoredIds.add(annotation.id);
+            const freshRange = serializeRange(range);
+            api.reanchorAnnotation(
+              annotation.id,
+              freshRange,
+              !!annotation.replacedText,
+            ).catch(err => {
+              console.error('[astro-inline-review] Failed to re-anchor annotation:', err);
+            });
+          }
         }
       }
 
