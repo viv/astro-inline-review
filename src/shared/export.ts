@@ -60,6 +60,7 @@ export function generateExport(store: ReviewStore): string {
         const status = getAnnotationStatus(a);
         const statusLabel = status === 'resolved' ? ' ✅ [Resolved]'
           : status === 'addressed' ? ' 🔧 [Addressed]'
+          : status === 'in_progress' ? ' ⏳ [In Progress]'
           : '';
         lines.push(`${i}. **"${a.selectedText}"**${statusLabel}`);
         if (a.note) {
@@ -84,6 +85,7 @@ export function generateExport(store: ReviewStore): string {
         const status = getAnnotationStatus(a);
         const statusLabel = status === 'resolved' ? ' ✅ [Resolved]'
           : status === 'addressed' ? ' 🔧 [Addressed]'
+          : status === 'in_progress' ? ' ⏳ [In Progress]'
           : '';
         lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)${statusLabel}`);
         if (a.note) {

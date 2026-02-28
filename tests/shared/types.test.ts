@@ -46,6 +46,12 @@ describe('getAnnotationStatus', () => {
     expect(getAnnotationStatus(annotation)).toBe('open');
   });
 
+  it('returns in_progress when status is in_progress', () => {
+    const annotation = makeAnnotation({ status: 'in_progress' });
+
+    expect(getAnnotationStatus(annotation)).toBe('in_progress');
+  });
+
   it('returns open when status is open even if resolvedAt is set (status takes precedence)', () => {
     const annotation = makeAnnotation({
       status: 'open',
