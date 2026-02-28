@@ -764,6 +764,139 @@ describe('middleware', () => {
     });
   });
 
+  describe('PATCH /annotations/:id reply', () => {
+    async function createTextAnnotation() {
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'some text',
+        note: 'original note',
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 9, selectedText: 'some text', contextBefore: '', contextAfter: '' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      return JSON.parse(createRes._body);
+    }
+
+    it('appends reviewer reply to replies array', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        reply: { message: 'please fix the typo' },
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.replies).toHaveLength(1);
+      expect(patched.replies[0].message).toBe('please fix the typo');
+    });
+
+    it('sets role to reviewer and createdAt timestamp', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        reply: { message: 'reviewer feedback' },
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.replies[0].role).toBe('reviewer');
+      expect(patched.replies[0].createdAt).toBeTruthy();
+      // Verify createdAt is a valid ISO 8601 timestamp
+      expect(new Date(patched.replies[0].createdAt).toISOString()).toBe(patched.replies[0].createdAt);
+    });
+
+    it('works alongside status change (reopen + reply)', async () => {
+      const created = await createTextAnnotation();
+
+      // First mark as addressed
+      const addressReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'addressed',
+      });
+      const addressRes = mockResponse();
+      await middleware(addressReq as any, addressRes as any, () => {});
+      expect(addressRes._status).toBe(200);
+
+      // Reopen with a reply explaining why
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'open',
+        reply: { message: 'try again like this' },
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.status).toBe('open');
+      expect(patched.addressedAt).toBeUndefined();
+      expect(patched.resolvedAt).toBeUndefined();
+      expect(patched.replies).toHaveLength(1);
+      expect(patched.replies[0].message).toBe('try again like this');
+      expect(patched.replies[0].role).toBe('reviewer');
+    });
+
+    it('preserves existing agent replies when adding reviewer reply', async () => {
+      const created = await createTextAnnotation();
+
+      // Simulate an existing agent reply by writing directly to storage
+      await storage.mutate(store => {
+        const idx = store.annotations.findIndex(a => a.id === created.id);
+        store.annotations[idx] = {
+          ...store.annotations[idx],
+          replies: [{ message: 'I fixed the typo', createdAt: new Date().toISOString(), role: 'agent' as const }],
+        };
+        return store;
+      });
+
+      // Add a reviewer reply via PATCH
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        reply: { message: 'not quite, try again' },
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.replies).toHaveLength(2);
+      expect(patched.replies[0].role).toBe('agent');
+      expect(patched.replies[0].message).toBe('I fixed the typo');
+      expect(patched.replies[1].role).toBe('reviewer');
+      expect(patched.replies[1].message).toBe('not quite, try again');
+    });
+
+    it('rejects empty reply message with 400', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        reply: { message: '   ' },
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(400);
+      const body = JSON.parse(patchRes._body);
+      expect(body.error).toContain('reply.message must be a non-empty string');
+    });
+
+    it('rejects reply with missing message field with 400', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        reply: {},
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(400);
+      const body = JSON.parse(patchRes._body);
+      expect(body.error).toContain('reply.message must be a non-empty string');
+    });
+  });
+
   describe('PATCH field allowlist', () => {
     it('PATCH /annotations/:id only applies allowlisted fields', async () => {
       // Create an annotation

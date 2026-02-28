@@ -1034,6 +1034,34 @@ describe('createPanel — status lifecycle buttons', () => {
     expect(reopenBtn!.tagName.toLowerCase()).toBe('button');
   });
 
+  it('shows Accept button on resolved annotation alongside Reopen', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]');
+    expect(acceptBtn).not.toBeNull();
+    expect(acceptBtn!.textContent).toBe('Accept');
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
+    expect(reopenBtn).not.toBeNull();
+  });
+
+  it('Accept button on resolved annotation calls onAnnotationDelete', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'resolved-accept', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]') as HTMLButtonElement;
+    acceptBtn.click();
+
+    expect(callbacks.onAnnotationDelete).toHaveBeenCalledWith('resolved-accept');
+  });
+
   it('does not show Reopen button on open annotation', async () => {
     await renderWithStore({
       version: 1,
@@ -1098,7 +1126,7 @@ describe('createPanel — status lifecycle buttons', () => {
     expect(reopenBtn).toBeNull();
   });
 
-  it('Reopen button calls onAnnotationStatusChange with open', async () => {
+  it('Reopen button shows inline form instead of immediately reopening', async () => {
     await renderWithStore({
       version: 1,
       annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
@@ -1108,7 +1136,136 @@ describe('createPanel — status lifecycle buttons', () => {
     const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]') as HTMLButtonElement;
     reopenBtn.click();
 
-    expect(callbacks.onAnnotationStatusChange).toHaveBeenCalledWith('reopen-me', 'open');
+    // Should NOT have called onAnnotationStatusChange yet
+    expect(callbacks.onAnnotationStatusChange).not.toHaveBeenCalled();
+
+    // Should show the reopen form
+    const form = shadowRoot.querySelector('[data-air-el="reopen-form"]');
+    expect(form).not.toBeNull();
+
+    const textarea = shadowRoot.querySelector('[data-air-el="reopen-textarea"]');
+    expect(textarea).not.toBeNull();
+  });
+
+  it('Reopen form submit calls onAnnotationStatusChange with open and no reply when empty', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]') as HTMLButtonElement;
+    reopenBtn.click();
+
+    const submitBtn = shadowRoot.querySelector('[data-air-el="reopen-submit"]') as HTMLButtonElement;
+    submitBtn.click();
+
+    expect(callbacks.onAnnotationStatusChange).toHaveBeenCalledWith('reopen-me', 'open', undefined);
+  });
+
+  it('Reopen form submit includes reply message when provided', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]') as HTMLButtonElement;
+    reopenBtn.click();
+
+    const textarea = shadowRoot.querySelector('[data-air-el="reopen-textarea"]') as HTMLTextAreaElement;
+    textarea.value = 'Actually I meant remove the comma too';
+
+    const submitBtn = shadowRoot.querySelector('[data-air-el="reopen-submit"]') as HTMLButtonElement;
+    submitBtn.click();
+
+    expect(callbacks.onAnnotationStatusChange).toHaveBeenCalledWith('reopen-me', 'open', 'Actually I meant remove the comma too');
+  });
+
+  it('Reopen form cancel removes form without calling callback', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]') as HTMLButtonElement;
+    reopenBtn.click();
+
+    expect(shadowRoot.querySelector('[data-air-el="reopen-form"]')).not.toBeNull();
+
+    const cancelBtn = shadowRoot.querySelector('[data-air-el="reopen-cancel"]') as HTMLButtonElement;
+    cancelBtn.click();
+
+    expect(shadowRoot.querySelector('[data-air-el="reopen-form"]')).toBeNull();
+    expect(callbacks.onAnnotationStatusChange).not.toHaveBeenCalled();
+  });
+
+  it('Reopen form submit removes the form from DOM', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]') as HTMLButtonElement;
+    reopenBtn.click();
+    expect(shadowRoot.querySelector('[data-air-el="reopen-form"]')).not.toBeNull();
+
+    const submitBtn = shadowRoot.querySelector('[data-air-el="reopen-submit"]') as HTMLButtonElement;
+    submitBtn.click();
+
+    expect(shadowRoot.querySelector('[data-air-el="reopen-form"]')).toBeNull();
+  });
+
+  it('displays reviewer reply with Reviewer: prefix', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({
+        replies: [{ message: 'Please try again', createdAt: '2026-02-22T10:30:00Z', role: 'reviewer' }],
+      })],
+      pageNotes: [],
+    });
+
+    const reply = shadowRoot.querySelector('[data-air-el="reviewer-reply"]');
+    expect(reply).not.toBeNull();
+    expect(reply!.textContent).toContain('Reviewer:');
+    expect(reply!.textContent).toContain('Please try again');
+  });
+
+  it('displays agent reply with Agent: prefix (backward compat)', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({
+        replies: [{ message: 'Fixed it', createdAt: '2026-02-22T10:30:00Z' }],
+      })],
+      pageNotes: [],
+    });
+
+    const reply = shadowRoot.querySelector('[data-air-el="agent-reply"]');
+    expect(reply).not.toBeNull();
+    expect(reply!.textContent).toContain('Agent:');
+    expect(reply!.textContent).toContain('Fixed it');
+  });
+
+  it('displays mixed agent and reviewer replies in order', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({
+        replies: [
+          { message: 'Fixed the typo', createdAt: '2026-02-22T10:00:00Z', role: 'agent' },
+          { message: 'Not quite right', createdAt: '2026-02-22T11:00:00Z', role: 'reviewer' },
+        ],
+      })],
+      pageNotes: [],
+    });
+
+    const agentReply = shadowRoot.querySelector('[data-air-el="agent-reply"]');
+    const reviewerReply = shadowRoot.querySelector('[data-air-el="reviewer-reply"]');
+    expect(agentReply).not.toBeNull();
+    expect(reviewerReply).not.toBeNull();
+    expect(agentReply!.textContent).toContain('Fixed the typo');
+    expect(reviewerReply!.textContent).toContain('Not quite right');
   });
 
   it('shows in-progress badge for in_progress annotation', async () => {

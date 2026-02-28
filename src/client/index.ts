@@ -101,9 +101,13 @@ function init(): void {
         showToast(shadowRoot, 'Failed to delete annotation');
       }
     },
-    onAnnotationStatusChange: async (id, status) => {
+    onAnnotationStatusChange: async (id, status, replyMessage?) => {
       try {
-        await api.updateAnnotation(id, { status } as Partial<import('./types.js').Annotation>);
+        const data: Record<string, unknown> = { status };
+        if (replyMessage) {
+          data.reply = { message: replyMessage };
+        }
+        await api.updateAnnotation(id, data as Partial<import('./types.js').Annotation>);
         await mediator.restoreHighlights();
         await refreshBadge();
         mediator.refreshPanel();

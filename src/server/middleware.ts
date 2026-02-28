@@ -157,7 +157,7 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
       const annotationMatch = routePath?.match(/^\/annotations\/([^/]+)$/);
       if (annotationMatch && method === 'PATCH') {
         const id = annotationMatch[1];
-        const body = await readBody<Partial<Annotation> & { replacedText?: string; status?: string }>(req);
+        const body = await readBody<Partial<Annotation> & { replacedText?: string; status?: string; reply?: { message: string } }>(req);
 
         if (typeof body.replacedText === 'string' && !body.replacedText.trim()) {
           throw new ValidationError('replacedText must not be empty');
@@ -165,6 +165,12 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
 
         if (body.status !== undefined && !VALID_STATUSES.includes(body.status as AnnotationStatus)) {
           throw new ValidationError('status must be one of: open, in_progress, addressed, resolved');
+        }
+
+        if (body.reply !== undefined) {
+          if (!body.reply || typeof body.reply.message !== 'string' || !body.reply.message.trim()) {
+            throw new ValidationError('reply.message must be a non-empty string');
+          }
         }
 
         let updated!: Annotation;
@@ -198,6 +204,16 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
             }
           }
 
+          // Append reviewer reply if provided
+          const replies = [...(existing.replies ?? [])];
+          if (body.reply) {
+            replies.push({
+              message: body.reply.message.trim(),
+              createdAt: now,
+              role: 'reviewer',
+            });
+          }
+
           store.annotations[idx] = {
             ...existing,
             note: body.note ?? existing.note,
@@ -206,6 +222,7 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
               ? { replacedText: body.replacedText }
               : {}),
             ...statusUpdates,
+            replies,
             updatedAt: now,
           };
           updated = store.annotations[idx];

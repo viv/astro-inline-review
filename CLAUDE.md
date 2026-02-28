@@ -38,7 +38,7 @@ This file is the source of truth. `ReviewStorage` reads from disk on every call 
       "inProgressAt": "ISO 8601 (optional)",
       "resolvedAt": "ISO 8601 (optional)",
       "addressedAt": "ISO 8601 (optional)",
-      "replies": [{ "message": "string", "createdAt": "ISO 8601" }],
+      "replies": [{ "message": "string", "createdAt": "ISO 8601", "role": "agent | reviewer (optional, defaults to agent)" }],
       "selectedText": "quoted text (text annotations only)",
       "replacedText": "text that replaced the original (optional, text annotations only)",
       "range": { "startXPath": "...", "startOffset": 0, "endXPath": "...", "endOffset": 0, "selectedText": "...", "contextBefore": "...", "contextAfter": "..." },

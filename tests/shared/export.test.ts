@@ -131,6 +131,89 @@ describe('generateExport', () => {
     expect(result).toContain('**Agent:** Also updated tests');
   });
 
+  it('renders reviewer reply with Reviewer prefix', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeTextAnnotation({
+          replies: [
+            { message: 'Please also check the footer', role: 'reviewer', createdAt: '2026-02-22T10:00:00Z' },
+          ],
+        }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).toContain('**Reviewer:** Please also check the footer');
+    expect(result).not.toContain('**Agent:**');
+  });
+
+  it('renders mixed agent and reviewer replies with correct prefixes in order', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeTextAnnotation({
+          replies: [
+            { message: 'Fixed the typo', role: 'agent', createdAt: '2026-02-22T10:00:00Z' },
+            { message: 'Looks good but check line 5', role: 'reviewer', createdAt: '2026-02-22T11:00:00Z' },
+            { message: 'Line 5 updated too', role: 'agent', createdAt: '2026-02-22T12:00:00Z' },
+          ],
+        }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    const lines = result.split('\n');
+    const replyLines = lines.filter(l => l.includes('**Agent:**') || l.includes('**Reviewer:**'));
+    expect(replyLines).toHaveLength(3);
+    expect(replyLines[0]).toContain('**Agent:** Fixed the typo');
+    expect(replyLines[1]).toContain('**Reviewer:** Looks good but check line 5');
+    expect(replyLines[2]).toContain('**Agent:** Line 5 updated too');
+  });
+
+  it('defaults reply without role to Agent prefix (backward compat)', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeTextAnnotation({
+          replies: [
+            { message: 'No role field here', createdAt: '2026-02-22T10:00:00Z' },
+          ],
+        }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).toContain('**Agent:** No role field here');
+    expect(result).not.toContain('**Reviewer:**');
+  });
+
+  it('renders reviewer reply with correct prefix on element annotations', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeElementAnnotation({
+          replies: [
+            { message: 'Agent fixed it', role: 'agent', createdAt: '2026-02-22T10:00:00Z' },
+            { message: 'Still needs work', role: 'reviewer', createdAt: '2026-02-22T11:00:00Z' },
+          ],
+        }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).toContain('**Agent:** Agent fixed it');
+    expect(result).toContain('**Reviewer:** Still needs work');
+  });
+
   it('includes page notes in the export', () => {
     const store: ReviewStore = {
       version: 1,

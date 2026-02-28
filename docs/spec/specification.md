@@ -122,7 +122,7 @@ interface BaseAnnotation {
   inProgressAt?: string;        // ISO 8601 — when marked in_progress by an agent (optional)
   addressedAt?: string;         // ISO 8601 — when marked addressed by an agent (optional)
   resolvedAt?: string;          // ISO 8601 — when marked resolved by a human reviewer (optional)
-  replies?: AgentReply[];       // Agent replies to this annotation (optional)
+  replies?: AgentReply[];       // Replies from agents and reviewers (optional)
 }
 ```
 
@@ -130,8 +130,9 @@ interface BaseAnnotation {
 
 ```typescript
 interface AgentReply {
-  message: string;     // The agent's reply text
-  createdAt: string;   // ISO 8601 timestamp
+  message: string;                 // The reply text
+  createdAt: string;               // ISO 8601 timestamp
+  role?: 'agent' | 'reviewer';    // Who wrote the reply (defaults to 'agent')
 }
 ```
 
@@ -190,7 +191,7 @@ open → in_progress → addressed → resolved
 | `open` | Annotation is new or has been reopened | Default on creation; human reviewer via Reopen button |
 | `in_progress` | An agent is actively working on the annotation | Agent via MCP `set_in_progress` tool |
 | `addressed` | An agent has acted on the annotation | Agent via MCP `resolve_annotation` tool (default behaviour) |
-| `resolved` | A human reviewer has accepted the agent's work | Human reviewer via Accept button in panel; or agent via MCP with `autoResolve: true` |
+| `resolved` | Agent's work has been auto-resolved (skipping human review) | Agent via MCP `resolve_annotation` with `autoResolve: true` |
 
 **Status transitions**:
 - `open` → `in_progress`: Agent calls `set_in_progress` MCP tool before editing source code
@@ -431,9 +432,9 @@ Note: The GET response returns the full store shape (including `pageNotes`), wit
 
 The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields default to empty strings/objects. If `type` is not provided, it defaults to `'text'` (backward compatibility).
 
-**PATCH /annotations/:id** request body: `{ "note": "new value", "replacedText": "new text", "status": "addressed" }`
+**PATCH /annotations/:id** request body: `{ "note": "new value", "replacedText": "new text", "status": "addressed", "reply": { "message": "follow-up note" } }`
 
-**Field mutability on PATCH**: The server uses an allowlist pattern — only `note`, `replacedText` (for text annotations), and `status` from the request body are applied; all other fields in the request body are ignored.
+**Field mutability on PATCH**: The server uses an allowlist pattern — only `note`, `replacedText` (for text annotations), `status`, and `reply` from the request body are applied; all other fields in the request body are ignored. The `reply` field, when provided, appends a new entry to the annotation's `replies` array with `role: 'reviewer'` and a server-generated `createdAt` timestamp.
 
 | Field | Mutable via PATCH? | Notes |
 |-------|-------------------|-------|
@@ -468,6 +469,7 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 `PATCH /annotations/:id` validates:
 - `replacedText` must not be empty (if provided)
 - `status` must be one of `'open'`, `'addressed'`, `'resolved'` (if provided)
+- `reply.message` must be a non-empty string (if `reply` is provided)
 
 `POST /page-notes` validates:
 - `pageUrl` must be a string
@@ -963,11 +965,16 @@ Each annotation item includes contextual action buttons based on its effective s
 |--------|--------------|-------|---------------|--------|
 | `open` | Delete | "Delete" | `annotation-delete` | Two-click delete (see section 6.2.3d) |
 | `addressed` | Accept | "Accept" | `annotation-accept` | Deletes annotation entirely via `DELETE /annotations/:id` |
-| `resolved` | Reopen | "Reopen" | `annotation-reopen` | Transitions annotation to `open` via `PATCH` with `status: 'open'` |
+| `resolved` | Accept, Reopen | "Accept", "Reopen" | `annotation-accept`, `annotation-reopen` | Accept deletes annotation; Reopen shows inline form (see below) |
 
-**Accept button**: Green background (`#166534`), green text (`#86EFAC`). Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `DELETE /annotations/:id`, removes highlights, refreshes badge, and refreshes panel. The annotation is removed entirely — accepting means the reviewer is happy with the change and the annotation has served its purpose.
+**Accept button**: Green background (`#166534`), green text (`#86EFAC`). Shown on both `addressed` and `resolved` annotations. Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `DELETE /annotations/:id`, removes highlights, refreshes badge, and refreshes panel. The annotation is removed entirely — accepting means the reviewer is happy with the change and the annotation has served its purpose.
 
-**Reopen button**: Styled as a cancel-type button. Used when the reviewer disagrees with the resolution and wants to re-open the annotation. Sends `PATCH /annotations/:id` with `{ "status": "open" }`, then restores highlights, refreshes badge, and refreshes panel.
+**Reopen button**: Styled as a cancel-type button. Used when the reviewer disagrees with the resolution and wants to re-open the annotation. Instead of immediately changing status, clicking Reopen shows an inline form (`data-air-el="reopen-form"`) with:
+- A textarea (`data-air-el="reopen-textarea"`) for an optional follow-up note, placeholder: "Add a follow-up note (optional)…"
+- A "Cancel" button (`data-air-el="reopen-cancel"`) that dismisses the form without changes
+- A "Reopen" submit button (`data-air-el="reopen-submit"`) that sends `PATCH /annotations/:id` with `{ "status": "open" }` and optionally `{ "reply": { "message": "..." } }` if the reviewer entered a note
+
+The follow-up note is appended to the annotation's `replies` array with `role: 'reviewer'`. This enables back-and-forth conversation between the reviewer and agent. The form is removed from the DOM after submit or cancel. Clicks within the form call `e.stopPropagation()` to prevent scroll-to-annotation.
 
 Both buttons call `e.stopPropagation()` to prevent the click from triggering the scroll-to-annotation behaviour.
 
@@ -1571,9 +1578,14 @@ The integration exposes stable `data-air-el` and `data-air-state` attributes for
 | `element-annotation-item` | Element annotation list item in panel | Shadow DOM | Present when panel is open and element annotations exist |
 | `panel-content` | Panel content area (scrollable) | Shadow DOM | Always present (child of panel) |
 | `status-badge` | Status badge on annotation (addressed or resolved) | Shadow DOM | Present on non-open annotations |
-| `annotation-accept` | Accept button on addressed annotation | Shadow DOM | Present on addressed annotations |
+| `annotation-accept` | Accept button on addressed or resolved annotation | Shadow DOM | Present on addressed and resolved annotations |
 | `annotation-reopen` | Reopen button on resolved annotation | Shadow DOM | Present on resolved annotations |
-| `agent-reply` | Agent reply block on annotation | Shadow DOM | Present when annotation has agent replies |
+| `agent-reply` | Agent reply block on annotation | Shadow DOM | Present when annotation has replies with `role !== 'reviewer'` |
+| `reviewer-reply` | Reviewer reply block on annotation | Shadow DOM | Present when annotation has replies with `role === 'reviewer'` |
+| `reopen-form` | Inline form for reopening with follow-up note | Shadow DOM | Present after clicking Reopen button |
+| `reopen-textarea` | Textarea in reopen form | Shadow DOM | Present inside reopen-form |
+| `reopen-submit` | Submit button in reopen form | Shadow DOM | Present inside reopen-form |
+| `reopen-cancel` | Cancel button in reopen form | Shadow DOM | Present inside reopen-form |
 | `first-use-tooltip` | First-use tooltip near FAB | Shadow DOM | Shown once on first visit, then dismissed |
 | `empty-arrow` | Directional arrow in empty state | Shadow DOM | Present when "This Page" tab has no annotations |
 | `shortcuts-help` | Keyboard shortcuts footer in panel | Shadow DOM | Always present (child of panel) |
@@ -1832,8 +1844,8 @@ The following accessibility features are not yet implemented:
 | Click element annotation in panel | Page scrolls to element, outline pulses | 6.2.3a, 8.5.3 |
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
 | Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
-| Click Accept on addressed annotation | Annotation is deleted entirely (removed from store, highlights cleared) | 6.2.3c |
-| Click Reopen on resolved annotation | Annotation status changes to open, highlights update colours | 6.2.3c, 3.2.5 |
+| Click Accept on addressed or resolved annotation | Annotation is deleted entirely (removed from store, highlights cleared) | 6.2.3c |
+| Click Reopen on resolved annotation | Shows inline form for optional follow-up note, then reopens | 6.2.3c |
 | Click Delete on annotation in panel | Two-click confirmation: first click shows "Sure?", second click deletes | 6.2.3, 6.2.3a |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |
 | Press Escape | Dismiss popup (priority) or close panel | 10.4 |
