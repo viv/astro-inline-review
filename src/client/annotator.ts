@@ -75,6 +75,11 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
   // Track scroll position when popup was shown (for scroll-threshold dismissal)
   let popupScrollY: number | null = null;
 
+  // Grace period: don't dismiss the popup within this window of it being shown.
+  // Avoids race between deferred focus (requestAnimationFrame) and scroll events.
+  const POPUP_GRACE_MS = 400;
+  let popupShownAt = 0;
+
   // Track annotations that have been re-anchored this session to avoid redundant PATCHes
   const reanchoredIds = new Set<string>();
 
@@ -119,6 +124,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
 
     currentRange = range.cloneRange();
     popupScrollY = window.scrollY;
+    popupShownAt = Date.now();
 
     const rect = range.getBoundingClientRect();
     showPopup(popup, text, rect, {
@@ -138,6 +144,11 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
         if (popup.textarea.value.trim()) return;
         // Don't dismiss if user is actively interacting with the popup
         if (popup.container.contains(shadowRoot.activeElement)) return;
+        // Don't dismiss during grace period after popup was shown.
+        // Focus is set via requestAnimationFrame so scroll events can
+        // race ahead of the focus call, making the activeElement check
+        // unreliable in the first few hundred milliseconds.
+        if (Date.now() - popupShownAt < POPUP_GRACE_MS) return;
         hidePopup(popup);
         currentRange = null;
         currentElementTarget = null;
@@ -287,6 +298,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     // Store element target for save flow
     currentElementTarget = target;
     popupScrollY = window.scrollY;
+    popupShownAt = Date.now();
 
     // Build element description for popup
     const selector = buildElementSelector(target);
@@ -388,6 +400,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     if (!annotation || !isTextAnnotation(annotation)) return;
 
     popupScrollY = window.scrollY;
+    popupShownAt = Date.now();
     const rect = mark.getBoundingClientRect();
     showEditPopup(popup, annotation.selectedText, annotation.note, rect, {
       onSave: async (newNote) => {
@@ -426,6 +439,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     if (!annotation || !isElementAnnotation(annotation)) return;
 
     popupScrollY = window.scrollY;
+    popupShownAt = Date.now();
     const rect = element.getBoundingClientRect();
     showEditElementPopup(popup, annotation.elementSelector.description, annotation.note, rect, {
       onSave: async (newNote) => {

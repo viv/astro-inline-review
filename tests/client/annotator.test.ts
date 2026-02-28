@@ -440,20 +440,52 @@ describe('createAnnotator', () => {
       expect(hidePopup).not.toHaveBeenCalled();
     });
 
-    it('dismisses popup when no focus and no content (passive mode)', () => {
-      initAnnotator();
-      setupVisiblePopup();
+    it('dismisses popup when no focus and no content after grace period', () => {
+      vi.useFakeTimers();
+      try {
+        initAnnotator();
+        setupVisiblePopup();
 
-      mockPopup.textarea.value = '';
-      // Ensure nothing in popup is focused — blur and don't re-focus
-      mockPopup.textarea.blur();
+        mockPopup.textarea.value = '';
+        // Ensure nothing in popup is focused — blur and don't re-focus
+        mockPopup.textarea.blur();
 
-      // Clear any hidePopup calls from setup
-      (hidePopup as Mock).mockClear();
+        // Advance past the 400ms grace period
+        vi.advanceTimersByTime(500);
 
-      scrollPast50();
+        // Clear any hidePopup calls from setup
+        (hidePopup as Mock).mockClear();
 
-      expect(hidePopup).toHaveBeenCalledTimes(1);
+        scrollPast50();
+
+        expect(hidePopup).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does NOT dismiss popup during grace period even without focus', () => {
+      vi.useFakeTimers();
+      try {
+        initAnnotator();
+        setupVisiblePopup();
+
+        mockPopup.textarea.value = '';
+        // Ensure nothing in popup is focused
+        mockPopup.textarea.blur();
+
+        // Still within the 400ms grace period
+        vi.advanceTimersByTime(100);
+
+        // Clear any hidePopup calls from setup
+        (hidePopup as Mock).mockClear();
+
+        scrollPast50();
+
+        expect(hidePopup).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('does NOT dismiss popup when a button inside popup is focused', () => {
