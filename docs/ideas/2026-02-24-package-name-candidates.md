@@ -7,6 +7,16 @@ context: astro-inline-review is being renamed to drop the Astro-specific brandin
 
 # Package Name Candidates
 
+## Decision
+
+**Final name: `review-loop`** (confirmed 2026-02-28)
+
+Previously considered `redline-ai` but ruled out — npm name taken by an active package in an adjacent space ("inline AI editing for local Markdown files"), both GitHub usernames (`redline-ai`, `redlineai`) claimed, and heavy brand crowding from legal tech / contract review tools using "Redline AI".
+
+`review-loop` was the existing leading candidate (`reviewloop` in the shortlist) and cleanly captures the human → agent → human cycle.
+
+---
+
 ## Product positioning (as of 2026-02-24)
 
 - A dev-only browser overlay for annotating rendered web pages during development
