@@ -26,17 +26,39 @@ fish -c "gh issue create --title 'issue title here' --body-file /tmp/gh-issue-bo
 fish -c "gh issue edit ISSUE_NUMBER --body-file /tmp/gh-issue-body.md"
 ```
 
-## Checklist for issue content
+## Issue structure
 
-Based on project conventions (see issue #31 for reference):
+Every issue should include:
 
-- [ ] Clear summary section
-- [ ] Problem/motivation section
-- [ ] Proposed changes
-- [ ] Tasks section with checkboxes, grouped by category (code, tests, docs, quality gates)
-- [ ] Related issues/PRs linked
-- [ ] Engineering plan referenced if one exists
-- [ ] Quality gates include: conventional commits, CI passing, acceptance tests, no stale references
+- **Summary** — what and why, concisely
+- **Problem/motivation** — context for the change
+- **Proposed changes** — what will be done
+- **Tasks** — checkboxes grouped by category (code, tests, docs, quality gates)
+- **Related** — linked issues, PRs, engineering plans, reviews
+
+## Quality gates
+
+Every issue's task list must include these standard quality gates:
+
+```markdown
+### Quality gates
+
+- [ ] Engineering plan created as a markdown document
+- [ ] Engineering plan maintained and kept up to date throughout implementation
+- [ ] Specification updated (`docs/spec/specification.md`)
+- [ ] Independent review carried out and markdown report added to `docs/reviews/`
+- [ ] Findings of the independent review assessed and addressed
+- [ ] All commits follow conventional commit format (no co-authored-by tagline)
+- [ ] All affected documentation updated (except point-in-time documents such as reviews)
+- [ ] CI passes on the pull request
+- [ ] Acceptance tests pass
+```
+
+Add feature-specific quality gates as needed, for example:
+- `[ ] MCP tools tested end-to-end` (for MCP changes)
+- `[ ] Backward compatibility verified with existing data` (for schema changes)
+- `[ ] Scenario tests updated in `astro-inline-review-tests`` (for UI/behaviour changes)
+- `[ ] No references to removed concept remain in source code` (for removal refactors)
 
 ## Never do this
 
