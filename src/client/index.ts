@@ -225,6 +225,7 @@ function init(): void {
         panel.container.classList.add('air-panel--open');
         panel.container.setAttribute('data-air-state', 'open');
         sessionStorage.setItem(PANEL_STATE_KEY, 'open');
+        openFab(fab);
         await panel.mediator.refreshPanel();
       }
       panel.addNoteBtn.click();
