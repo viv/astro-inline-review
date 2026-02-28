@@ -345,7 +345,7 @@ describe('middleware', () => {
   });
 
   describe('POST /annotations validation', () => {
-    it('rejects missing type field with 400', async () => {
+    it('defaults missing type to text and creates annotation', async () => {
       const req = mockRequest('POST', '/__inline-review/api/annotations', {
         pageUrl: '/',
         note: 'test',
@@ -355,8 +355,24 @@ describe('middleware', () => {
       const res = mockResponse();
       await middleware(req as any, res as any, () => {});
 
+      expect(res._status).toBe(201);
+      const data = JSON.parse(res._body);
+      expect(data.type).toBe('text');
+      expect(data.selectedText).toBe('hello');
+      expect(data.note).toBe('test');
+    });
+
+    it('rejects missing type with element fields but no text fields', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        pageUrl: '/',
+        note: 'test',
+        elementSelector: { cssSelector: 'div', xpath: '/div', description: 'a div', tagName: 'div', attributes: {}, outerHtmlPreview: '<div></div>' },
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
       expect(res._status).toBe(400);
-      expect(JSON.parse(res._body).error).toContain('"type"');
+      expect(JSON.parse(res._body).error).toContain('"selectedText"');
     });
 
     it('rejects invalid type value with 400', async () => {
