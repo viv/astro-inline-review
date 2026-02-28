@@ -87,6 +87,7 @@ import {
   showElementPopup,
   showEditElementPopup,
   hidePopup,
+  isPopupVisible,
 } from '../../src/client/ui/popup.js';
 import {
   applyHighlight,
@@ -358,7 +359,126 @@ describe('createAnnotator', () => {
   });
 
   // =========================================================
-  // 3. Save Flows
+  // 3. Scroll Dismissal
+  // =========================================================
+
+  describe('scroll dismissal', () => {
+    /**
+     * Helper: trigger a text selection to set popupScrollY, then make
+     * isPopupVisible return true so the scroll handler's guard passes.
+     */
+    function setupVisiblePopup(): void {
+      const p = document.createElement('p');
+      p.textContent = 'Hello world';
+      document.body.appendChild(p);
+
+      const range = document.createRange();
+      range.setStart(p.firstChild!, 0);
+      range.setEnd(p.firstChild!, 5);
+
+      restoreSelection = mockSelection(range);
+
+      // Trigger selection → sets popupScrollY to current scrollY (0)
+      p.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+      // Now make isPopupVisible return true for subsequent scroll checks
+      (isPopupVisible as Mock).mockReturnValue(true);
+    }
+
+    /** Simulate scrolling past the 50px threshold */
+    function scrollPast50(): void {
+      Object.defineProperty(window, 'scrollY', {
+        value: 100,
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event('scroll'));
+    }
+
+    afterEach(() => {
+      // Reset scrollY to default
+      Object.defineProperty(window, 'scrollY', {
+        value: 0,
+        writable: true,
+        configurable: true,
+      });
+      (isPopupVisible as Mock).mockReturnValue(false);
+    });
+
+    it('does NOT dismiss popup when textarea is focused but empty', () => {
+      initAnnotator();
+      setupVisiblePopup();
+
+      // Place textarea inside container and container inside shadowRoot
+      // so shadowRoot.activeElement works correctly
+      mockPopup.container.appendChild(mockPopup.textarea);
+      shadowRoot.appendChild(mockPopup.container);
+
+      mockPopup.textarea.value = '';
+      mockPopup.textarea.focus();
+
+      // Clear any hidePopup calls from setup
+      (hidePopup as Mock).mockClear();
+
+      scrollPast50();
+
+      expect(hidePopup).not.toHaveBeenCalled();
+    });
+
+    it('does NOT dismiss popup when textarea has content', () => {
+      initAnnotator();
+      setupVisiblePopup();
+
+      mockPopup.textarea.value = 'some content';
+
+      // Clear any hidePopup calls from setup
+      (hidePopup as Mock).mockClear();
+
+      scrollPast50();
+
+      expect(hidePopup).not.toHaveBeenCalled();
+    });
+
+    it('dismisses popup when no focus and no content (passive mode)', () => {
+      initAnnotator();
+      setupVisiblePopup();
+
+      mockPopup.textarea.value = '';
+      // Ensure nothing in popup is focused — blur and don't re-focus
+      mockPopup.textarea.blur();
+
+      // Clear any hidePopup calls from setup
+      (hidePopup as Mock).mockClear();
+
+      scrollPast50();
+
+      expect(hidePopup).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT dismiss popup when a button inside popup is focused', () => {
+      initAnnotator();
+      setupVisiblePopup();
+
+      // Add a button inside the popup container (like Save or Cancel)
+      const button = document.createElement('button');
+      mockPopup.container.appendChild(button);
+      mockPopup.container.appendChild(mockPopup.textarea);
+      shadowRoot.appendChild(mockPopup.container);
+
+      mockPopup.textarea.value = '';
+      button.focus();
+
+      // Clear any hidePopup calls from setup
+      (hidePopup as Mock).mockClear();
+
+      scrollPast50();
+
+      expect(hidePopup).not.toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================
+  // 4. Save Flows
   // =========================================================
 
   describe('save flows', () => {
@@ -435,7 +555,7 @@ describe('createAnnotator', () => {
   });
 
   // =========================================================
-  // 4. Edit Flows
+  // 5. Edit Flows
   // =========================================================
 
   describe('edit flows', () => {
@@ -523,7 +643,7 @@ describe('createAnnotator', () => {
   });
 
   // =========================================================
-  // 5. Restore Highlights
+  // 6. Restore Highlights
   // =========================================================
 
   describe('restoreHighlights', () => {
@@ -712,7 +832,7 @@ describe('createAnnotator', () => {
   });
 
   // =========================================================
-  // 6. Lifecycle
+  // 7. Lifecycle
   // =========================================================
 
   describe('lifecycle', () => {
