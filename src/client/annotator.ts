@@ -35,12 +35,22 @@ import { updateBadge } from './ui/fab.js';
 import { showToast } from './ui/toast.js';
 import { Z_INDEX } from './styles.js';
 import { isTextAnnotation, isElementAnnotation, getAnnotationStatus } from './types.js';
+import type { SerializedRange, ElementSelector } from './types.js';
 import type { ReviewMediator } from './mediator.js';
 
 export interface AnnotatorDeps {
   shadowRoot: ShadowRoot;
   badge: HTMLSpanElement;
   mediator: ReviewMediator;
+}
+
+/** State captured from an active popup, serialisable to sessionStorage. */
+export interface PendingPopupState {
+  type: 'text' | 'element';
+  note: string;
+  selectedText?: string;
+  serializedRange?: SerializedRange;
+  elementSelector?: ElementSelector;
 }
 
 export interface AnnotatorInstance {
@@ -50,6 +60,10 @@ export interface AnnotatorInstance {
   destroy: () => void;
   /** Popup elements for external hide/visibility checks */
   popup: PopupElements;
+  /** Capture the current popup state for persistence across reloads */
+  getPendingState: () => PendingPopupState | null;
+  /** Restore a previously captured popup state. Returns true on success. */
+  restorePendingState: (state: PendingPopupState) => boolean;
 }
 
 /**
@@ -585,6 +599,100 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     }
   }
 
+  // --- Popup State Persistence ---
+
+  function getPendingState(): PendingPopupState | null {
+    if (!isPopupVisible(popup)) return null;
+
+    if (currentRange) {
+      return {
+        type: 'text',
+        note: popup.textarea.value,
+        selectedText: currentRange.toString(),
+        serializedRange: serializeRange(currentRange),
+      };
+    }
+
+    if (currentElementTarget) {
+      return {
+        type: 'element',
+        note: popup.textarea.value,
+        elementSelector: buildElementSelector(currentElementTarget),
+      };
+    }
+
+    return null;
+  }
+
+  function restorePendingState(state: PendingPopupState): boolean {
+    if (state.type === 'text' && state.serializedRange) {
+      // Tier 1: XPath + offset
+      let range = deserializeRange(state.serializedRange);
+
+      // Tier 2: context matching
+      if (!range) {
+        range = findRangeByContext(
+          state.serializedRange.selectedText,
+          state.serializedRange.contextBefore,
+          state.serializedRange.contextAfter,
+        );
+      }
+
+      if (!range) {
+        const msg = state.note
+          ? `Could not restore selection. Your note: ${state.note}`
+          : 'Could not restore selection after reload';
+        showToast(shadowRoot, msg, 6000);
+        return false;
+      }
+
+      currentRange = range;
+      popupScrollY = window.scrollY;
+      popupShownAt = Date.now();
+
+      const rect = range.getBoundingClientRect();
+      showPopup(popup, state.selectedText ?? range.toString(), rect, {
+        onSave: (note) => handleSave(note),
+        onCancel: () => {
+          hidePopup(popup);
+          currentRange = null;
+          window.getSelection()?.removeAllRanges();
+        },
+      });
+      popup.textarea.value = state.note;
+      return true;
+    }
+
+    if (state.type === 'element' && state.elementSelector) {
+      const element = resolveElement(state.elementSelector);
+
+      if (!element) {
+        const msg = state.note
+          ? `Could not restore element. Your note: ${state.note}`
+          : 'Could not restore element after reload';
+        showToast(shadowRoot, msg, 6000);
+        return false;
+      }
+
+      currentElementTarget = element;
+      popupScrollY = window.scrollY;
+      popupShownAt = Date.now();
+
+      const rect = element.getBoundingClientRect();
+      showElementPopup(popup, state.elementSelector.description, rect, {
+        onSave: (note) => handleElementSave(note),
+        onCancel: () => {
+          hidePopup(popup);
+          currentElementTarget = null;
+        },
+      });
+      popup.textarea.value = state.note;
+      return true;
+    }
+
+    return false;
+  }
+
   // Wire up mediator so the panel can trigger highlight restoration
   mediator.restoreHighlights = restoreHighlights;
 
@@ -624,5 +732,5 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
     destroyInspector();
   }
 
-  return { restoreHighlights, destroy, popup };
+  return { restoreHighlights, destroy, popup, getPendingState, restorePendingState };
 }

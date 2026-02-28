@@ -7,7 +7,7 @@
 import { createHost } from './ui/host.js';
 import { createFab, updateBadge, resetFab, openFab, type FabElements } from './ui/fab.js';
 import { createPanel, togglePanel, closePanel, isPanelOpen, type PanelElements } from './ui/panel.js';
-import { createAnnotator, type AnnotatorInstance } from './annotator.js';
+import { createAnnotator, type AnnotatorInstance, type PendingPopupState } from './annotator.js';
 import type { ReviewMediator } from './mediator.js';
 import { isPopupVisible, hidePopup } from './ui/popup.js';
 import { registerShortcuts } from './shortcuts.js';
@@ -21,6 +21,7 @@ import { OrphanTracker } from './orphan-tracker.js';
 
 const SCROLL_TO_KEY = 'air-scroll-to';
 const PANEL_STATE_KEY = 'air-panel-state';
+const PENDING_POPUP_KEY = 'air-pending-popup';
 
 /** Scroll to and pulse an annotation highlight on the current page. */
 function scrollToAnnotation(id: string): void {
@@ -81,6 +82,10 @@ function init(): void {
   // truly orphaned — reporting them as orphaned early causes false positives.
   let highlightsRestored = false;
 
+  // Tracks whether a store change was detected while the popup was active.
+  // While true, restoreHighlights() is deferred — DOM highlights are stale.
+  let pendingStoreUpdate = false;
+
   // Panel
   const panel: PanelElements = createPanel(shadowRoot, {
     onAnnotationClick: (id, pageUrl) => {
@@ -127,6 +132,9 @@ function init(): void {
       // orphaned annotations from ones that simply haven't been located yet.
       // Return 'anchored' to avoid a flash of false "Could not locate" messages.
       if (!highlightsRestored) return 'anchored';
+      // While a store update is deferred (popup active), DOM highlights are
+      // stale — don't let orphan states change until restoreHighlights runs.
+      if (pendingStoreUpdate) return 'anchored';
       const isDomAnchored = getHighlightMarks(id).length > 0 || !!getElementByAnnotationId(id);
       return orphanTracker.getOrphanState(id, pageUrl, isDomAnchored, status);
     },
@@ -241,6 +249,16 @@ function init(): void {
     },
   });
 
+  // Save pending popup state before page unload (e.g. Vite HMR full reload)
+  window.addEventListener('beforeunload', () => {
+    if (isPopupVisible(annotator.popup)) {
+      const state = annotator.getPendingState();
+      if (state) {
+        sessionStorage.setItem(PENDING_POPUP_KEY, JSON.stringify(state));
+      }
+    }
+  });
+
   // Restore panel state — survives page reloads and cross-page navigation.
   // The key persists until the user explicitly closes the panel.
   const pendingPanelState = sessionStorage.getItem(PANEL_STATE_KEY);
@@ -257,7 +275,7 @@ function init(): void {
     }
   }
 
-  // Restore highlights for the current page, then handle pending scroll-to
+  // Restore highlights for the current page, then handle pending state
   annotator.restoreHighlights().then(() => {
     highlightsRestored = true;
     // Refresh panel after highlights so orphan states reflect DOM reality
@@ -268,6 +286,17 @@ function init(): void {
     if (pendingId) {
       sessionStorage.removeItem(SCROLL_TO_KEY);
       scrollToAnnotation(pendingId);
+    }
+    // Restore pending popup state (e.g. user was typing a note when Vite reloaded)
+    const pendingPopup = sessionStorage.getItem(PENDING_POPUP_KEY);
+    if (pendingPopup) {
+      sessionStorage.removeItem(PENDING_POPUP_KEY);
+      try {
+        const state: PendingPopupState = JSON.parse(pendingPopup);
+        annotator.restorePendingState(state);
+      } catch {
+        // Corrupt data — ignore
+      }
     }
   });
 
@@ -290,9 +319,19 @@ function init(): void {
   // Poll for external store changes (e.g. MCP tool updates)
   const poller = createStorePoller({
     onStoreChanged: () => {
-      // Clear orphan timestamps so re-restored annotations get a fresh grace window
+      if (isPopupVisible(annotator.popup)) {
+        // Defer restoreHighlights (which strips/re-applies marks and
+        // invalidates the live Range) but still refresh the panel so
+        // status changes (e.g. in_progress → addressed) are visible.
+        // Don't reset orphan tracker here — orphan states from the
+        // initial restore are still valid until highlights are re-applied.
+        pendingStoreUpdate = true;
+        if (isPanelOpen(panel)) {
+          mediator.refreshPanel();
+        }
+        return;
+      }
       orphanTracker.onStoreChanged();
-      // Refresh panel AFTER highlights so orphan states reflect DOM reality
       annotator.restoreHighlights().then(() => {
         if (isPanelOpen(panel)) {
           mediator.refreshPanel();
@@ -301,6 +340,24 @@ function init(): void {
     },
   });
   poller.start();
+
+  // Flush deferred store update when popup is dismissed
+  const popupObserver = new MutationObserver(() => {
+    const state = annotator.popup.container.getAttribute('data-air-state');
+    if (state === 'hidden' && pendingStoreUpdate) {
+      pendingStoreUpdate = false;
+      orphanTracker.onStoreChanged();
+      annotator.restoreHighlights().then(() => {
+        if (isPanelOpen(panel)) {
+          mediator.refreshPanel();
+        }
+      });
+    }
+  });
+  popupObserver.observe(annotator.popup.container, {
+    attributes: true,
+    attributeFilter: ['data-air-state'],
+  });
 }
 
 // Bootstrap on DOM ready

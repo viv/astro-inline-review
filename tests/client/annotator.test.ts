@@ -77,6 +77,10 @@ vi.mock('../../src/client/ui/fab.js', () => ({
   resetFab: vi.fn(),
 }));
 
+vi.mock('../../src/client/ui/toast.js', () => ({
+  showToast: vi.fn(),
+}));
+
 // --- Imports (after mock declarations) ---
 
 import { createAnnotator, type AnnotatorInstance } from '../../src/client/annotator.js';
@@ -101,6 +105,7 @@ import { readCache, writeCache } from '../../src/client/cache.js';
 import { buildElementSelector, resolveElement } from '../../src/client/element-selector.js';
 import { serializeRange, deserializeRange, findRangeByContext, findRangeByContextSeam } from '../../src/client/selection.js';
 import { updateBadge } from '../../src/client/ui/fab.js';
+import { showToast } from '../../src/client/ui/toast.js';
 
 // --- Helpers ---
 
@@ -1136,6 +1141,230 @@ describe('createAnnotator', () => {
 
       // The annotator should have assigned its restoreHighlights to the mediator
       expect(mediator.restoreHighlights).toBe(annotator.restoreHighlights);
+    });
+  });
+
+  // =========================================================
+  // 8. Popup State Persistence
+  // =========================================================
+
+  describe('popup state persistence', () => {
+    describe('getPendingState', () => {
+      it('returns null when no popup is active', () => {
+        initAnnotator();
+
+        (isPopupVisible as Mock).mockReturnValue(false);
+
+        expect(annotator.getPendingState()).toBeNull();
+      });
+
+      it('returns correct state for text annotation popup', () => {
+        initAnnotator();
+
+        const p = document.createElement('p');
+        p.textContent = 'Hello world';
+        document.body.appendChild(p);
+
+        const range = document.createRange();
+        range.setStart(p.firstChild!, 0);
+        range.setEnd(p.firstChild!, 5);
+
+        restoreSelection = mockSelection(range);
+
+        // Trigger selection → sets currentRange
+        p.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+        // Now make popup visible
+        (isPopupVisible as Mock).mockReturnValue(true);
+        mockPopup.textarea.value = 'my draft note';
+
+        const state = annotator.getPendingState();
+
+        expect(state).not.toBeNull();
+        expect(state!.type).toBe('text');
+        expect(state!.note).toBe('my draft note');
+        expect(state!.selectedText).toBe('Hello');
+        expect(state!.serializedRange).toBeDefined();
+        expect(serializeRange).toHaveBeenCalled();
+      });
+
+      it('returns correct state for element annotation popup', () => {
+        initAnnotator();
+
+        const target = document.createElement('div');
+        target.className = 'target';
+        document.body.appendChild(target);
+
+        // Ensure popup reports hidden so onClickCapture doesn't bail early
+        (isPopupVisible as Mock).mockReturnValue(false);
+
+        // Alt+click to set currentElementTarget
+        target.dispatchEvent(new MouseEvent('click', {
+          bubbles: true,
+          altKey: true,
+        }));
+
+        // Now make popup visible
+        (isPopupVisible as Mock).mockReturnValue(true);
+        mockPopup.textarea.value = 'element draft';
+
+        const state = annotator.getPendingState();
+
+        expect(state).not.toBeNull();
+        expect(state!.type).toBe('element');
+        expect(state!.note).toBe('element draft');
+        expect(state!.elementSelector).toBeDefined();
+        expect(state!.elementSelector!.cssSelector).toBe('div.target');
+      });
+    });
+
+    describe('restorePendingState', () => {
+      it('restores text popup with saved note', () => {
+        initAnnotator();
+
+        const mockRange = document.createRange();
+        (deserializeRange as Mock).mockReturnValue(mockRange);
+
+        const state = {
+          type: 'text' as const,
+          note: 'restored note',
+          selectedText: 'Hello',
+          serializedRange: {
+            startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+            startOffset: 0,
+            endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+            endOffset: 5,
+            selectedText: 'Hello',
+            contextBefore: '',
+            contextAfter: ' world',
+          },
+        };
+
+        const result = annotator.restorePendingState(state);
+
+        expect(result).toBe(true);
+        expect(showPopup).toHaveBeenCalledTimes(1);
+        // Textarea value is set after showPopup
+        expect(mockPopup.textarea.value).toBe('restored note');
+      });
+
+      it('restores text popup via context fallback when XPath fails', () => {
+        initAnnotator();
+
+        (deserializeRange as Mock).mockReturnValue(null);
+        const fallbackRange = document.createRange();
+        (findRangeByContext as Mock).mockReturnValue(fallbackRange);
+
+        const state = {
+          type: 'text' as const,
+          note: 'restored note',
+          selectedText: 'Hello',
+          serializedRange: {
+            startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+            startOffset: 0,
+            endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+            endOffset: 5,
+            selectedText: 'Hello',
+            contextBefore: '',
+            contextAfter: ' world',
+          },
+        };
+
+        const result = annotator.restorePendingState(state);
+
+        expect(result).toBe(true);
+        expect(showPopup).toHaveBeenCalledTimes(1);
+        expect(mockPopup.textarea.value).toBe('restored note');
+      });
+
+      it('restores element popup with saved note', () => {
+        initAnnotator();
+
+        const target = document.createElement('div');
+        target.className = 'target';
+        document.body.appendChild(target);
+        (resolveElement as Mock).mockReturnValue(target);
+
+        const state = {
+          type: 'element' as const,
+          note: 'element restored',
+          elementSelector: {
+            cssSelector: 'div.target',
+            xpath: '/html[1]/body[1]/div[1]',
+            description: 'div.target',
+            tagName: 'div',
+            attributes: { class: 'target' },
+            outerHtmlPreview: '<div class="target"></div>',
+          },
+        };
+
+        const result = annotator.restorePendingState(state);
+
+        expect(result).toBe(true);
+        expect(showElementPopup).toHaveBeenCalledTimes(1);
+        expect(mockPopup.textarea.value).toBe('element restored');
+      });
+
+      it('returns false and shows toast when text range is unresolvable', () => {
+        initAnnotator();
+
+        (deserializeRange as Mock).mockReturnValue(null);
+        (findRangeByContext as Mock).mockReturnValue(null);
+
+        const state = {
+          type: 'text' as const,
+          note: 'lost note',
+          selectedText: 'Hello',
+          serializedRange: {
+            startXPath: '/html[1]/body[1]/p[1]/text()[1]',
+            startOffset: 0,
+            endXPath: '/html[1]/body[1]/p[1]/text()[1]',
+            endOffset: 5,
+            selectedText: 'Hello',
+            contextBefore: '',
+            contextAfter: ' world',
+          },
+        };
+
+        const result = annotator.restorePendingState(state);
+
+        expect(result).toBe(false);
+        expect(showPopup).not.toHaveBeenCalled();
+        expect(showToast).toHaveBeenCalledWith(
+          shadowRoot,
+          expect.stringContaining('lost note'),
+          expect.any(Number),
+        );
+      });
+
+      it('returns false and shows toast when element is unresolvable', () => {
+        initAnnotator();
+
+        (resolveElement as Mock).mockReturnValue(null);
+
+        const state = {
+          type: 'element' as const,
+          note: 'lost element note',
+          elementSelector: {
+            cssSelector: 'div.gone',
+            xpath: '/html[1]/body[1]/div[99]',
+            description: 'div.gone',
+            tagName: 'div',
+            attributes: {},
+            outerHtmlPreview: '<div class="gone"></div>',
+          },
+        };
+
+        const result = annotator.restorePendingState(state);
+
+        expect(result).toBe(false);
+        expect(showElementPopup).not.toHaveBeenCalled();
+        expect(showToast).toHaveBeenCalledWith(
+          shadowRoot,
+          expect.stringContaining('lost element note'),
+          expect.any(Number),
+        );
+      });
     });
   });
 });
