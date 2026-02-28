@@ -128,22 +128,39 @@ export function removeElementHighlight(id: string): void {
   const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${CSS.escape(id)}"]`) as HTMLElement | null;
   if (!el) return;
   el.removeAttribute(ELEMENT_HIGHLIGHT_ATTR);
+  el.removeAttribute('data-air-pulse');
   el.style.outline = '';
   el.style.outlineOffset = '';
   el.style.cursor = '';
+  // Clear properties that may be set by a mid-flight pulse animation
+  el.style.backgroundColor = '';
+  el.style.boxShadow = '';
+  el.style.transition = '';
 }
 
 /**
  * Add a pulse animation to an element highlight.
+ * Uses a background flash and box-shadow (matching the text highlight pulse)
+ * so the effect is clearly visible, not just a subtle outline change.
  */
 export function pulseElementHighlight(id: string): void {
   const el = document.querySelector(`[${ELEMENT_HIGHLIGHT_ATTR}="${CSS.escape(id)}"]`) as HTMLElement | null;
   if (!el) return;
   el.setAttribute('data-air-pulse', '');
-  el.style.transition = 'outline-color 0.3s ease';
+
+  // Save originals to restore after animation
+  const origBg = el.style.backgroundColor;
+  const origBoxShadow = el.style.boxShadow;
+
+  el.style.transition = 'background-color 0.3s ease, box-shadow 0.3s ease, outline-color 0.3s ease';
   el.style.outlineColor = 'rgba(217,119,6,1)';
+  el.style.backgroundColor = 'rgba(217,119,6,0.15)';
+  el.style.boxShadow = '0 0 0 4px rgba(217,119,6,0.3)';
+
   setTimeout(() => {
     el.style.outlineColor = 'rgba(217,119,6,0.8)';
+    el.style.backgroundColor = origBg;
+    el.style.boxShadow = origBoxShadow;
   }, 600);
   setTimeout(() => {
     el.style.transition = '';

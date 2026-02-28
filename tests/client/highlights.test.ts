@@ -1,9 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   applyHighlight,
   removeHighlight,
   getHighlightMarks,
+  pulseHighlight,
+  applyElementHighlight,
+  removeElementHighlight,
+  pulseElementHighlight,
   HIGHLIGHT_ATTR,
+  ELEMENT_HIGHLIGHT_ATTR,
 } from '../../src/client/highlights.js';
 
 describe('applyHighlight', () => {
@@ -174,5 +179,183 @@ describe('getHighlightMarks', () => {
     document.body.innerHTML = '<p>No marks here</p>';
     const marks = getHighlightMarks('nonexistent');
     expect(marks.length).toBe(0);
+  });
+});
+
+describe('pulseHighlight', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('sets data-air-pulse attribute on the mark', () => {
+    document.body.innerHTML = '<p><mark data-air-id="id-1" style="background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;">hello</mark></p>';
+
+    pulseHighlight('id-1');
+
+    const mark = document.querySelector('mark')!;
+    expect(mark.hasAttribute('data-air-pulse')).toBe(true);
+  });
+
+  it('changes background to brighter orange during pulse', () => {
+    document.body.innerHTML = '<p><mark data-air-id="id-1" style="background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;">hello</mark></p>';
+
+    pulseHighlight('id-1');
+
+    const mark = document.querySelector('mark') as HTMLElement;
+    // happy-dom normalises rgba with spaces
+    expect(mark.style.backgroundColor).toBe('rgba(217, 119, 6, 0.6)');
+  });
+
+  it('restores original background after 600ms', () => {
+    document.body.innerHTML = '<p><mark data-air-id="id-1" style="background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;">hello</mark></p>';
+
+    pulseHighlight('id-1');
+    vi.advanceTimersByTime(600);
+
+    const mark = document.querySelector('mark') as HTMLElement;
+    expect(mark.style.backgroundColor).toBe('rgba(217, 119, 6, 0.3)');
+  });
+
+  it('removes data-air-pulse and transition after 900ms', () => {
+    document.body.innerHTML = '<p><mark data-air-id="id-1" style="background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;">hello</mark></p>';
+
+    pulseHighlight('id-1');
+    vi.advanceTimersByTime(900);
+
+    const mark = document.querySelector('mark') as HTMLElement;
+    expect(mark.hasAttribute('data-air-pulse')).toBe(false);
+    expect(mark.style.transition).toBe('');
+  });
+});
+
+describe('pulseElementHighlight', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('sets data-air-pulse attribute on the element', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    pulseElementHighlight('el-1');
+
+    const el = document.querySelector('[data-air-element-id="el-1"]')!;
+    expect(el.hasAttribute('data-air-pulse')).toBe(true);
+  });
+
+  it('applies background flash during pulse', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    pulseElementHighlight('el-1');
+
+    const el = document.querySelector('[data-air-element-id="el-1"]') as HTMLElement;
+    expect(el.style.backgroundColor).toBe('rgba(217, 119, 6, 0.15)');
+  });
+
+  it('applies box-shadow during pulse', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    pulseElementHighlight('el-1');
+
+    const el = document.querySelector('[data-air-element-id="el-1"]') as HTMLElement;
+    expect(el.style.boxShadow).toBe('0 0 0 4px rgba(217,119,6,0.3)');
+  });
+
+  it('brightens outline color during pulse', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    pulseElementHighlight('el-1');
+
+    const el = document.querySelector('[data-air-element-id="el-1"]') as HTMLElement;
+    expect(el.style.outlineColor).toBe('rgba(217, 119, 6, 1)');
+  });
+
+  it('restores original styles after 600ms', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    pulseElementHighlight('el-1');
+    vi.advanceTimersByTime(600);
+
+    const el = document.querySelector('[data-air-element-id="el-1"]') as HTMLElement;
+    expect(el.style.backgroundColor).toBe('');
+    expect(el.style.boxShadow).toBe('');
+    expect(el.style.outlineColor).toBe('rgba(217, 119, 6, 0.8)');
+  });
+
+  it('removes data-air-pulse and transition after 900ms', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    pulseElementHighlight('el-1');
+    vi.advanceTimersByTime(900);
+
+    const el = document.querySelector('[data-air-element-id="el-1"]') as HTMLElement;
+    expect(el.hasAttribute('data-air-pulse')).toBe(false);
+    expect(el.style.transition).toBe('');
+  });
+
+  it('does nothing when element does not exist', () => {
+    document.body.innerHTML = '<p>No annotated elements</p>';
+
+    // Should not throw
+    expect(() => pulseElementHighlight('nonexistent')).not.toThrow();
+  });
+
+  it('preserves pre-existing background colour after pulse', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer; background-color: rgb(240, 240, 240);">content</div>';
+
+    pulseElementHighlight('el-1');
+
+    const el = document.querySelector('[data-air-element-id="el-1"]') as HTMLElement;
+    // During pulse, background is overridden
+    expect(el.style.backgroundColor).toBe('rgba(217, 119, 6, 0.15)');
+
+    // After 600ms, original background is restored
+    vi.advanceTimersByTime(600);
+    expect(el.style.backgroundColor).toBe('rgb(240, 240, 240)');
+  });
+});
+
+describe('removeElementHighlight — mid-pulse cleanup', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('clears pulse styles when highlight is removed mid-animation', () => {
+    document.body.innerHTML = '<div data-air-element-id="el-1" style="outline: 2px dashed rgba(217,119,6,0.8); outline-offset: 2px; cursor: pointer;">content</div>';
+
+    // Start pulse
+    pulseElementHighlight('el-1');
+    const el = document.querySelector('div') as HTMLElement;
+
+    // Verify pulse styles are active
+    expect(el.style.backgroundColor).toBe('rgba(217, 119, 6, 0.15)');
+    expect(el.style.boxShadow).toBe('0 0 0 4px rgba(217,119,6,0.3)');
+
+    // Remove highlight mid-pulse (simulates user deleting annotation quickly)
+    removeElementHighlight('el-1');
+
+    // All styles should be cleared, including pulse properties
+    expect(el.style.outline).toBe('');
+    expect(el.style.outlineOffset).toBe('');
+    expect(el.style.cursor).toBe('');
+    expect(el.style.backgroundColor).toBe('');
+    expect(el.style.boxShadow).toBe('');
+    expect(el.style.transition).toBe('');
+    expect(el.hasAttribute('data-air-pulse')).toBe(false);
+    expect(el.hasAttribute('data-air-element-id')).toBe(false);
   });
 });
