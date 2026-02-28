@@ -249,33 +249,9 @@ export const PANEL_STYLES = /* css */ `
     color: #ccc;
   }
 
-  .air-annotation-item--resolved {
-    opacity: 0.7;
-  }
-
-  .air-annotation-item--resolved .air-annotation-item__text {
-    text-decoration: line-through;
-  }
-
   .air-annotation-item--addressed {
     opacity: 0.85;
     border-left: 3px solid #3B82F6;
-  }
-
-  .air-annotation-item__resolved-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #22C55E;
-    margin-bottom: 4px;
-  }
-
-  .air-annotation-item__resolved-time {
-    font-size: 11px;
-    color: #888;
-    font-weight: 400;
   }
 
   .air-annotation-item__addressed-badge {

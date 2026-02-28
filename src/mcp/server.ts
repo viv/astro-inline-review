@@ -6,7 +6,7 @@ import { register as registerListAnnotations } from './tools/list-annotations.js
 import { register as registerListPageNotes } from './tools/list-page-notes.js';
 import { register as registerGetAnnotation } from './tools/get-annotation.js';
 import { register as registerGetExport } from './tools/get-export.js';
-import { register as registerResolveAnnotation } from './tools/resolve-annotation.js';
+import { register as registerAddressAnnotation } from './tools/address-annotation.js';
 import { register as registerAddAgentReply } from './tools/add-agent-reply.js';
 import { register as registerUpdateAnnotationTarget } from './tools/update-annotation-target.js';
 import { register as registerSetInProgress } from './tools/set-in-progress.js';
@@ -31,7 +31,7 @@ async function main() {
   registerListPageNotes(server, storage);
   registerGetAnnotation(server, storage);
   registerGetExport(server, storage);
-  registerResolveAnnotation(server, storage);
+  registerAddressAnnotation(server, storage);
   registerAddAgentReply(server, storage);
   registerUpdateAnnotationTarget(server, storage);
   registerSetInProgress(server, storage);

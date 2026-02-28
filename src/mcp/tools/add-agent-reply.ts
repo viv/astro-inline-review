@@ -25,7 +25,7 @@ export async function addAgentReplyHandler(
       if (!annotation.replies) {
         annotation.replies = [];
       }
-      annotation.replies.push({ message: params.message, createdAt: now });
+      annotation.replies.push({ message: params.message, createdAt: now, role: 'agent' });
       annotation.updatedAt = now;
       return s;
     });

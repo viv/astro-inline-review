@@ -149,62 +149,6 @@ describe('createPanel — resolved annotations and agent replies', () => {
     return panel;
   }
 
-  it('shows resolved badge for resolved text annotation', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation({ resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
-    expect(badge).not.toBeNull();
-    expect(badge!.textContent).toContain('Resolved');
-  });
-
-  it('adds resolved class to resolved annotation item', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation({ resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
-    expect(item!.classList.contains('air-annotation-item--resolved')).toBe(true);
-  });
-
-  it('does not show resolved badge for unresolved annotation', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation()],
-      pageNotes: [],
-    });
-
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
-    expect(badge).toBeNull();
-  });
-
-  it('does not add resolved class for unresolved annotation', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation()],
-      pageNotes: [],
-    });
-
-    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
-    expect(item!.classList.contains('air-annotation-item--resolved')).toBe(false);
-  });
-
-  it('shows resolved badge for resolved element annotation', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeElementAnnotation({ resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
-    expect(badge).not.toBeNull();
-  });
-
   it('displays agent reply with Agent: prefix', async () => {
     await renderWithStore({
       version: 1,
@@ -249,19 +193,6 @@ describe('createPanel — resolved annotations and agent replies', () => {
     expect(reply).toBeNull();
   });
 
-  it('shows resolved timestamp in human-readable format', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation({ resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const badge = shadowRoot.querySelector('[data-air-el="resolved-badge"]');
-    const timeSpan = badge!.querySelector('.air-annotation-item__resolved-time');
-    expect(timeSpan).not.toBeNull();
-    // Should contain some formatted date text (locale-dependent)
-    expect(timeSpan!.textContent!.length).toBeGreaterThan(0);
-  });
 });
 
 describe('annotation item — delete button', () => {
@@ -1034,46 +965,6 @@ describe('createPanel — status lifecycle buttons', () => {
     expect(reopenBtn!.tagName.toLowerCase()).toBe('button');
   });
 
-  it('shows Reopen button on resolved annotation', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
-    expect(reopenBtn).not.toBeNull();
-    expect(reopenBtn!.tagName.toLowerCase()).toBe('button');
-  });
-
-  it('shows Accept button on resolved annotation alongside Reopen', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]');
-    expect(acceptBtn).not.toBeNull();
-    expect(acceptBtn!.textContent).toBe('Accept');
-
-    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
-    expect(reopenBtn).not.toBeNull();
-  });
-
-  it('Accept button on resolved annotation calls onAnnotationDelete', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation({ id: 'resolved-accept', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]') as HTMLButtonElement;
-    acceptBtn.click();
-
-    expect(callbacks.onAnnotationDelete).toHaveBeenCalledWith('resolved-accept');
-  });
-
   it('does not show Reopen button on open annotation', async () => {
     await renderWithStore({
       version: 1,
@@ -1110,17 +1001,6 @@ describe('createPanel — status lifecycle buttons', () => {
     expect(deleteBtn).toBeNull();
   });
 
-  it('hides Delete button when Reopen button is shown (resolved status)', async () => {
-    await renderWithStore({
-      version: 1,
-      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
-      pageNotes: [],
-    });
-
-    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]');
-    expect(deleteBtn).toBeNull();
-  });
-
   it('shows Delete button only on open annotations', async () => {
     await renderWithStore({
       version: 1,
@@ -1141,7 +1021,7 @@ describe('createPanel — status lifecycle buttons', () => {
   it('Reopen button shows inline form instead of immediately reopening', async () => {
     await renderWithStore({
       version: 1,
-      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
       pageNotes: [],
     });
 
@@ -1162,7 +1042,7 @@ describe('createPanel — status lifecycle buttons', () => {
   it('Reopen form submit calls onAnnotationStatusChange with open and no reply when empty', async () => {
     await renderWithStore({
       version: 1,
-      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
       pageNotes: [],
     });
 
@@ -1178,7 +1058,7 @@ describe('createPanel — status lifecycle buttons', () => {
   it('Reopen form submit includes reply message when provided', async () => {
     await renderWithStore({
       version: 1,
-      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      annotations: [makeTextAnnotation({ id: 'reopen-me', status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
       pageNotes: [],
     });
 
@@ -1197,7 +1077,7 @@ describe('createPanel — status lifecycle buttons', () => {
   it('Reopen form cancel removes form without calling callback', async () => {
     await renderWithStore({
       version: 1,
-      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      annotations: [makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
       pageNotes: [],
     });
 
@@ -1216,7 +1096,7 @@ describe('createPanel — status lifecycle buttons', () => {
   it('Reopen form submit removes the form from DOM', async () => {
     await renderWithStore({
       version: 1,
-      annotations: [makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' })],
+      annotations: [makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
       pageNotes: [],
     });
 

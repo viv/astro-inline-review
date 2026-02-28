@@ -58,8 +58,7 @@ export function generateExport(store: ReviewStore): string {
       let i = 1;
       for (const a of textAnnotations) {
         const status = getAnnotationStatus(a);
-        const statusLabel = status === 'resolved' ? ' ✅ [Resolved]'
-          : status === 'addressed' ? ' 🔧 [Addressed]'
+        const statusLabel = status === 'addressed' ? ' 🔧 [Addressed]'
           : status === 'in_progress' ? ' ⏳ [In Progress]'
           : '';
         lines.push(`${i}. **"${a.selectedText}"**${statusLabel}`);
@@ -84,8 +83,7 @@ export function generateExport(store: ReviewStore): string {
         const safeSelector = a.elementSelector.cssSelector.replace(/`/g, '\\`');
         const safePreview = a.elementSelector.outerHtmlPreview.replace(/`/g, '\\`');
         const status = getAnnotationStatus(a);
-        const statusLabel = status === 'resolved' ? ' ✅ [Resolved]'
-          : status === 'addressed' ? ' 🔧 [Addressed]'
+        const statusLabel = status === 'addressed' ? ' 🔧 [Addressed]'
           : status === 'in_progress' ? ' ⏳ [In Progress]'
           : '';
         lines.push(`${i}. **\`${safeSelector}\`** (\`${safePreview}\`)${statusLabel}`);

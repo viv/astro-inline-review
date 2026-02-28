@@ -355,7 +355,6 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
   const status = getAnnotationStatus(annotation);
   const orphanState = callbacks.getOrphanState(annotation.id, annotation.pageUrl, status);
   const classes = ['air-annotation-item'];
-  if (status === 'resolved') classes.push('air-annotation-item--resolved');
   if (status === 'addressed') classes.push('air-annotation-item--addressed');
   if (status === 'in_progress') classes.push('air-annotation-item--in-progress');
   if (orphanState === 'orphaned') classes.push('air-annotation-item--orphan');
@@ -364,7 +363,7 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
   item.setAttribute('data-air-el', 'annotation-item');
 
   if (status !== 'open') {
-    item.appendChild(createStatusBadge(status, annotation.inProgressAt, annotation.addressedAt, annotation.resolvedAt));
+    item.appendChild(createStatusBadge(status, annotation.inProgressAt, annotation.addressedAt));
   }
 
   const text = document.createElement('div');
@@ -458,7 +457,6 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
   const status = getAnnotationStatus(annotation);
   const orphanState = callbacks.getOrphanState(annotation.id, annotation.pageUrl, status);
   const classes = ['air-annotation-item'];
-  if (status === 'resolved') classes.push('air-annotation-item--resolved');
   if (status === 'addressed') classes.push('air-annotation-item--addressed');
   if (status === 'in_progress') classes.push('air-annotation-item--in-progress');
   if (orphanState === 'orphaned') classes.push('air-annotation-item--orphan');
@@ -467,7 +465,7 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
   item.setAttribute('data-air-el', 'element-annotation-item');
 
   if (status !== 'open') {
-    item.appendChild(createStatusBadge(status, annotation.inProgressAt, annotation.addressedAt, annotation.resolvedAt));
+    item.appendChild(createStatusBadge(status, annotation.inProgressAt, annotation.addressedAt));
   }
 
   const desc = document.createElement('div');
@@ -727,7 +725,7 @@ function appendStatusActions(
   callbacks: PanelCallbacks,
   item: HTMLElement,
 ): void {
-  if (status === 'addressed' || status === 'resolved') {
+  if (status === 'addressed') {
     const acceptBtn = document.createElement('button');
     acceptBtn.className = 'air-popup__btn air-popup__btn--accept';
     acceptBtn.setAttribute('data-air-el', 'annotation-accept');
@@ -740,7 +738,7 @@ function appendStatusActions(
     container.appendChild(acceptBtn);
   }
 
-  if (status === 'addressed' || status === 'resolved') {
+  if (status === 'addressed') {
     const reopenBtn = document.createElement('button');
     reopenBtn.className = 'air-popup__btn air-popup__btn--cancel';
     reopenBtn.setAttribute('data-air-el', 'annotation-reopen');
@@ -874,19 +872,9 @@ function formatTimestamp(iso: string): string {
   }
 }
 
-function createStatusBadge(status: AnnotationStatus, inProgressAt?: string, addressedAt?: string, resolvedAt?: string): HTMLDivElement {
+function createStatusBadge(status: AnnotationStatus, inProgressAt?: string, addressedAt?: string): HTMLDivElement {
   const badge = document.createElement('div');
-  if (status === 'resolved') {
-    badge.setAttribute('data-air-el', 'resolved-badge');
-    badge.className = 'air-annotation-item__resolved-badge';
-    badge.textContent = '\u2714 Resolved';
-    if (resolvedAt) {
-      const time = document.createElement('span');
-      time.className = 'air-annotation-item__resolved-time';
-      time.textContent = formatTimestamp(resolvedAt);
-      badge.appendChild(time);
-    }
-  } else if (status === 'addressed') {
+  if (status === 'addressed') {
     badge.setAttribute('data-air-el', 'addressed-badge');
     badge.className = 'air-annotation-item__addressed-badge';
     badge.textContent = '\uD83D\uDD27 Addressed';

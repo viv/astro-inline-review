@@ -139,7 +139,7 @@ describe('generateExport', () => {
     expect(result).not.toContain('> ');
   });
 
-  it('shows [Resolved] indicator for resolved text annotations', () => {
+  it('maps legacy resolvedAt to addressed in export (backward compat)', () => {
     const store = makeStore({
       annotations: [{
         id: '1', type: 'text', pageUrl: '/', pageTitle: '',
@@ -152,11 +152,12 @@ describe('generateExport', () => {
 
     const result = generateExport(store);
 
-    expect(result).toContain('[Resolved]');
+    expect(result).toContain('[Addressed]');
+    expect(result).not.toContain('[Resolved]');
     expect(result).toContain('**"fix this"**');
   });
 
-  it('does not show [Resolved] for unresolved annotations', () => {
+  it('does not show status label for open annotations', () => {
     const store = makeStore({
       annotations: [{
         id: '1', type: 'text', pageUrl: '/', pageTitle: '',
@@ -169,6 +170,7 @@ describe('generateExport', () => {
     const result = generateExport(store);
 
     expect(result).not.toContain('[Resolved]');
+    expect(result).not.toContain('[Addressed]');
   });
 
   it('shows agent replies as blockquotes with Agent: prefix', () => {
@@ -212,7 +214,7 @@ describe('generateExport', () => {
     expect(firstIdx).toBeLessThan(secondIdx);
   });
 
-  it('shows [Resolved] for resolved element annotations', () => {
+  it('maps legacy resolvedAt to addressed for element annotations (backward compat)', () => {
     const store = makeStore({
       annotations: [{
         id: '1', type: 'element', pageUrl: '/', pageTitle: '',
@@ -225,7 +227,8 @@ describe('generateExport', () => {
 
     const result = generateExport(store);
 
-    expect(result).toContain('[Resolved]');
+    expect(result).toContain('[Addressed]');
+    expect(result).not.toContain('[Resolved]');
     expect(result).toContain('div.hero');
   });
 });

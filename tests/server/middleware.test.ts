@@ -123,6 +123,24 @@ describe('middleware', () => {
       expect(data.createdAt).toBeTruthy();
     });
 
+    it('POST /annotations sets explicit status: open on creation', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        pageTitle: 'Home',
+        selectedText: 'hello world',
+        note: 'test note',
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 11, selectedText: 'hello world', contextBefore: '', contextAfter: '' },
+      });
+      const res = mockResponse();
+
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(201);
+      const data = JSON.parse(res._body);
+      expect(data.status).toBe('open');
+    });
+
     it('PATCH /annotations/:id updates the annotation', async () => {
       // Create first
       const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
@@ -648,7 +666,7 @@ describe('middleware', () => {
       expect(patched.resolvedAt).toBeUndefined();
     });
 
-    it('sets status to resolved and sets resolvedAt timestamp', async () => {
+    it('rejects resolved as a status value with 400', async () => {
       const created = await createTextAnnotation();
 
       const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
@@ -657,22 +675,22 @@ describe('middleware', () => {
       const patchRes = mockResponse();
       await middleware(patchReq as any, patchRes as any, () => {});
 
-      expect(patchRes._status).toBe(200);
-      const patched = JSON.parse(patchRes._body);
-      expect(patched.status).toBe('resolved');
-      expect(patched.resolvedAt).toBeTruthy();
+      expect(patchRes._status).toBe(400);
+      const body = JSON.parse(patchRes._body);
+      expect(body.error).toContain('open');
+      expect(body.error).toContain('addressed');
     });
 
     it('reopens annotation by setting status to open', async () => {
       const created = await createTextAnnotation();
 
-      // First resolve it
-      const resolveReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
-        status: 'resolved',
+      // First address it
+      const addressReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'addressed',
       });
-      const resolveRes = mockResponse();
-      await middleware(resolveReq as any, resolveRes as any, () => {});
-      expect(resolveRes._status).toBe(200);
+      const addressRes = mockResponse();
+      await middleware(addressReq as any, addressRes as any, () => {});
+      expect(addressRes._status).toBe(200);
 
       // Then reopen it
       const reopenReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
@@ -743,7 +761,7 @@ describe('middleware', () => {
       expect(body.error).toContain('open');
       expect(body.error).toContain('in_progress');
       expect(body.error).toContain('addressed');
-      expect(body.error).toContain('resolved');
+      expect(body.error).not.toContain('resolved');
     });
 
     it('updates status alongside note', async () => {
