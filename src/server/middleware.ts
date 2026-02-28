@@ -158,7 +158,7 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
       const annotationMatch = routePath?.match(/^\/annotations\/([^/]+)$/);
       if (annotationMatch && method === 'PATCH') {
         const id = annotationMatch[1];
-        const body = await readBody<Partial<Annotation> & { replacedText?: string; status?: string; reply?: { message: string } }>(req);
+        const body = await readBody<Partial<Annotation> & { replacedText?: string | null; status?: string; reply?: { message: string }; range?: TextAnnotation['range'] }>(req);
 
         if (typeof body.replacedText === 'string' && !body.replacedText.trim()) {
           throw new ValidationError('replacedText must not be empty');
@@ -171,6 +171,12 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
         if (body.reply !== undefined) {
           if (!body.reply || typeof body.reply.message !== 'string' || !body.reply.message.trim()) {
             throw new ValidationError('reply.message must be a non-empty string');
+          }
+        }
+
+        if (body.range !== undefined) {
+          if (typeof body.range !== 'object' || body.range === null || Array.isArray(body.range)) {
+            throw new ValidationError('range must be an object');
           }
         }
 
@@ -211,13 +217,24 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
             });
           }
 
+          // Build replacedText update: string sets it, null clears it
+          const replacedTextUpdate: Record<string, unknown> = {};
+          if (isTextAnnotation(existing)) {
+            if (typeof body.replacedText === 'string') {
+              replacedTextUpdate.replacedText = body.replacedText;
+            } else if (body.replacedText === null) {
+              replacedTextUpdate.replacedText = undefined;
+            }
+          }
+
           store.annotations[idx] = {
             ...existing,
             note: body.note ?? existing.note,
-            // Allow replacedText on text annotations only
-            ...(isTextAnnotation(existing) && typeof body.replacedText === 'string'
-              ? { replacedText: body.replacedText }
+            // Allow range update on text annotations only
+            ...(isTextAnnotation(existing) && body.range && typeof body.range === 'object'
+              ? { range: body.range as TextAnnotation['range'] }
               : {}),
+            ...replacedTextUpdate,
             ...statusUpdates,
             replies,
             updatedAt: now,

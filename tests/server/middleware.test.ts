@@ -589,6 +589,141 @@ describe('middleware', () => {
     });
   });
 
+  describe('PATCH /annotations/:id range', () => {
+    async function createTextAnnotation() {
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'text',
+        pageUrl: '/',
+        selectedText: 'some text',
+        note: 'original note',
+        range: { startXPath: '/p[1]/text()[1]', startOffset: 0, endXPath: '/p[1]/text()[1]', endOffset: 9, selectedText: 'some text', contextBefore: 'before ', contextAfter: ' after' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      return JSON.parse(createRes._body);
+    }
+
+    it('updates range on a text annotation', async () => {
+      const created = await createTextAnnotation();
+
+      const newRange = {
+        startXPath: '/p[1]/text()[1]',
+        startOffset: 7,
+        endXPath: '/p[1]/text()[1]',
+        endOffset: 23,
+        selectedText: 'replacement text',
+        contextBefore: 'before ',
+        contextAfter: ' after',
+      };
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        range: newRange,
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.range.startOffset).toBe(7);
+      expect(patched.range.endOffset).toBe(23);
+      expect(patched.range.selectedText).toBe('replacement text');
+    });
+
+    it('clears replacedText when null is sent', async () => {
+      const created = await createTextAnnotation();
+
+      // First set replacedText
+      const setReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        replacedText: 'new text',
+      });
+      const setRes = mockResponse();
+      await middleware(setReq as any, setRes as any, () => {});
+      expect(JSON.parse(setRes._body).replacedText).toBe('new text');
+
+      // Now clear it with null
+      const clearReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        replacedText: null,
+      });
+      const clearRes = mockResponse();
+      await middleware(clearReq as any, clearRes as any, () => {});
+
+      expect(clearRes._status).toBe(200);
+      const patched = JSON.parse(clearRes._body);
+      expect(patched.replacedText).toBeUndefined();
+    });
+
+    it('updates range and clears replacedText together (re-anchor)', async () => {
+      const created = await createTextAnnotation();
+
+      // Set replacedText first
+      const setReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        replacedText: 'new text',
+      });
+      const setRes = mockResponse();
+      await middleware(setReq as any, setRes as any, () => {});
+
+      // Re-anchor: update range and clear replacedText
+      const newRange = {
+        startXPath: '/p[1]/text()[1]',
+        startOffset: 7,
+        endXPath: '/p[1]/text()[1]',
+        endOffset: 15,
+        selectedText: 'new text',
+        contextBefore: 'before ',
+        contextAfter: ' after',
+      };
+
+      const reanchorReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        range: newRange,
+        replacedText: null,
+      });
+      const reanchorRes = mockResponse();
+      await middleware(reanchorReq as any, reanchorRes as any, () => {});
+
+      expect(reanchorRes._status).toBe(200);
+      const patched = JSON.parse(reanchorRes._body);
+      expect(patched.range.selectedText).toBe('new text');
+      expect(patched.replacedText).toBeUndefined();
+    });
+
+    it('rejects invalid range with 400', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        range: 'not an object',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(400);
+      expect(JSON.parse(patchRes._body).error).toContain('range must be an object');
+    });
+
+    it('ignores range on element annotations', async () => {
+      // Create an element annotation
+      const createReq = mockRequest('POST', '/__inline-review/api/annotations', {
+        type: 'element',
+        pageUrl: '/',
+        note: 'element note',
+        elementSelector: { cssSelector: 'div', xpath: '//div', description: 'A div', tagName: 'div', attributes: {}, outerHtmlPreview: '<div></div>' },
+      });
+      const createRes = mockResponse();
+      await middleware(createReq as any, createRes as any, () => {});
+      const created = JSON.parse(createRes._body);
+
+      // Attempt to set range — should be silently ignored
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        range: { startXPath: '/p[1]', startOffset: 0, endXPath: '/p[1]', endOffset: 5, selectedText: 'test', contextBefore: '', contextAfter: '' },
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.range).toBeUndefined();
+    });
+  });
+
   describe('POST /page-notes validation', () => {
     it('rejects missing pageUrl with 400', async () => {
       const req = mockRequest('POST', '/__inline-review/api/page-notes', {
