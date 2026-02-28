@@ -250,6 +250,10 @@ function init(): void {
 
   // Restore highlights for the current page, then handle pending scroll-to
   annotator.restoreHighlights().then(() => {
+    // Refresh panel after highlights so orphan states reflect DOM reality
+    if (isPanelOpen(panel)) {
+      mediator.refreshPanel();
+    }
     const pendingId = sessionStorage.getItem(SCROLL_TO_KEY);
     if (pendingId) {
       sessionStorage.removeItem(SCROLL_TO_KEY);
@@ -260,6 +264,9 @@ function init(): void {
   // Re-restore on Astro page transitions (also handles pending scroll-to)
   document.addEventListener('astro:page-load', () => {
     annotator.restoreHighlights().then(() => {
+      if (isPanelOpen(panel)) {
+        mediator.refreshPanel();
+      }
       const pendingId = sessionStorage.getItem(SCROLL_TO_KEY);
       if (pendingId) {
         sessionStorage.removeItem(SCROLL_TO_KEY);
@@ -273,12 +280,12 @@ function init(): void {
     onStoreChanged: () => {
       // Clear orphan timestamps so re-restored annotations get a fresh grace window
       orphanTracker.onStoreChanged();
-      // Always update DOM highlights — they're visible regardless of panel state
-      annotator.restoreHighlights();
-      // Only refresh the panel if it's currently open — avoids unnecessary DOM work
-      if (isPanelOpen(panel)) {
-        mediator.refreshPanel();
-      }
+      // Refresh panel AFTER highlights so orphan states reflect DOM reality
+      annotator.restoreHighlights().then(() => {
+        if (isPanelOpen(panel)) {
+          mediator.refreshPanel();
+        }
+      });
     },
   });
   poller.start();
