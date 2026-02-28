@@ -26,8 +26,8 @@ class ValidationError extends Error {
  * Returns a descriptive error message, or null if valid.
  */
 function validateAnnotationBody(body: Record<string, unknown>): string | null {
-  if (body.type !== 'text' && body.type !== 'element') {
-    return 'Invalid or missing "type": must be "text" or "element"';
+  if (body.type !== undefined && body.type !== 'text' && body.type !== 'element') {
+    return 'Invalid "type": must be "text" or "element"';
   }
   if (typeof body.pageUrl !== 'string') {
     return 'Invalid or missing "pageUrl": must be a string';
@@ -36,7 +36,10 @@ function validateAnnotationBody(body: Record<string, unknown>): string | null {
     return 'Invalid or missing "note": must be a string';
   }
 
-  if (body.type === 'text') {
+  // Treat missing type as 'text' for validation purposes
+  const effectiveType = body.type ?? 'text';
+
+  if (effectiveType === 'text') {
     if (typeof body.selectedText !== 'string') {
       return 'Invalid or missing "selectedText": must be a string when type is "text"';
     }
@@ -45,7 +48,7 @@ function validateAnnotationBody(body: Record<string, unknown>): string | null {
     }
   }
 
-  if (body.type === 'element') {
+  if (effectiveType === 'element') {
     if (typeof body.elementSelector !== 'object' || body.elementSelector === null || Array.isArray(body.elementSelector)) {
       return 'Invalid or missing "elementSelector": must be an object when type is "element"';
     }
