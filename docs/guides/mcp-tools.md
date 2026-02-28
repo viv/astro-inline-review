@@ -21,11 +21,11 @@ List all review annotations, optionally filtered by page URL.
 - `pageUrl` — the route path (e.g. `"/"`, `"/about"`)
 - `pageTitle` — the page's `<title>`
 - `note` — the reviewer's comment
-- `status` — lifecycle state: `"open"`, `"addressed"`, or `"resolved"`
+- `status` — lifecycle state: `"open"`, `"in_progress"`, or `"addressed"`
 - `createdAt`, `updatedAt` — ISO 8601 timestamps
 - `addressedAt` — ISO 8601 timestamp if addressed, absent otherwise
-- `resolvedAt` — ISO 8601 timestamp if resolved, absent otherwise
-- `replies` — array of `{ message, createdAt }` objects if any agent replies exist
+- `inProgressAt` — ISO 8601 timestamp if in progress, absent otherwise
+- `replies` — array of `{ message, createdAt, role }` objects if any replies exist
 - `selectedText` and `range` — (text annotations only) the highlighted text and its DOM location
 - `replacedText` — (text annotations only) what text replaced the original, if the agent updated it
 - `elementSelector` — (element annotations only) CSS selector, XPath, tag name, and HTML preview
@@ -94,7 +94,7 @@ Get a Markdown export of all annotations and page notes, grouped by page URL.
 
 **Parameters:** None.
 
-**Returns:** A Markdown-formatted string containing all annotations and page notes, grouped by page. Addressed and resolved annotations are marked accordingly. Agent replies are included inline.
+**Returns:** A Markdown-formatted string containing all annotations and page notes, grouped by page. Addressed annotations are marked with `🔧 [Addressed]`. In-progress annotations are marked with `⏳ [In Progress]`. Agent replies are included inline.
 
 This produces the same format as the browser's clipboard export. Useful for getting a complete overview of all review feedback in a human-readable format, or for sharing feedback with agents that don't support MCP.
 
@@ -106,53 +106,74 @@ get_export({})
 
 ---
 
-### resolve_annotation
+### address_annotation
 
-Mark an annotation as addressed or resolved.
+Mark an annotation as addressed by the agent. Sets the annotation's status to `"addressed"` (agent has acted on it, awaiting human review). The reviewer can then Accept (delete) or Reopen (back to open with follow-up note) via the browser UI.
 
-By default, this sets the annotation's status to `"addressed"` (agent has acted on it). The reviewer can later confirm the change and move it to `"resolved"` via the browser UI.
-
-Pass `autoResolve: true` to skip the human review step and mark the annotation directly as `"resolved"`.
+Optionally provide `replacedText` to record the new text that replaced the original — this enables the browser UI to re-locate the annotation after the text has changed.
 
 **Parameters:**
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` | Yes | The annotation ID to mark |
-| `autoResolve` | `boolean` | No | If `true`, mark directly as resolved (skip human review). Default: `false` |
+| `id` | `string` | Yes | The annotation ID to mark as addressed |
+| `replacedText` | `string` | No | The new text that replaced the original annotated text (text annotations only) |
 
-**Returns:** The updated annotation object with `addressedAt` (and `resolvedAt` if `autoResolve`) set.
+**Returns:** The updated annotation object with `addressedAt` set.
+
+**Errors:**
+
+- `Annotation with ID "..." not found` — the ID doesn't match any annotation.
+- `replacedText must not be empty` — provided but empty or whitespace-only.
+- `not a text annotation` — `replacedText` used on an element annotation.
+
+**Status lifecycle:**
+
+```
+open → in_progress → addressed → (Accept = delete | Reopen = back to open)
+```
+
+**Example — mark as addressed:**
+
+```
+address_annotation({ id: "abc123" })
+```
+
+**Example — mark as addressed with replacement text:**
+
+```
+address_annotation({ id: "abc123", replacedText: "corrected text here" })
+```
+
+---
+
+### set_in_progress
+
+Signal that the agent is about to start working on an annotation. Sets status to `"in_progress"` so the browser UI shows a working indicator instead of an orphan warning during code edits and hot-reloads. Call this before editing source code, then call `address_annotation` when done.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | `string` | Yes | The annotation ID to mark as in-progress |
+
+**Returns:** The updated annotation object with `inProgressAt` set.
 
 **Errors:**
 
 - `Annotation with ID "..." not found` — the ID doesn't match any annotation.
 
-**Status lifecycle:**
+**Example:**
 
 ```
-open → addressed (agent acted) → resolved (reviewer confirmed)
-```
-
-- Default behaviour (`autoResolve: false`): sets status to `"addressed"` with an `addressedAt` timestamp
-- With `autoResolve: true`: sets status to `"resolved"` with both `addressedAt` and `resolvedAt` timestamps
-
-**Example — mark as addressed (default):**
-
-```
-resolve_annotation({ id: "abc123" })
-```
-
-**Example — mark as resolved (skip human review):**
-
-```
-resolve_annotation({ id: "abc123", autoResolve: true })
+set_in_progress({ id: "abc123" })
 ```
 
 ---
 
 ### add_agent_reply
 
-Add a reply to an annotation explaining what action was taken. Appends to the annotation's `replies` array so reviewers can see agent responses alongside their original notes.
+Add a reply to an annotation explaining what action was taken. Appends to the annotation's `replies` array so reviewers can see agent responses alongside their original notes. The reply is added with `role: "agent"`.
 
 **Parameters:**
 
@@ -216,24 +237,25 @@ Common error scenarios:
 
 | Error | Cause | Tools affected |
 |-------|-------|----------------|
-| Annotation not found | ID doesn't exist in the store | `get_annotation`, `resolve_annotation`, `add_agent_reply`, `update_annotation_target` |
+| Annotation not found | ID doesn't exist in the store | `get_annotation`, `address_annotation`, `add_agent_reply`, `update_annotation_target`, `set_in_progress` |
 | Empty message | Reply message is blank | `add_agent_reply` |
 | Storage file missing | `inline-review.json` doesn't exist yet | All tools (returns empty arrays) |
 
 ## Workflow examples
 
-### Review and resolve all annotations
+### Address all annotations
 
 A typical agent workflow for processing all review feedback:
 
 ```
 1. list_annotations({})                              → get all annotations
 2. For each annotation:
-   a. Read the note and selectedText
-   b. Make the code change
-   c. update_annotation_target({ id, replacedText })  → record replacement text
-   d. resolve_annotation({ id })                      → mark as addressed
-   e. add_agent_reply({ id, message })                → explain what changed
+   a. set_in_progress({ id })                         → signal work starting
+   b. Read the note and selectedText
+   c. Make the code change
+   d. update_annotation_target({ id, replacedText })  → record replacement text
+   e. address_annotation({ id })                      → mark as addressed
+   f. add_agent_reply({ id, message })                → explain what changed
 ```
 
 ### Process a single page
@@ -243,7 +265,7 @@ Focus on annotations for one page:
 ```
 1. list_page_notes({ pageUrl: "/about" })  → check page-level feedback
 2. list_annotations({ pageUrl: "/about" }) → get text/element annotations
-3. Process each annotation and resolve
+3. Process each annotation and mark addressed
 ```
 
 ### Get a quick overview

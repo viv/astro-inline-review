@@ -318,11 +318,11 @@ describe('MCP server end-to-end workflow', () => {
     expect(annotations).toHaveLength(2);
 
     // Step 2: Address the first annotation (default behaviour)
-    const resolveResponse = await client.callTool('address_annotation', { id: 'ann-1' });
-    const resolveResult = resolveResponse.result as { content: Array<{ type: string; text: string }> };
-    const resolved = JSON.parse(resolveResult.content[0].text);
-    expect(resolved.status).toBe('addressed');
-    expect(resolved.addressedAt).toBeDefined();
+    const addressResponse = await client.callTool('address_annotation', { id: 'ann-1' });
+    const addressResult = addressResponse.result as { content: Array<{ type: string; text: string }> };
+    const addressed = JSON.parse(addressResult.content[0].text);
+    expect(addressed.status).toBe('addressed');
+    expect(addressed.addressedAt).toBeDefined();
 
     // Step 3: Add a reply to the second annotation
     const replyResponse = await client.callTool('add_agent_reply', {

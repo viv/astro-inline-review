@@ -95,7 +95,7 @@ describe('createPanel — export button', () => {
   });
 });
 
-describe('createPanel — resolved annotations and agent replies', () => {
+describe('createPanel — addressed annotations and agent replies', () => {
   let shadowRoot: ShadowRoot;
   let callbacks: PanelCallbacks;
   let mediator: ReviewMediator;
