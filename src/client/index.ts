@@ -225,6 +225,7 @@ function init(): void {
         panel.container.classList.add('air-panel--open');
         panel.container.setAttribute('data-air-state', 'open');
         sessionStorage.setItem(PANEL_STATE_KEY, 'open');
+        openFab(fab);
         await panel.mediator.refreshPanel();
       }
       panel.addNoteBtn.click();
@@ -237,6 +238,7 @@ function init(): void {
   if (pendingPanelState) {
     panel.container.classList.add('air-panel--open');
     panel.container.setAttribute('data-air-state', 'open');
+    openFab(fab);
     if (pendingPanelState === 'all-pages') {
       panel.allPagesTab.click();
       // Reset to 'open' — the all-pages tab switch is a one-shot action

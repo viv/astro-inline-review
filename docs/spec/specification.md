@@ -827,9 +827,12 @@ The `onStoreChanged` callback is never invoked on error — the last known finge
 
 **State Synchronisation**:
 
-The FAB derives its state from the `data-air-state` attribute on each click rather than maintaining an independent boolean. When the panel is closed by means other than a FAB click (e.g. Escape key, keyboard shortcut), the `closeActive()` handler calls `resetFab(fab)` which resets the FAB icon, CSS class, and `data-air-state` to `"closed"`. This keeps the FAB and panel in sync regardless of how the panel is closed.
+The FAB derives its state from the `data-air-state` attribute on each click rather than maintaining an independent boolean. Because the panel can be opened or closed by means other than a direct FAB click, two helper functions keep the FAB and panel in sync:
 
-The `resetFab()` function sets the icon back to the clipboard SVG, removes the `air-fab--open` class, and sets `data-air-state` to `"closed"`.
+- `openFab(fab)` — sets the icon to the plus/X SVG, adds the `air-fab--open` class, and sets `data-air-state` to `"open"`. Called whenever the panel is opened by a non-FAB-click path: the toggle-panel keyboard shortcut, the add-page-note keyboard shortcut, and the panel state restoration on page load/navigation.
+- `resetFab(fab)` — sets the icon back to the clipboard SVG, removes the `air-fab--open` class, and sets `data-air-state` to `"closed"`. Called whenever the panel is closed by a non-FAB-click path: the Escape key handler and the toggle-panel keyboard shortcut (when toggling closed).
+
+All paths that open or close the panel must call the appropriate helper to keep the FAB visual state consistent.
 
 **Accessibility**:
 - `aria-label="Toggle inline review panel"` (updated dynamically to include count when annotations exist, e.g. "Toggle inline review (3 annotations)")

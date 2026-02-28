@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createFab, updateBadge } from '../../../src/client/ui/fab.js';
+import { createFab, updateBadge, openFab, resetFab } from '../../../src/client/ui/fab.js';
 
 describe('createFab', () => {
   let shadowRoot: ShadowRoot;
@@ -53,6 +53,49 @@ describe('createFab', () => {
     const { badge } = createFab(shadowRoot, vi.fn());
     expect(badge).not.toBeNull();
     expect(badge.className).toContain('air-fab__badge');
+  });
+});
+
+describe('openFab', () => {
+  let shadowRoot: ShadowRoot;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+  });
+
+  it('sets FAB to open visual state', () => {
+    const fab = createFab(shadowRoot, vi.fn());
+    expect(fab.button.getAttribute('data-air-state')).toBe('closed');
+
+    openFab(fab);
+
+    expect(fab.button.classList.contains('air-fab--open')).toBe(true);
+    expect(fab.button.getAttribute('data-air-state')).toBe('open');
+  });
+});
+
+describe('resetFab', () => {
+  let shadowRoot: ShadowRoot;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: 'open' });
+  });
+
+  it('resets FAB to closed visual state', () => {
+    const fab = createFab(shadowRoot, vi.fn());
+    openFab(fab);
+    expect(fab.button.getAttribute('data-air-state')).toBe('open');
+
+    resetFab(fab);
+
+    expect(fab.button.classList.contains('air-fab--open')).toBe(false);
+    expect(fab.button.getAttribute('data-air-state')).toBe('closed');
   });
 });
 
