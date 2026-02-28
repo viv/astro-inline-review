@@ -119,6 +119,7 @@ interface BaseAnnotation {
   createdAt: string;    // ISO 8601 timestamp, server-generated
   updatedAt: string;    // ISO 8601 timestamp, updated on each edit
   status?: AnnotationStatus;    // Explicit lifecycle status (see 3.2.5)
+  inProgressAt?: string;        // ISO 8601 — when marked in_progress by an agent (optional)
   addressedAt?: string;         // ISO 8601 — when marked addressed by an agent (optional)
   resolvedAt?: string;          // ISO 8601 — when marked resolved by a human reviewer (optional)
   replies?: AgentReply[];       // Agent replies to this annotation (optional)
@@ -134,7 +135,7 @@ interface AgentReply {
 }
 ```
 
-Agent replies are appended by the MCP `add_agent_reply` tool. The `replies` array is append-only and grows chronologically. The `status`, `addressedAt`, `resolvedAt`, and `replies` fields are all optional — their absence means "open" / "not addressed" / "not resolved" / "no replies". No migration is needed for existing data.
+Replies are appended to the `replies` array chronologically. Agent replies are added via the MCP `add_agent_reply` tool. Reviewer replies are added via `PATCH /annotations/:id` with a `reply` field when reopening an annotation with a follow-up note. The `role` field defaults to `'agent'` when absent for backward compatibility. The `status`, `inProgressAt`, `addressedAt`, `resolvedAt`, and `replies` fields are all optional — their absence means "open" / "not in progress" / "not addressed" / "not resolved" / "no replies". No migration is needed for existing data.
 
 #### 3.2.2 TextAnnotation
 
@@ -179,26 +180,33 @@ The discriminant field is `type`:
 Annotations have an explicit lifecycle status that tracks their progress from creation through agent action to human acceptance:
 
 ```
-open → addressed → resolved
-  ↑                    │
-  └────────────────────┘  (reopen)
+open → in_progress → addressed → resolved
+  ↑                                   │
+  └───────────────────────────────────┘  (reopen)
 ```
 
 | Status | Meaning | Set by |
 |--------|---------|--------|
 | `open` | Annotation is new or has been reopened | Default on creation; human reviewer via Reopen button |
+| `in_progress` | An agent is actively working on the annotation | Agent via MCP `set_in_progress` tool |
 | `addressed` | An agent has acted on the annotation | Agent via MCP `resolve_annotation` tool (default behaviour) |
 | `resolved` | A human reviewer has accepted the agent's work | Human reviewer via Accept button in panel; or agent via MCP with `autoResolve: true` |
 
 **Status transitions**:
-- `open` → `addressed`: Agent calls `resolve_annotation` MCP tool (default, without `autoResolve`)
-- `addressed` → `resolved`: Human reviewer clicks Accept button in panel; or agent calls `resolve_annotation` with `autoResolve: true`
-- `resolved` → `open`: Human reviewer clicks Reopen button in panel (clears `addressedAt` and `resolvedAt`)
+- `open` → `in_progress`: Agent calls `set_in_progress` MCP tool before editing source code
+- `open` or `in_progress` → `addressed`: Agent calls `resolve_annotation` MCP tool (default, without `autoResolve`)
+- `open` or `in_progress` → `resolved`: Agent calls `resolve_annotation` with `autoResolve: true` (skips human review step)
+- `addressed` or `resolved` → *(deleted)*: Human reviewer clicks Accept button in panel — annotation is removed entirely
+- `resolved` → `open`: Human reviewer clicks Reopen button in panel (clears all progress timestamps)
 
 **Timestamp semantics**:
+- `inProgressAt` is set when status transitions to `in_progress`
 - `addressedAt` is set when status transitions to `addressed`
 - `resolvedAt` is set when status transitions to `resolved`
-- Transitioning to `open` (reopen) clears both `addressedAt` and `resolvedAt`
+- Each transition clears the timestamps of other states (e.g. `addressed` clears `inProgressAt` and `resolvedAt`)
+- Transitioning to `open` (reopen) clears `inProgressAt`, `addressedAt`, and `resolvedAt`
+
+**Orphan grace period**: When an agent edits source code, Vite hot-reloads the page and the annotation temporarily loses its DOM anchor. The `OrphanTracker` provides a 15-second grace period before showing the "Could not locate on page" orphan warning, but only for annotations that were previously located on the page. Annotations that have never been DOM-anchored (e.g. the referenced text no longer exists) are shown as orphaned immediately — there is no reason to show "Checking…" for text that was never on the page. Annotations with `in_progress` status never time out — they always show a "Checking..." indicator until the agent resolves them or the reviewer acts. The `onStoreChanged()` method resets all grace period timers (but not the anchor history) when external store changes are detected.
 
 **`getAnnotationStatus()` helper**: A shared helper function provides backward compatibility for annotations that predate the `status` field:
 
@@ -435,18 +443,20 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 | `selectedText` | No | Preserved from original |
 | `note` | **Yes** | Mutable — primary use case |
 | `replacedText` | **Yes** (text only) | Mutable on text annotations only, ignored on element annotations |
-| `status` | **Yes** | Must be `'open'`, `'addressed'`, or `'resolved'` (see status side-effects below) |
+| `status` | **Yes** | Must be `'open'`, `'in_progress'`, `'addressed'`, or `'resolved'` (see status side-effects below) |
 | `range` | No | Preserved from original |
 | `elementSelector` | No | Preserved from original |
 | `createdAt` | No | Preserved from original |
 | `updatedAt` | No | Server-generated on every PATCH |
+| `inProgressAt` | No | Server-generated as side-effect of `status` change |
 | `addressedAt` | No | Server-generated as side-effect of `status` change |
 | `resolvedAt` | No | Server-generated as side-effect of `status` change |
 
 **Status side-effects on PATCH**: When `status` is included in the request body, the server automatically manages the related timestamp fields:
-- `status: 'addressed'` → sets `addressedAt` to current timestamp, clears `resolvedAt` (handles `resolved → addressed` transition cleanly)
-- `status: 'resolved'` → sets `resolvedAt` to current timestamp (preserves `addressedAt` — shows when the agent first acted)
-- `status: 'open'` → clears both `addressedAt` and `resolvedAt` (sets to `undefined`)
+- `status: 'in_progress'` → sets `inProgressAt` to current timestamp, clears `addressedAt` and `resolvedAt`
+- `status: 'addressed'` → sets `addressedAt` to current timestamp, clears `inProgressAt` and `resolvedAt`
+- `status: 'resolved'` → sets `resolvedAt` to current timestamp, clears `inProgressAt` (preserves `addressedAt` — shows when the agent first acted)
+- `status: 'open'` → clears `inProgressAt`, `addressedAt`, and `resolvedAt` (sets to `undefined`)
 
 **Validation**: `POST /annotations` validates required fields and returns 400 with a descriptive error message on failure:
 - `type` must be `"text"` or `"element"`
@@ -560,6 +570,7 @@ The MCP (Model Context Protocol) server provides structured agent access to revi
 | `resolve_annotation` | Write | `id` (string, required), `autoResolve` (boolean, optional) | Mark an annotation as addressed (default) or resolved (see below) |
 | `add_agent_reply` | Write | `id` (string, required), `message` (string, required) | Add a reply to an annotation explaining what action was taken |
 | `update_annotation_target` | Write | `id` (string, required), `replacedText` (string, required) | Update what text replaced the original annotated text. Only applicable to text annotations. |
+| `set_in_progress` | Write | `id` (string, required) | Signal that the agent is about to start working on an annotation. Sets status to `in_progress` so the UI shows a working indicator instead of an orphan warning during code edits and hot-reloads. |
 
 All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters require non-empty strings (`.min(1)`). The `add_agent_reply` tool additionally validates that `message` is non-empty after trimming — an empty or whitespace-only message returns an error. The `update_annotation_target` tool validates that `replacedText` is non-empty after trimming and returns an error if the annotation is not a text annotation.
 

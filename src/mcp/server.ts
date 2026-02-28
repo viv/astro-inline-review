@@ -9,6 +9,7 @@ import { register as registerGetExport } from './tools/get-export.js';
 import { register as registerResolveAnnotation } from './tools/resolve-annotation.js';
 import { register as registerAddAgentReply } from './tools/add-agent-reply.js';
 import { register as registerUpdateAnnotationTarget } from './tools/update-annotation-target.js';
+import { register as registerSetInProgress } from './tools/set-in-progress.js';
 
 export function parseStoragePath(argv: string[]): string {
   const idx = argv.indexOf('--storage');
@@ -33,6 +34,7 @@ async function main() {
   registerResolveAnnotation(server, storage);
   registerAddAgentReply(server, storage);
   registerUpdateAnnotationTarget(server, storage);
+  registerSetInProgress(server, storage);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

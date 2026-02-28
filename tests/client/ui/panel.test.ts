@@ -34,7 +34,7 @@ describe('createPanel — export button', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -130,7 +130,7 @@ describe('createPanel — resolved annotations and agent replies', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -299,7 +299,7 @@ describe('annotation item — delete button', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -457,7 +457,7 @@ describe('annotation item — orphan indicator', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -474,8 +474,8 @@ describe('annotation item — orphan indicator', () => {
     await mediator.refreshPanel();
   }
 
-  it('shows orphan indicator when isAnnotationOrphaned returns true', async () => {
-    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(true);
+  it('shows orphan indicator when getOrphanState returns orphaned', async () => {
+    vi.mocked(callbacks.getOrphanState).mockReturnValue('orphaned');
 
     await renderWithStore({
       version: 1,
@@ -488,8 +488,8 @@ describe('annotation item — orphan indicator', () => {
     expect(orphanIndicator!.textContent).toBe('Could not locate on page');
   });
 
-  it('does not show orphan indicator when isAnnotationOrphaned returns false', async () => {
-    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(false);
+  it('does not show orphan indicator when getOrphanState returns anchored', async () => {
+    vi.mocked(callbacks.getOrphanState).mockReturnValue('anchored');
 
     await renderWithStore({
       version: 1,
@@ -501,8 +501,22 @@ describe('annotation item — orphan indicator', () => {
     expect(orphanIndicator).toBeNull();
   });
 
+  it('shows checking indicator when getOrphanState returns checking', async () => {
+    vi.mocked(callbacks.getOrphanState).mockReturnValue('checking');
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const checkingIndicator = shadowRoot.querySelector('[data-air-el="checking-indicator"]');
+    expect(checkingIndicator).not.toBeNull();
+    expect(checkingIndicator!.textContent).toBe('Checking…');
+  });
+
   it('adds orphan modifier class when annotation is orphaned', async () => {
-    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(true);
+    vi.mocked(callbacks.getOrphanState).mockReturnValue('orphaned');
 
     await renderWithStore({
       version: 1,
@@ -514,8 +528,21 @@ describe('annotation item — orphan indicator', () => {
     expect(item!.classList.contains('air-annotation-item--orphan')).toBe(true);
   });
 
-  it('does not add orphan modifier class when annotation is not orphaned', async () => {
-    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(false);
+  it('adds checking modifier class when orphan state is checking', async () => {
+    vi.mocked(callbacks.getOrphanState).mockReturnValue('checking');
+
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation()],
+      pageNotes: [],
+    });
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
+    expect(item!.classList.contains('air-annotation-item--checking')).toBe(true);
+  });
+
+  it('does not add orphan modifier class when annotation is anchored', async () => {
+    vi.mocked(callbacks.getOrphanState).mockReturnValue('anchored');
 
     await renderWithStore({
       version: 1,
@@ -528,7 +555,7 @@ describe('annotation item — orphan indicator', () => {
   });
 
   it('shows orphan indicator on element annotation when orphaned', async () => {
-    vi.mocked(callbacks.isAnnotationOrphaned).mockReturnValue(true);
+    vi.mocked(callbacks.getOrphanState).mockReturnValue('orphaned');
 
     await renderWithStore({
       version: 1,
@@ -543,14 +570,14 @@ describe('annotation item — orphan indicator', () => {
     expect(item!.classList.contains('air-annotation-item--orphan')).toBe(true);
   });
 
-  it('calls isAnnotationOrphaned with annotation id and pageUrl', async () => {
+  it('calls getOrphanState with annotation id, pageUrl and status', async () => {
     await renderWithStore({
       version: 1,
       annotations: [makeTextAnnotation({ id: 'check-me' })],
       pageNotes: [],
     });
 
-    expect(callbacks.isAnnotationOrphaned).toHaveBeenCalledWith('check-me', '/');
+    expect(callbacks.getOrphanState).toHaveBeenCalledWith('check-me', '/', 'open');
   });
 });
 
@@ -569,7 +596,7 @@ describe('createPanel — single fetch per refresh', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -632,7 +659,7 @@ describe('createPanel — shortcuts help footer', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -688,7 +715,7 @@ describe('createPanel — replacedText rendering', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -793,7 +820,7 @@ describe('createPanel — ARIA semantics', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -932,7 +959,7 @@ describe('createPanel — status lifecycle buttons', () => {
       onAnnotationClick: vi.fn(),
       onAnnotationDelete: vi.fn().mockResolvedValue(undefined),
       onAnnotationStatusChange: vi.fn().mockResolvedValue(undefined),
-      isAnnotationOrphaned: vi.fn().mockReturnValue(false),
+      getOrphanState: vi.fn().mockReturnValue('anchored'),
       onRefreshBadge: vi.fn().mockResolvedValue(undefined),
       onExport: vi.fn().mockResolvedValue(undefined),
     };
@@ -1082,5 +1109,43 @@ describe('createPanel — status lifecycle buttons', () => {
     reopenBtn.click();
 
     expect(callbacks.onAnnotationStatusChange).toHaveBeenCalledWith('reopen-me', 'open');
+  });
+
+  it('shows in-progress badge for in_progress annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'in_progress', inProgressAt: '2026-02-28T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const badge = shadowRoot.querySelector('[data-air-el="in-progress-badge"]');
+    expect(badge).not.toBeNull();
+    expect(badge!.textContent).toContain('Agent working');
+  });
+
+  it('adds in-progress class for in_progress annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'in_progress', inProgressAt: '2026-02-28T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const item = shadowRoot.querySelector('[data-air-el="annotation-item"]');
+    expect(item!.classList.contains('air-annotation-item--in-progress')).toBe(true);
+  });
+
+  it('hides action buttons for in_progress annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'in_progress', inProgressAt: '2026-02-28T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const deleteBtn = shadowRoot.querySelector('[data-air-el="annotation-delete"]');
+    const acceptBtn = shadowRoot.querySelector('[data-air-el="annotation-accept"]');
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
+    expect(deleteBtn).toBeNull();
+    expect(acceptBtn).toBeNull();
+    expect(reopenBtn).toBeNull();
   });
 });

@@ -12,7 +12,7 @@ export interface AgentReply {
 }
 
 /** Annotation lifecycle status */
-export type AnnotationStatus = 'open' | 'addressed' | 'resolved';
+export type AnnotationStatus = 'open' | 'in_progress' | 'addressed' | 'resolved';
 
 /** Shared fields for all annotation types */
 export interface BaseAnnotation {
@@ -24,6 +24,7 @@ export interface BaseAnnotation {
   createdAt: string;
   updatedAt: string;
   status?: AnnotationStatus;
+  inProgressAt?: string;
   addressedAt?: string;
   resolvedAt?: string;
   replies?: AgentReply[];
@@ -38,6 +39,11 @@ export function getAnnotationStatus(a: BaseAnnotation): AnnotationStatus {
   if (a.status) return a.status;
   if (a.resolvedAt) return 'resolved';
   return 'open';
+}
+
+/** Check whether an annotation is in a terminal/non-editable agent state */
+export function isAgentWorking(a: BaseAnnotation): boolean {
+  return getAnnotationStatus(a) === 'in_progress';
 }
 
 /** A text selection annotation */

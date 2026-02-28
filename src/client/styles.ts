@@ -327,6 +327,38 @@ export const PANEL_STYLES = /* css */ `
     margin-left: 8px;
   }
 
+  .air-annotation-item--in-progress {
+    opacity: 0.85;
+    border-left: 3px solid #8B5CF6;
+  }
+
+  .air-annotation-item__in-progress-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #8B5CF6;
+    margin-bottom: 4px;
+  }
+
+  .air-annotation-item__in-progress-time {
+    font-size: 11px;
+    color: #888;
+    font-weight: 400;
+  }
+
+  .air-annotation-item--checking {
+    opacity: 0.85;
+    border-left: 3px solid #D97706;
+  }
+
+  .air-annotation-item__checking {
+    font-size: 11px;
+    color: #D97706;
+    margin-top: 4px;
+  }
+
   .air-annotation-item--orphan {
     opacity: 0.7;
     border-left: 3px solid #F87171;
