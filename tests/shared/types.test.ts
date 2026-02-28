@@ -28,16 +28,17 @@ describe('getAnnotationStatus', () => {
     expect(getAnnotationStatus(annotation)).toBe('addressed');
   });
 
-  it('returns resolved when status is resolved', () => {
-    const annotation = makeAnnotation({ status: 'resolved' });
+  it('maps resolved to addressed for backward compatibility', () => {
+    // Cast via any — 'resolved' is no longer in AnnotationStatus but may exist in legacy data
+    const annotation = makeAnnotation({ status: 'resolved' as any });
 
-    expect(getAnnotationStatus(annotation)).toBe('resolved');
+    expect(getAnnotationStatus(annotation)).toBe('addressed');
   });
 
-  it('returns resolved for legacy annotation with resolvedAt but no status', () => {
+  it('maps legacy resolvedAt to addressed for backward compatibility', () => {
     const annotation = makeAnnotation({ resolvedAt: '2026-02-23T10:00:00Z' });
 
-    expect(getAnnotationStatus(annotation)).toBe('resolved');
+    expect(getAnnotationStatus(annotation)).toBe('addressed');
   });
 
   it('returns open for legacy annotation with no status and no resolvedAt', () => {

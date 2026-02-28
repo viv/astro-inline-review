@@ -38,7 +38,7 @@ No other configuration is needed — Claude Code reads `.mcp.json` on startup.
 1. Claude Code reads `.mcp.json` on startup
 2. It spawns `node ./node_modules/astro-inline-review/dist/mcp/server.js` as a child process using stdio transport
 3. The MCP server reads `inline-review.json` from disk on every tool call
-4. Claude Code gains access to seven tools for listing, reading, resolving, replying to, and updating annotations
+4. Claude Code gains access to seven tools for listing, reading, addressing, replying to, and updating annotations
 
 ### Custom storage path
 
@@ -81,16 +81,17 @@ Human reviewer (browser)        AI coding agent (MCP)
    elements, add notes
                          ──────►
                                 3. list_annotations → see all feedback
-                                4. Make source code changes
-                                5. resolve_annotation → mark addressed
-                                6. add_agent_reply → explain changes
-                                7. update_annotation_target → record
+                                4. set_in_progress → signal work starting
+                                5. Make source code changes
+                                6. address_annotation → mark addressed
+                                7. add_agent_reply → explain changes
+                                8. update_annotation_target → record
                                    what text replaced the original
                          ◄──────
-8. See addressed status and
+9. See addressed status and
    agent replies in panel
-9. Confirm changes (resolved)
-   or re-annotate
+10. Accept (delete) or Reopen
+    with follow-up note
 ```
 
 1. **Reviewer annotates** — using the browser overlay during `astro dev`, the reviewer selects text or Alt+clicks elements and adds notes describing what needs to change.
@@ -99,9 +100,9 @@ Human reviewer (browser)        AI coding agent (MCP)
 
 3. **Agent makes changes** — using the annotation context (page URL, selected text, reviewer note), the agent locates and modifies the relevant source files.
 
-4. **Agent marks addressed and replies** — after making changes, the agent calls `resolve_annotation` to mark the item as addressed, `add_agent_reply` to explain what changed, and optionally `update_annotation_target` to record the replacement text.
+4. **Agent marks addressed and replies** — after making changes, the agent calls `address_annotation` to mark the item as addressed, `add_agent_reply` to explain what changed, and optionally `update_annotation_target` to record the replacement text.
 
-5. **Reviewer sees responses** — the browser UI shows addressed annotations with their status and displays agent replies inline, so the reviewer can verify the changes and confirm resolution.
+5. **Reviewer sees responses** — the browser UI shows addressed annotations with their status and displays agent replies inline, so the reviewer can Accept (delete the annotation) or Reopen with a follow-up note.
 
 ## Troubleshooting
 

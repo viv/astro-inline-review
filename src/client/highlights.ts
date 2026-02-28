@@ -12,7 +12,6 @@ export const HIGHLIGHT_ATTR = 'data-air-id';
 const HIGHLIGHT_STYLE = 'background-color: rgba(217,119,6,0.3); border-radius: 2px; cursor: pointer;';
 const IN_PROGRESS_HIGHLIGHT_STYLE = 'background-color: rgba(139,92,246,0.2); border-radius: 2px; cursor: pointer;';
 const ADDRESSED_HIGHLIGHT_STYLE = 'background-color: rgba(59,130,246,0.2); border-radius: 2px; cursor: pointer;';
-const RESOLVED_HIGHLIGHT_STYLE = 'background-color: rgba(34,197,94,0.2); border-radius: 2px; cursor: pointer;';
 
 /**
  * Apply a highlight to a Range by wrapping text nodes in <mark> elements.
@@ -111,9 +110,7 @@ export const ELEMENT_HIGHLIGHT_ATTR = 'data-air-element-id';
 export function applyElementHighlight(element: Element, id: string, status: AnnotationStatus = 'open'): void {
   const el = element as HTMLElement;
   el.setAttribute(ELEMENT_HIGHLIGHT_ATTR, id);
-  if (status === 'resolved') {
-    el.style.outline = '2px dashed rgba(34,197,94,0.5)';
-  } else if (status === 'addressed') {
+  if (status === 'addressed') {
     el.style.outline = '2px dashed rgba(59,130,246,0.5)';
   } else if (status === 'in_progress') {
     el.style.outline = '2px dashed rgba(139,92,246,0.5)';
@@ -177,9 +174,7 @@ export function removeAllElementHighlights(): void {
 function createMark(id: string, status: AnnotationStatus = 'open'): HTMLElement {
   const mark = document.createElement('mark');
   mark.setAttribute(HIGHLIGHT_ATTR, id);
-  if (status === 'resolved') {
-    mark.setAttribute('style', RESOLVED_HIGHLIGHT_STYLE);
-  } else if (status === 'addressed') {
+  if (status === 'addressed') {
     mark.setAttribute('style', ADDRESSED_HIGHLIGHT_STYLE);
   } else if (status === 'in_progress') {
     mark.setAttribute('style', IN_PROGRESS_HIGHLIGHT_STYLE);

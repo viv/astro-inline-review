@@ -13,7 +13,7 @@ export interface AgentReply {
 }
 
 /** Annotation lifecycle status */
-export type AnnotationStatus = 'open' | 'in_progress' | 'addressed' | 'resolved';
+export type AnnotationStatus = 'open' | 'in_progress' | 'addressed';
 
 /** Shared fields for all annotation types */
 export interface BaseAnnotation {
@@ -34,11 +34,16 @@ export interface BaseAnnotation {
 /**
  * Get the effective status of an annotation.
  * Handles backward compatibility: annotations without a status field
- * default to 'resolved' if resolvedAt is set, otherwise 'open'.
+ * derive from timestamps. Legacy 'resolved' status maps to 'addressed'.
  */
 export function getAnnotationStatus(a: BaseAnnotation): AnnotationStatus {
-  if (a.status) return a.status;
-  if (a.resolvedAt) return 'resolved';
+  if (a.status) {
+    // Backward compat: legacy 'resolved' maps to 'addressed'
+    if ((a.status as string) === 'resolved') return 'addressed';
+    return a.status;
+  }
+  // Legacy annotations without status field: resolvedAt → addressed
+  if (a.resolvedAt) return 'addressed';
   return 'open';
 }
 

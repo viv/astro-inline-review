@@ -5,13 +5,13 @@ import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { ReviewStorage } from '../../../src/server/storage.js';
 import { createEmptyStore } from '../../../src/shared/types.js';
 import type { ReviewStore } from '../../../src/shared/types.js';
-import { resolveAnnotationHandler } from '../../../src/mcp/tools/resolve-annotation.js';
+import { addressAnnotationHandler } from '../../../src/mcp/tools/address-annotation.js';
 import { makeTextAnnotation, makeElementAnnotation } from '../helpers/fixtures.js';
 
-const TEST_DIR = join(tmpdir(), 'air-mcp-resolve-' + Date.now());
+const TEST_DIR = join(tmpdir(), 'air-mcp-address-' + Date.now());
 const TEST_FILE = join(TEST_DIR, 'store.json');
 
-describe('resolve_annotation handler', () => {
+describe('address_annotation handler', () => {
   let storage: ReviewStorage;
 
   beforeEach(() => {
@@ -24,7 +24,7 @@ describe('resolve_annotation handler', () => {
     if (existsSync(TEST_FILE)) unlinkSync(TEST_FILE);
   });
 
-  describe('default behaviour (no autoResolve)', () => {
+  describe('default behaviour', () => {
     it('sets status to "addressed" and addressedAt to a valid ISO 8601 timestamp', async () => {
       const store: ReviewStore = {
         ...createEmptyStore(),
@@ -32,7 +32,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1' });
+      const result = await addressAnnotationHandler(storage, { id: 'ann1' });
 
       const data = JSON.parse(result.content[0].text);
       expect(data.status).toBe('addressed');
@@ -47,7 +47,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1' });
+      const result = await addressAnnotationHandler(storage, { id: 'ann1' });
 
       const data = JSON.parse(result.content[0].text);
       expect(data.resolvedAt).toBeUndefined();
@@ -60,7 +60,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      await resolveAnnotationHandler(storage, { id: 'ann1' });
+      await addressAnnotationHandler(storage, { id: 'ann1' });
 
       const persisted = await storage.read();
       expect(persisted.annotations[0].status).toBe('addressed');
@@ -77,74 +77,10 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1' });
+      const result = await addressAnnotationHandler(storage, { id: 'ann1' });
 
       const data = JSON.parse(result.content[0].text);
       expect(data.updatedAt).not.toBe('2026-01-01T00:00:00.000Z');
-    });
-  });
-
-  describe('autoResolve: true', () => {
-    it('sets status to "resolved" and resolvedAt to a valid ISO 8601 timestamp', async () => {
-      const store: ReviewStore = {
-        ...createEmptyStore(),
-        annotations: [makeTextAnnotation('ann1', '/', 'fix this')],
-      };
-      await storage.write(store);
-
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1', autoResolve: true });
-
-      const data = JSON.parse(result.content[0].text);
-      expect(data.status).toBe('resolved');
-      expect(data.resolvedAt).toBeDefined();
-      expect(new Date(data.resolvedAt).toISOString()).toBe(data.resolvedAt);
-    });
-
-    it('updates resolvedAt when the annotation already has one', async () => {
-      const store: ReviewStore = {
-        ...createEmptyStore(),
-        annotations: [{
-          ...makeTextAnnotation('ann1', '/', 'fix this'),
-          resolvedAt: '2026-01-01T00:00:00.000Z',
-        }],
-      };
-      await storage.write(store);
-
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1', autoResolve: true });
-
-      const data = JSON.parse(result.content[0].text);
-      expect(data.resolvedAt).toBeDefined();
-      expect(data.resolvedAt).not.toBe('2026-01-01T00:00:00.000Z');
-    });
-
-    it('does not set addressedAt', async () => {
-      const store: ReviewStore = {
-        ...createEmptyStore(),
-        annotations: [makeTextAnnotation('ann1', '/', 'fix this')],
-      };
-      await storage.write(store);
-
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1', autoResolve: true });
-
-      const data = JSON.parse(result.content[0].text);
-      expect(data.addressedAt).toBeUndefined();
-    });
-
-    it('persists status and resolvedAt to the JSON file', async () => {
-      const store: ReviewStore = {
-        ...createEmptyStore(),
-        annotations: [makeTextAnnotation('ann1', '/', 'fix this')],
-      };
-      await storage.write(store);
-
-      await resolveAnnotationHandler(storage, { id: 'ann1', autoResolve: true });
-
-      const persisted = await storage.read();
-      expect(persisted.annotations[0].status).toBe('resolved');
-      expect(persisted.annotations[0].resolvedAt).toBeDefined();
-      expect(new Date(persisted.annotations[0].resolvedAt!).toISOString()).toBe(
-        persisted.annotations[0].resolvedAt,
-      );
     });
   });
 
@@ -156,7 +92,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, {
+      const result = await addressAnnotationHandler(storage, {
         id: 'ann1',
         replacedText: 'updated text',
       });
@@ -166,24 +102,6 @@ describe('resolve_annotation handler', () => {
       expect(data.status).toBe('addressed');
     });
 
-    it('sets replacedText with autoResolve', async () => {
-      const store: ReviewStore = {
-        ...createEmptyStore(),
-        annotations: [makeTextAnnotation('ann1', '/', 'update this text')],
-      };
-      await storage.write(store);
-
-      const result = await resolveAnnotationHandler(storage, {
-        id: 'ann1',
-        replacedText: 'updated text',
-        autoResolve: true,
-      });
-
-      const data = JSON.parse(result.content[0].text);
-      expect(data.replacedText).toBe('updated text');
-      expect(data.status).toBe('resolved');
-    });
-
     it('persists replacedText to the JSON file', async () => {
       const store: ReviewStore = {
         ...createEmptyStore(),
@@ -191,7 +109,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      await resolveAnnotationHandler(storage, { id: 'ann1', replacedText: 'updated text' });
+      await addressAnnotationHandler(storage, { id: 'ann1', replacedText: 'updated text' });
 
       const persisted = await storage.read();
       expect(persisted.annotations[0].replacedText).toBe('updated text');
@@ -204,7 +122,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1', replacedText: '' });
+      const result = await addressAnnotationHandler(storage, { id: 'ann1', replacedText: '' });
 
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('must not be empty');
@@ -217,7 +135,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1', replacedText: '   ' });
+      const result = await addressAnnotationHandler(storage, { id: 'ann1', replacedText: '   ' });
 
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('must not be empty');
@@ -230,7 +148,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, {
+      const result = await addressAnnotationHandler(storage, {
         id: 'ann1',
         replacedText: 'some text',
       });
@@ -246,7 +164,7 @@ describe('resolve_annotation handler', () => {
       };
       await storage.write(store);
 
-      const result = await resolveAnnotationHandler(storage, { id: 'ann1' });
+      const result = await addressAnnotationHandler(storage, { id: 'ann1' });
 
       const data = JSON.parse(result.content[0].text);
       expect(data.replacedText).toBeUndefined();
@@ -254,7 +172,7 @@ describe('resolve_annotation handler', () => {
   });
 
   it('returns error for non-existent ID', async () => {
-    const result = await resolveAnnotationHandler(storage, { id: 'nonexistent' });
+    const result = await addressAnnotationHandler(storage, { id: 'nonexistent' });
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain('not found');

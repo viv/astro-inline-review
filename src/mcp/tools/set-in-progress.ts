@@ -36,7 +36,7 @@ export async function setInProgressHandler(
 export function register(server: McpServer, storage: ReviewStorage): void {
   server.tool(
     'set_in_progress',
-    'Signal that the agent is about to start working on an annotation. Sets status to "in_progress" so the browser UI shows a working indicator instead of an orphan warning during code edits and hot-reloads. Call this before editing source code, then call resolve_annotation when done.',
+    'Signal that the agent is about to start working on an annotation. Sets status to "in_progress" so the browser UI shows a working indicator instead of an orphan warning during code edits and hot-reloads. Call this before editing source code, then call address_annotation when done.',
     {
       id: z.string().min(1).describe('The annotation ID to mark as in-progress'),
     },

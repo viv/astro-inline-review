@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateExport } from '../../src/shared/export.js';
-import type { ReviewStore, TextAnnotation, ElementAnnotation } from '../../src/shared/types.js';
+import type { ReviewStore, TextAnnotation, ElementAnnotation, AnnotationStatus } from '../../src/shared/types.js';
 
 function makeTextAnnotation(overrides: Partial<TextAnnotation> = {}): TextAnnotation {
   return {
@@ -85,7 +85,7 @@ describe('generateExport', () => {
     expect(result).toContain('> fix element');
   });
 
-  it('shows checkmark for resolved annotations', () => {
+  it('shows addressed label for annotations with resolvedAt (backward compat)', () => {
     const store: ReviewStore = {
       version: 1,
       annotations: [
@@ -96,7 +96,7 @@ describe('generateExport', () => {
 
     const result = generateExport(store);
 
-    expect(result).toContain('[Resolved]');
+    expect(result).toContain('[Addressed]');
   });
 
   it('does not show checkmark for unresolved annotations', () => {
@@ -268,19 +268,19 @@ describe('generateExport', () => {
     expect(result).not.toContain('[Resolved]');
   });
 
-  it('shows resolved label for resolved annotations (via status field)', () => {
+  it('maps resolved status to addressed in export (backward compat)', () => {
     const store: ReviewStore = {
       version: 1,
       annotations: [
-        makeTextAnnotation({ status: 'resolved', resolvedAt: '2026-02-22T10:00:00Z' }),
+        makeTextAnnotation({ status: 'resolved' as AnnotationStatus, resolvedAt: '2026-02-22T10:00:00Z' }),
       ],
       pageNotes: [],
     };
 
     const result = generateExport(store);
 
-    expect(result).toContain('✅ [Resolved]');
-    expect(result).not.toContain('[Addressed]');
+    expect(result).toContain('🔧 [Addressed]');
+    expect(result).not.toContain('[Resolved]');
   });
 
   it('shows no status label for open annotations', () => {

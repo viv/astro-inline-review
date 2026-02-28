@@ -180,7 +180,7 @@ describe('MCP server integration', () => {
     expect(toolNames).toContain('list_page_notes');
     expect(toolNames).toContain('get_annotation');
     expect(toolNames).toContain('get_export');
-    expect(toolNames).toContain('resolve_annotation');
+    expect(toolNames).toContain('address_annotation');
     expect(toolNames).toContain('add_agent_reply');
     expect(toolNames).toContain('set_in_progress');
   });
@@ -229,10 +229,10 @@ describe('MCP server integration', () => {
     expect(result.content[0].text).toContain('not found');
   });
 
-  it('resolve_annotation defaults to addressed status', async () => {
+  it('address_annotation defaults to addressed status', async () => {
     await client.initialize();
 
-    const response = await client.callTool('resolve_annotation', { id: 'ann-1' });
+    const response = await client.callTool('address_annotation', { id: 'ann-1' });
     const result = response.result as { content: Array<{ type: string; text: string }> };
     const annotation = JSON.parse(result.content[0].text);
 
@@ -318,11 +318,11 @@ describe('MCP server end-to-end workflow', () => {
     expect(annotations).toHaveLength(2);
 
     // Step 2: Address the first annotation (default behaviour)
-    const resolveResponse = await client.callTool('resolve_annotation', { id: 'ann-1' });
-    const resolveResult = resolveResponse.result as { content: Array<{ type: string; text: string }> };
-    const resolved = JSON.parse(resolveResult.content[0].text);
-    expect(resolved.status).toBe('addressed');
-    expect(resolved.addressedAt).toBeDefined();
+    const addressResponse = await client.callTool('address_annotation', { id: 'ann-1' });
+    const addressResult = addressResponse.result as { content: Array<{ type: string; text: string }> };
+    const addressed = JSON.parse(addressResult.content[0].text);
+    expect(addressed.status).toBe('addressed');
+    expect(addressed.addressedAt).toBeDefined();
 
     // Step 3: Add a reply to the second annotation
     const replyResponse = await client.callTool('add_agent_reply', {

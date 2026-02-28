@@ -34,9 +34,8 @@ This file is the source of truth. `ReviewStorage` reads from disk on every call 
       "note": "reviewer's comment",
       "createdAt": "ISO 8601",
       "updatedAt": "ISO 8601",
-      "status": "open | in_progress | addressed | resolved (optional, derived from timestamps if absent)",
+      "status": "open | in_progress | addressed (optional, derived from timestamps if absent)",
       "inProgressAt": "ISO 8601 (optional)",
-      "resolvedAt": "ISO 8601 (optional)",
       "addressedAt": "ISO 8601 (optional)",
       "replies": [{ "message": "string", "createdAt": "ISO 8601", "role": "agent | reviewer (optional, defaults to agent)" }],
       "selectedText": "quoted text (text annotations only)",
@@ -66,7 +65,7 @@ To read review annotations, parse `inline-review.json` from the project root. Ea
 - `note` — the reviewer's comment describing what to change
 - `type: "text"` — includes `selectedText` and `range` for locating the exact text; optionally `replacedText` if the agent changed the text
 - `type: "element"` — includes `elementSelector` with `cssSelector`, `xpath`, and `outerHtmlPreview`
-- `status` — lifecycle state: `open` → `in_progress` (agent working) → `addressed` (agent acted on it) → `resolved` (reviewer confirmed). Derived from timestamps if absent for backward compatibility
+- `status` — lifecycle state: `open` → `in_progress` (agent working) → `addressed` (agent acted on it, awaiting human review). Terminal actions: Accept (deletes annotation) or Reopen (back to open). Derived from timestamps if absent for backward compatibility
 - `pageNotes` — general notes about a page, not tied to specific elements
 
 ### REST API (when dev server is running)
@@ -99,7 +98,7 @@ The `.mcp.json` file at the project root enables auto-discovery for Claude Code 
 | `list_page_notes` | List all page-level notes, optionally filtered by `pageUrl` |
 | `get_annotation` | Get a single annotation by ID with full detail |
 | `get_export` | Get a markdown export of all annotations and page notes |
-| `resolve_annotation` | Mark an annotation as addressed (default) or resolved (with `autoResolve` param) |
+| `address_annotation` | Mark an annotation as addressed by the agent. Optionally provide `replacedText` to record what text replaced the original |
 | `add_agent_reply` | Add a reply to an annotation explaining what action was taken |
 | `update_annotation_target` | Update what text replaced the original annotated text (text annotations only) |
 | `set_in_progress` | Signal that the agent is about to start working — sets status to `in_progress` so the UI shows a working indicator instead of orphan warnings |

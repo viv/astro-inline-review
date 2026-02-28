@@ -4,10 +4,10 @@
  * When an agent edits source code, Vite hot-reloads the page and the
  * annotation temporarily loses its DOM anchor. Rather than immediately
  * showing "Could not locate on page", we wait a grace period to give
- * the store poller time to pick up the agent's resolve_annotation call.
+ * the store poller time to pick up the agent's address_annotation call.
  *
  * Annotations with status 'in_progress' never time out — they stay in
- * 'checking' state until the agent resolves them or the reviewer acts.
+ * 'checking' state until the agent addresses them or the reviewer acts.
  */
 
 import type { AnnotationStatus } from './types.js';
