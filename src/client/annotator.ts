@@ -136,6 +136,8 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       if (Math.abs(window.scrollY - popupScrollY) > 50) {
         // Don't dismiss if textarea has unsaved content
         if (popup.textarea.value.trim()) return;
+        // Don't dismiss if user is actively interacting with the popup
+        if (popup.container.contains(shadowRoot.activeElement)) return;
         hidePopup(popup);
         currentRange = null;
         currentElementTarget = null;

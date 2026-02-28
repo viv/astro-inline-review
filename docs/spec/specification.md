@@ -1150,7 +1150,9 @@ Note: `Element.contains()` does not pierce shadow boundaries, so both checks are
 
 When the page scrolls more than 50 pixels from the popup's original position, the popup is hidden and the current range is discarded. This prevents the popup from floating away from its associated text whilst tolerating minor scroll adjustments. The initial `scrollY` is captured when the popup is shown and compared against the current `scrollY` on each scroll event.
 
-**Unsaved changes protection**: If the popup textarea contains non-empty content (after trimming whitespace), scroll dismissal is skipped. This prevents accidental loss of in-progress notes. The popup is only dismissed on scroll when the textarea is empty. Users can always dismiss via the Cancel button regardless of textarea content.
+**Unsaved changes protection**: If the popup textarea contains non-empty content (after trimming whitespace), scroll dismissal is skipped. This prevents accidental loss of in-progress notes. Users can always dismiss via the Cancel button regardless of textarea content.
+
+**Active interaction protection**: If any element within the popup container has focus (checked via `shadowRoot.activeElement`), scroll dismissal is skipped. This prevents the popup from disappearing while the user is actively composing an annotation — even when the textarea is empty. The check uses `popup.container.contains(shadowRoot.activeElement)` to cover the textarea, buttons, and any other focusable elements within the popup. The popup is only dismissed on scroll when it is in "passive mode" — no focus inside the popup and no content in the textarea.
 
 
 ### 7.5 Creating an Element Annotation
