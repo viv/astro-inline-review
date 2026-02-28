@@ -1022,6 +1022,18 @@ describe('createPanel — status lifecycle buttons', () => {
     expect(acceptBtn).toBeNull();
   });
 
+  it('shows Reopen button on addressed annotation', async () => {
+    await renderWithStore({
+      version: 1,
+      annotations: [makeTextAnnotation({ status: 'addressed', addressedAt: '2026-02-22T10:00:00Z' })],
+      pageNotes: [],
+    });
+
+    const reopenBtn = shadowRoot.querySelector('[data-air-el="annotation-reopen"]');
+    expect(reopenBtn).not.toBeNull();
+    expect(reopenBtn!.tagName.toLowerCase()).toBe('button');
+  });
+
   it('shows Reopen button on resolved annotation', async () => {
     await renderWithStore({
       version: 1,
