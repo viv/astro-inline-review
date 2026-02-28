@@ -740,7 +740,7 @@ function appendStatusActions(
     container.appendChild(acceptBtn);
   }
 
-  if (status === 'resolved') {
+  if (status === 'addressed' || status === 'resolved') {
     const reopenBtn = document.createElement('button');
     reopenBtn.className = 'air-popup__btn air-popup__btn--cancel';
     reopenBtn.setAttribute('data-air-el', 'annotation-reopen');

@@ -198,7 +198,8 @@ open → in_progress → addressed → resolved
 - `open` or `in_progress` → `addressed`: Agent calls `resolve_annotation` MCP tool (default, without `autoResolve`)
 - `open` or `in_progress` → `resolved`: Agent calls `resolve_annotation` with `autoResolve: true` (skips human review step)
 - `addressed` or `resolved` → *(deleted)*: Human reviewer clicks Accept button in panel — annotation is removed entirely
-- `resolved` → `open`: Human reviewer clicks Reopen button in panel (clears all progress timestamps)
+- `addressed` → `open`: Human reviewer clicks Reopen button in panel (clears all progress timestamps), optionally with follow-up note
+- `resolved` → `open`: Human reviewer clicks Reopen button in panel (clears all progress timestamps), optionally with follow-up note
 
 **Timestamp semantics**:
 - `inProgressAt` is set when status transitions to `in_progress`
@@ -964,12 +965,12 @@ Each annotation item includes contextual action buttons based on its effective s
 | Status | Buttons shown | Label | `data-air-el` | Action |
 |--------|--------------|-------|---------------|--------|
 | `open` | Delete | "Delete" | `annotation-delete` | Two-click delete (see section 6.2.3d) |
-| `addressed` | Accept | "Accept" | `annotation-accept` | Deletes annotation entirely via `DELETE /annotations/:id` |
+| `addressed` | Accept, Reopen | "Accept", "Reopen" | `annotation-accept`, `annotation-reopen` | Accept deletes annotation; Reopen shows inline form (see below) |
 | `resolved` | Accept, Reopen | "Accept", "Reopen" | `annotation-accept`, `annotation-reopen` | Accept deletes annotation; Reopen shows inline form (see below) |
 
 **Accept button**: Green background (`#166534`), green text (`#86EFAC`). Shown on both `addressed` and `resolved` annotations. Used by the human reviewer to confirm that the agent's work is satisfactory. Sends `DELETE /annotations/:id`, removes highlights, refreshes badge, and refreshes panel. The annotation is removed entirely — accepting means the reviewer is happy with the change and the annotation has served its purpose.
 
-**Reopen button**: Styled as a cancel-type button. Used when the reviewer disagrees with the resolution and wants to re-open the annotation. Instead of immediately changing status, clicking Reopen shows an inline form (`data-air-el="reopen-form"`) with:
+**Reopen button**: Styled as a cancel-type button. Shown on both `addressed` and `resolved` annotations. Used when the reviewer disagrees with the agent's work and wants to re-open the annotation. Instead of immediately changing status, clicking Reopen shows an inline form (`data-air-el="reopen-form"`) with:
 - A textarea (`data-air-el="reopen-textarea"`) for an optional follow-up note, placeholder: "Add a follow-up note (optional)…"
 - A "Cancel" button (`data-air-el="reopen-cancel"`) that dismisses the form without changes
 - A "Reopen" submit button (`data-air-el="reopen-submit"`) that sends `PATCH /annotations/:id` with `{ "status": "open" }` and optionally `{ "reply": { "message": "..." } }` if the reviewer entered a note
@@ -1845,7 +1846,7 @@ The following accessibility features are not yet implemented:
 | Click "+ Note" in panel | Add-note form appears/toggles | 11.2 |
 | Click "Copy All" in panel | Export all annotations to clipboard, show toast | 9.3 |
 | Click Accept on addressed or resolved annotation | Annotation is deleted entirely (removed from store, highlights cleared) | 6.2.3c |
-| Click Reopen on resolved annotation | Shows inline form for optional follow-up note, then reopens | 6.2.3c |
+| Click Reopen on addressed or resolved annotation | Shows inline form for optional follow-up note, then reopens | 6.2.3c |
 | Click Delete on annotation in panel | Two-click confirmation: first click shows "Sure?", second click deletes | 6.2.3, 6.2.3a |
 | Click "Clear All" in panel | Confirmation step, then deletes all | 6.2.5 |
 | Press Escape | Dismiss popup (priority) or close panel | 10.4 |
