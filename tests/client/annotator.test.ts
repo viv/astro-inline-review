@@ -807,6 +807,27 @@ describe('createAnnotator', () => {
       expect(api.reanchorAnnotation).not.toHaveBeenCalled();
     });
 
+    it('does NOT re-anchor after Tier 2 match (original text found by context)', async () => {
+      initAnnotator();
+
+      const ann = makeTextAnnotation({ id: 'ann-1' });
+      const store = makeStore([ann]);
+      (api.getStore as Mock).mockResolvedValue(store);
+
+      // Tier 1 fails
+      (deserializeRange as Mock).mockReturnValue(null);
+
+      // Tier 2 succeeds — original text found by context matching
+      const tier2Range = document.createRange();
+      (findRangeByContext as Mock).mockReturnValue(tier2Range);
+
+      await annotator.restoreHighlights();
+
+      expect(applyHighlight).toHaveBeenCalledWith(tier2Range, 'ann-1', 'open');
+      // Tier 2 matches the original text so range data is still semantically valid
+      expect(api.reanchorAnnotation).not.toHaveBeenCalled();
+    });
+
     it('clears replacedText when re-anchoring annotation that has replacedText', async () => {
       initAnnotator();
 

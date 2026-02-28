@@ -378,7 +378,7 @@ All routes are served via Vite dev server middleware at the prefix `/__inline-re
 | `GET` | `/annotations` | List all annotations | 200 |
 | `GET` | `/annotations?page=/path` | List annotations filtered by page URL | 200 |
 | `POST` | `/annotations` | Create a new annotation | 201 |
-| `PATCH` | `/annotations/:id` | Update an annotation (note, replacedText, and/or status) | 200 |
+| `PATCH` | `/annotations/:id` | Update an annotation (note, replacedText, range, and/or status) | 200 |
 | `DELETE` | `/annotations/:id` | Delete an annotation | 200 |
 
 **GET /annotations** response shape:
@@ -435,9 +435,9 @@ Note: The GET response returns the full store shape (including `pageNotes`), wit
 
 The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields default to empty strings/objects. If `type` is not provided, it defaults to `'text'` (backward compatibility).
 
-**PATCH /annotations/:id** request body: `{ "note": "new value", "replacedText": "new text", "status": "addressed", "reply": { "message": "follow-up note" } }`
+**PATCH /annotations/:id** request body: `{ "note": "new value", "replacedText": "new text", "range": { ... }, "status": "addressed", "reply": { "message": "follow-up note" } }`
 
-**Field mutability on PATCH**: The server uses an allowlist pattern — only `note`, `replacedText` (for text annotations), `status`, and `reply` from the request body are applied; all other fields in the request body are ignored. The `reply` field, when provided, appends a new entry to the annotation's `replies` array with `role: 'reviewer'` and a server-generated `createdAt` timestamp.
+**Field mutability on PATCH**: The server uses an allowlist pattern — only `note`, `replacedText` (for text annotations), `range` (for text annotations), `status`, and `reply` from the request body are applied; all other fields in the request body are ignored. The `reply` field, when provided, appends a new entry to the annotation's `replies` array with `role: 'reviewer'` and a server-generated `createdAt` timestamp.
 
 | Field | Mutable via PATCH? | Notes |
 |-------|-------------------|-------|
@@ -446,9 +446,9 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 | `pageTitle` | No | Preserved from original |
 | `selectedText` | No | Preserved from original |
 | `note` | **Yes** | Mutable — primary use case |
-| `replacedText` | **Yes** (text only) | Mutable on text annotations only, ignored on element annotations |
+| `replacedText` | **Yes** (text only) | Mutable on text annotations only, ignored on element annotations. Send `null` to clear. |
+| `range` | **Yes** (text only) | Mutable on text annotations only, ignored on element annotations. Used for re-anchoring after fallback tier match (see Section 8.4). |
 | `status` | **Yes** | Must be `'open'`, `'in_progress'`, or `'addressed'` (see status side-effects below) |
-| `range` | No | Preserved from original |
 | `elementSelector` | No | Preserved from original |
 | `createdAt` | No | Preserved from original |
 | `updatedAt` | No | Server-generated on every PATCH |
@@ -467,7 +467,8 @@ The server generates `id`, `createdAt`, and `updatedAt` fields. Missing fields d
 - When `type` is `"element"`: `elementSelector` must be an object
 
 `PATCH /annotations/:id` validates:
-- `replacedText` must not be empty (if provided)
+- `replacedText` must not be empty when provided as a string; send `null` to clear (removes the field from the persisted annotation)
+- `range` must be an object (if provided); applied to text annotations only, ignored on element annotations
 - `status` must be one of `'open'`, `'in_progress'`, `'addressed'` (if provided)
 - `reply.message` must be a non-empty string (if `reply` is provided)
 
@@ -1271,6 +1272,14 @@ When the page loads (or on SPA navigation), **text** highlights are restored fro
 - The panel indicates orphaned status with a red indicator ("Could not locate on page") and the `.air-annotation-item--orphan` modifier class (red left border, reduced opacity)
 - The annotation can be deleted via its Delete button in the panel (`data-air-el="annotation-delete"`)
 
+**Re-anchoring after fallback match**: When a Tier 2.5 or Tier 3 match succeeds, the client serialises the live DOM Range (via `serializeRange`) and sends a PATCH request to update the annotation's stored `range` data with the fresh XPath, offset, and context information. This promotes the annotation to Tier 1 on subsequent page loads, eliminating repeated fallback resolution.
+
+- Re-anchoring is fire-and-forget — the PATCH runs asynchronously and does not block highlight restoration
+- Each annotation is re-anchored at most once per session (tracked by an in-memory `reanchoredIds` set)
+- If the annotation has a `replacedText` field, the PATCH also clears it (sends `replacedText: null`) because the new range's `selectedText` now contains the current text, making `replacedText` redundant
+- Tier 1 and Tier 2 matches do not trigger re-anchoring: Tier 1 data is already accurate; Tier 2 matched the original text so stored `selectedText` remains valid for future context matches
+- If the PATCH fails (e.g., network error), the annotation continues to use fallback restoration until the next session, when re-anchoring is attempted again
+
 ### 8.5 Element Highlights
 
 Element annotations use **CSS outline** (not background colour or border) to avoid affecting the element's layout.
@@ -1645,6 +1654,10 @@ When context matching fails for both the original and replacement text, the cont
 6. For each (start, end) pair, computes the gap: `end - start`
 7. Selects the pair with the smallest valid gap (at least 1 character, at most `MAX_GAP` of 500 characters)
 8. Returns a Range covering the text between the two context anchors, or `null` if no valid pair exists
+
+### 15.5 Range Re-anchoring
+
+When a fallback tier (Tier 2.5 or Tier 3) successfully restores a highlight, the matched Range is re-serialised and the annotation's stored range data is updated via a PATCH request (see Section 8.4 for full details). The re-serialised range captures the current XPath, offset, selectedText, and context for the matched location, enabling Tier 1 restoration on subsequent page loads.
 
 
 ## 16. Error Handling
