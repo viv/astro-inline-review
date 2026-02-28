@@ -18,26 +18,42 @@ describe('OrphanTracker', () => {
     expect(state).toBe('anchored');
   });
 
-  it('returns "checking" immediately when annotation first becomes unanchored', () => {
+  it('returns "orphaned" immediately for never-anchored annotations', () => {
+    const state = tracker.getOrphanState('ann-1', '/', false, 'open');
+    expect(state).toBe('orphaned');
+  });
+
+  it('returns "checking" when previously-anchored annotation becomes unanchored', () => {
+    // First anchor it
+    tracker.getOrphanState('ann-1', '/', true, 'open');
+    // Then lose anchor
     const state = tracker.getOrphanState('ann-1', '/', false, 'open');
     expect(state).toBe('checking');
   });
 
-  it('returns "checking" during grace period', () => {
+  it('returns "checking" during grace period for previously-anchored annotation', () => {
+    tracker.getOrphanState('ann-1', '/', true, 'open');
     tracker.getOrphanState('ann-1', '/', false, 'open');
     vi.advanceTimersByTime(10_000); // 10s < 15s grace period
     const state = tracker.getOrphanState('ann-1', '/', false, 'open');
     expect(state).toBe('checking');
   });
 
-  it('returns "orphaned" after grace period expires', () => {
+  it('returns "orphaned" after grace period expires for previously-anchored annotation', () => {
+    tracker.getOrphanState('ann-1', '/', true, 'open');
     tracker.getOrphanState('ann-1', '/', false, 'open');
     vi.advanceTimersByTime(15_000);
     const state = tracker.getOrphanState('ann-1', '/', false, 'open');
     expect(state).toBe('orphaned');
   });
 
+  it('returns "checking" for in_progress annotations even if never anchored', () => {
+    const state = tracker.getOrphanState('ann-1', '/', false, 'in_progress');
+    expect(state).toBe('checking');
+  });
+
   it('returns "checking" for in_progress annotations even after grace period', () => {
+    tracker.getOrphanState('ann-1', '/', true, 'in_progress');
     tracker.getOrphanState('ann-1', '/', false, 'in_progress');
     vi.advanceTimersByTime(60_000); // well past grace period
     const state = tracker.getOrphanState('ann-1', '/', false, 'in_progress');
@@ -45,7 +61,8 @@ describe('OrphanTracker', () => {
   });
 
   it('clears orphan timestamp when annotation becomes anchored again', () => {
-    // First seen as unanchored
+    // Anchor then unanchor
+    tracker.getOrphanState('ann-1', '/', true, 'open');
     tracker.getOrphanState('ann-1', '/', false, 'open');
     vi.advanceTimersByTime(10_000);
 
@@ -59,7 +76,9 @@ describe('OrphanTracker', () => {
   });
 
   it('onStoreChanged clears all orphan timestamps', () => {
-    // Start tracking two annotations
+    // Anchor then unanchor two annotations
+    tracker.getOrphanState('ann-1', '/', true, 'open');
+    tracker.getOrphanState('ann-2', '/', true, 'open');
     tracker.getOrphanState('ann-1', '/', false, 'open');
     tracker.getOrphanState('ann-2', '/', false, 'open');
     vi.advanceTimersByTime(14_000);
@@ -74,6 +93,9 @@ describe('OrphanTracker', () => {
   });
 
   it('tracks different annotations independently', () => {
+    // Anchor both then unanchor at different times
+    tracker.getOrphanState('ann-1', '/', true, 'open');
+    tracker.getOrphanState('ann-2', '/', true, 'open');
     tracker.getOrphanState('ann-1', '/', false, 'open');
     vi.advanceTimersByTime(10_000);
     tracker.getOrphanState('ann-2', '/', false, 'open');
@@ -85,6 +107,7 @@ describe('OrphanTracker', () => {
 
   it('uses custom grace period', () => {
     const shortTracker = new OrphanTracker(5_000);
+    shortTracker.getOrphanState('ann-1', '/', true, 'open');
     shortTracker.getOrphanState('ann-1', '/', false, 'open');
     vi.advanceTimersByTime(5_000);
     expect(shortTracker.getOrphanState('ann-1', '/', false, 'open')).toBe('orphaned');

@@ -206,7 +206,7 @@ open → in_progress → addressed → resolved
 - Each transition clears the timestamps of other states (e.g. `addressed` clears `inProgressAt` and `resolvedAt`)
 - Transitioning to `open` (reopen) clears `inProgressAt`, `addressedAt`, and `resolvedAt`
 
-**Orphan grace period**: When an agent edits source code, Vite hot-reloads the page and the annotation temporarily loses its DOM anchor. The `OrphanTracker` provides a 15-second grace period before showing the "Could not locate on page" orphan warning. Annotations with `in_progress` status never time out — they always show a "Checking..." indicator until the agent resolves them or the reviewer acts. The `onStoreChanged()` method resets all grace period timers when external store changes are detected.
+**Orphan grace period**: When an agent edits source code, Vite hot-reloads the page and the annotation temporarily loses its DOM anchor. The `OrphanTracker` provides a 15-second grace period before showing the "Could not locate on page" orphan warning, but only for annotations that were previously located on the page. Annotations that have never been DOM-anchored (e.g. the referenced text no longer exists) are shown as orphaned immediately — there is no reason to show "Checking…" for text that was never on the page. Annotations with `in_progress` status never time out — they always show a "Checking..." indicator until the agent resolves them or the reviewer acts. The `onStoreChanged()` method resets all grace period timers (but not the anchor history) when external store changes are detected.
 
 **`getAnnotationStatus()` helper**: A shared helper function provides backward compatibility for annotations that predate the `status` field:
 

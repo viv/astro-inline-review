@@ -20,6 +20,8 @@ const GRACE_PERIOD_MS = 15_000;
 export class OrphanTracker {
   /** Map of annotation ID → timestamp when it was first seen as unanchored */
   private orphanedSince = new Map<string, number>();
+  /** Set of annotation IDs that have been seen as DOM-anchored at least once */
+  private everAnchored = new Set<string>();
   private gracePeriodMs: number;
 
   constructor(gracePeriodMs = GRACE_PERIOD_MS) {
@@ -28,6 +30,11 @@ export class OrphanTracker {
 
   /**
    * Determine the orphan state of an annotation.
+   *
+   * The grace period only applies to annotations that were previously anchored
+   * and then lost their DOM highlight (e.g. after a Vite hot-reload). Annotations
+   * that have never been located go straight to 'orphaned' — no point showing
+   * "Checking…" for text that was never on the page.
    *
    * @param id - Annotation ID
    * @param pageUrl - The page the annotation belongs to
@@ -43,6 +50,7 @@ export class OrphanTracker {
     // If the DOM highlight exists, the annotation is anchored — clear any orphan tracking
     if (isDomAnchored) {
       this.orphanedSince.delete(id);
+      this.everAnchored.add(id);
       return 'anchored';
     }
 
@@ -51,7 +59,12 @@ export class OrphanTracker {
       return 'checking';
     }
 
-    // First time seeing this annotation unanchored — start the clock
+    // Never been anchored — go straight to orphaned (no grace period on initial load)
+    if (!this.everAnchored.has(id)) {
+      return 'orphaned';
+    }
+
+    // Was previously anchored — apply grace period
     if (!this.orphanedSince.has(id)) {
       this.orphanedSince.set(id, Date.now());
     }
@@ -67,7 +80,8 @@ export class OrphanTracker {
   /**
    * Clear all orphan timestamps. Call this when the store changes externally
    * (e.g. after an agent resolves annotations) so that re-restored annotations
-   * get a fresh grace window.
+   * get a fresh grace window. Does not clear the everAnchored history — we need
+   * to remember which annotations were previously located.
    */
   onStoreChanged(): void {
     this.orphanedSince.clear();
