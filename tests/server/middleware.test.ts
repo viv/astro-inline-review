@@ -362,6 +362,19 @@ describe('middleware', () => {
       expect(data.note).toBe('test');
     });
 
+    it('rejects missing type with element fields but no text fields', async () => {
+      const req = mockRequest('POST', '/__inline-review/api/annotations', {
+        pageUrl: '/',
+        note: 'test',
+        elementSelector: { cssSelector: 'div', xpath: '/div', description: 'a div', tagName: 'div', attributes: {}, outerHtmlPreview: '<div></div>' },
+      });
+      const res = mockResponse();
+      await middleware(req as any, res as any, () => {});
+
+      expect(res._status).toBe(400);
+      expect(JSON.parse(res._body).error).toContain('"selectedText"');
+    });
+
     it('rejects invalid type value with 400', async () => {
       const req = mockRequest('POST', '/__inline-review/api/annotations', {
         type: 'invalid',
