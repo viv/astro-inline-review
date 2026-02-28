@@ -76,6 +76,11 @@ function init(): void {
 
   const orphanTracker = new OrphanTracker();
 
+  // Tracks whether restoreHighlights() has run at least once.
+  // Before highlights are restored, we can't know which annotations are
+  // truly orphaned — reporting them as orphaned early causes false positives.
+  let highlightsRestored = false;
+
   // Panel
   const panel: PanelElements = createPanel(shadowRoot, {
     onAnnotationClick: (id, pageUrl) => {
@@ -118,6 +123,10 @@ function init(): void {
     },
     getOrphanState: (id, pageUrl, status) => {
       if (pageUrl !== window.location.pathname) return 'anchored';
+      // Before highlights have been restored, we can't distinguish truly
+      // orphaned annotations from ones that simply haven't been located yet.
+      // Return 'anchored' to avoid a flash of false "Could not locate" messages.
+      if (!highlightsRestored) return 'anchored';
       const isDomAnchored = getHighlightMarks(id).length > 0 || !!getElementByAnnotationId(id);
       return orphanTracker.getOrphanState(id, pageUrl, isDomAnchored, status);
     },
@@ -250,6 +259,7 @@ function init(): void {
 
   // Restore highlights for the current page, then handle pending scroll-to
   annotator.restoreHighlights().then(() => {
+    highlightsRestored = true;
     // Refresh panel after highlights so orphan states reflect DOM reality
     if (isPanelOpen(panel)) {
       mediator.refreshPanel();
@@ -263,7 +273,9 @@ function init(): void {
 
   // Re-restore on Astro page transitions (also handles pending scroll-to)
   document.addEventListener('astro:page-load', () => {
+    highlightsRestored = false;
     annotator.restoreHighlights().then(() => {
+      highlightsRestored = true;
       if (isPanelOpen(panel)) {
         mediator.refreshPanel();
       }
