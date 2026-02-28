@@ -5,7 +5,7 @@ import { isTextAnnotation } from '../types.js';
 import { ReviewStorage } from './storage.js';
 import { generateExport } from '../shared/export.js';
 
-const VALID_STATUSES: AnnotationStatus[] = ['open', 'addressed', 'resolved'];
+const VALID_STATUSES: AnnotationStatus[] = ['open', 'in_progress', 'addressed', 'resolved'];
 
 const API_PREFIX = '/__inline-review/api';
 
@@ -164,7 +164,7 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
         }
 
         if (body.status !== undefined && !VALID_STATUSES.includes(body.status as AnnotationStatus)) {
-          throw new ValidationError('status must be one of: open, addressed, resolved');
+          throw new ValidationError('status must be one of: open, in_progress, addressed, resolved');
         }
 
         if (body.reply !== undefined) {
@@ -185,13 +185,20 @@ export function createMiddleware(storage: ReviewStorage): MiddlewareHandler {
           if (body.status !== undefined) {
             const newStatus = body.status as AnnotationStatus;
             statusUpdates.status = newStatus;
-            if (newStatus === 'addressed') {
+            if (newStatus === 'in_progress') {
+              statusUpdates.inProgressAt = now;
+              statusUpdates.addressedAt = undefined;
+              statusUpdates.resolvedAt = undefined;
+            } else if (newStatus === 'addressed') {
+              statusUpdates.inProgressAt = undefined;
               statusUpdates.addressedAt = now;
               statusUpdates.resolvedAt = undefined;
             } else if (newStatus === 'resolved') {
+              statusUpdates.inProgressAt = undefined;
               statusUpdates.resolvedAt = now;
               // Keep addressedAt — shows when the agent first acted
             } else if (newStatus === 'open') {
+              statusUpdates.inProgressAt = undefined;
               statusUpdates.addressedAt = undefined;
               statusUpdates.resolvedAt = undefined;
             }

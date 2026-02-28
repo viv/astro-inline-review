@@ -298,6 +298,36 @@ describe('generateExport', () => {
     expect(result).not.toContain('[Addressed]');
   });
 
+  it('shows in_progress label for in_progress annotations', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeTextAnnotation({ status: 'in_progress', inProgressAt: '2026-02-28T10:00:00Z' }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).toContain('⏳ [In Progress]');
+    expect(result).not.toContain('[Resolved]');
+    expect(result).not.toContain('[Addressed]');
+  });
+
+  it('shows in_progress label for in_progress element annotations', () => {
+    const store: ReviewStore = {
+      version: 1,
+      annotations: [
+        makeElementAnnotation({ status: 'in_progress', inProgressAt: '2026-02-28T10:00:00Z' }),
+      ],
+      pageNotes: [],
+    };
+
+    const result = generateExport(store);
+
+    expect(result).toContain('⏳ [In Progress]');
+  });
+
   it('shows no status label for annotations with no status field', () => {
     const store: ReviewStore = {
       version: 1,

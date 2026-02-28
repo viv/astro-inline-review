@@ -688,6 +688,47 @@ describe('middleware', () => {
       expect(patched.addressedAt).toBeUndefined();
     });
 
+    it('sets status to in_progress and sets inProgressAt timestamp', async () => {
+      const created = await createTextAnnotation();
+
+      const patchReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'in_progress',
+      });
+      const patchRes = mockResponse();
+      await middleware(patchReq as any, patchRes as any, () => {});
+
+      expect(patchRes._status).toBe(200);
+      const patched = JSON.parse(patchRes._body);
+      expect(patched.status).toBe('in_progress');
+      expect(patched.inProgressAt).toBeTruthy();
+      expect(patched.addressedAt).toBeUndefined();
+      expect(patched.resolvedAt).toBeUndefined();
+    });
+
+    it('clears inProgressAt when transitioning from in_progress to addressed', async () => {
+      const created = await createTextAnnotation();
+
+      // Set to in_progress first
+      const ipReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'in_progress',
+      });
+      const ipRes = mockResponse();
+      await middleware(ipReq as any, ipRes as any, () => {});
+      expect(JSON.parse(ipRes._body).inProgressAt).toBeTruthy();
+
+      // Then transition to addressed
+      const addrReq = mockRequest('PATCH', `/__inline-review/api/annotations/${created.id}`, {
+        status: 'addressed',
+      });
+      const addrRes = mockResponse();
+      await middleware(addrReq as any, addrRes as any, () => {});
+
+      const patched = JSON.parse(addrRes._body);
+      expect(patched.status).toBe('addressed');
+      expect(patched.inProgressAt).toBeUndefined();
+      expect(patched.addressedAt).toBeTruthy();
+    });
+
     it('rejects invalid status with 400', async () => {
       const created = await createTextAnnotation();
 
@@ -700,6 +741,7 @@ describe('middleware', () => {
       expect(patchRes._status).toBe(400);
       const body = JSON.parse(patchRes._body);
       expect(body.error).toContain('open');
+      expect(body.error).toContain('in_progress');
       expect(body.error).toContain('addressed');
       expect(body.error).toContain('resolved');
     });

@@ -17,6 +17,7 @@ import { api } from './api.js';
 import { writeCache } from './cache.js';
 import { pulseHighlight, getHighlightMarks, pulseElementHighlight, getElementByAnnotationId, removeHighlight, removeElementHighlight } from './highlights.js';
 import { createStorePoller } from './store-poller.js';
+import { OrphanTracker } from './orphan-tracker.js';
 
 const SCROLL_TO_KEY = 'air-scroll-to';
 const PANEL_STATE_KEY = 'air-panel-state';
@@ -73,6 +74,8 @@ function init(): void {
     restoreHighlights: async () => {},
   };
 
+  const orphanTracker = new OrphanTracker();
+
   // Panel
   const panel: PanelElements = createPanel(shadowRoot, {
     onAnnotationClick: (id, pageUrl) => {
@@ -113,13 +116,10 @@ function init(): void {
         showToast(shadowRoot, 'Failed to update status');
       }
     },
-    isAnnotationOrphaned: (id, pageUrl) => {
-      if (pageUrl !== window.location.pathname) return false;
-      const marks = getHighlightMarks(id);
-      if (marks.length > 0) return false;
-      const element = getElementByAnnotationId(id);
-      if (element) return false;
-      return true;
+    getOrphanState: (id, pageUrl, status) => {
+      if (pageUrl !== window.location.pathname) return 'anchored';
+      const isDomAnchored = getHighlightMarks(id).length > 0 || !!getElementByAnnotationId(id);
+      return orphanTracker.getOrphanState(id, pageUrl, isDomAnchored, status);
     },
     onRefreshBadge: refreshBadge,
     onExport: async () => {
@@ -269,6 +269,8 @@ function init(): void {
   // Poll for external store changes (e.g. MCP tool updates)
   const poller = createStorePoller({
     onStoreChanged: () => {
+      // Clear orphan timestamps so re-restored annotations get a fresh grace window
+      orphanTracker.onStoreChanged();
       // Always update DOM highlights — they're visible regardless of panel state
       annotator.restoreHighlights();
       // Only refresh the panel if it's currently open — avoids unnecessary DOM work

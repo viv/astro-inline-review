@@ -34,7 +34,8 @@ This file is the source of truth. `ReviewStorage` reads from disk on every call 
       "note": "reviewer's comment",
       "createdAt": "ISO 8601",
       "updatedAt": "ISO 8601",
-      "status": "open | addressed | resolved (optional, derived from timestamps if absent)",
+      "status": "open | in_progress | addressed | resolved (optional, derived from timestamps if absent)",
+      "inProgressAt": "ISO 8601 (optional)",
       "resolvedAt": "ISO 8601 (optional)",
       "addressedAt": "ISO 8601 (optional)",
       "replies": [{ "message": "string", "createdAt": "ISO 8601", "role": "agent | reviewer (optional, defaults to agent)" }],
@@ -65,7 +66,7 @@ To read review annotations, parse `inline-review.json` from the project root. Ea
 - `note` — the reviewer's comment describing what to change
 - `type: "text"` — includes `selectedText` and `range` for locating the exact text; optionally `replacedText` if the agent changed the text
 - `type: "element"` — includes `elementSelector` with `cssSelector`, `xpath`, and `outerHtmlPreview`
-- `status` — lifecycle state: `open` → `addressed` (agent acted on it) → `resolved` (reviewer confirmed). Derived from timestamps if absent for backward compatibility
+- `status` — lifecycle state: `open` → `in_progress` (agent working) → `addressed` (agent acted on it) → `resolved` (reviewer confirmed). Derived from timestamps if absent for backward compatibility
 - `pageNotes` — general notes about a page, not tied to specific elements
 
 ### REST API (when dev server is running)
@@ -77,7 +78,7 @@ Base: `http://localhost:4321/__inline-review/api`
 | GET | `/annotations` | List all (optional `?page=/path` filter) |
 | GET | `/annotations?page=/path` | Filter by page URL |
 | POST | `/annotations` | Create annotation |
-| PATCH | `/annotations/:id` | Update note, replacedText, status, and/or reply |
+| PATCH | `/annotations/:id` | Update note, replacedText, status (incl. in_progress), and/or reply |
 | DELETE | `/annotations/:id` | Delete annotation |
 | GET | `/page-notes` | List all page notes |
 | POST | `/page-notes` | Create page note |
@@ -101,6 +102,7 @@ The `.mcp.json` file at the project root enables auto-discovery for Claude Code 
 | `resolve_annotation` | Mark an annotation as addressed (default) or resolved (with `autoResolve` param) |
 | `add_agent_reply` | Add a reply to an annotation explaining what action was taken |
 | `update_annotation_target` | Update what text replaced the original annotated text (text annotations only) |
+| `set_in_progress` | Signal that the agent is about to start working — sets status to `in_progress` so the UI shows a working indicator instead of orphan warnings |
 
 ### Running manually
 
@@ -138,6 +140,7 @@ git push origin main --tags
 - `src/server/storage.ts` — `ReviewStorage` class (JSON file I/O)
 - `src/server/middleware.ts` — REST API middleware + server-side export
 - `src/client/export.ts` — client-side markdown export
+- `src/client/orphan-tracker.ts` — grace period tracker for orphaned annotations during agent work
 - `src/index.ts` — main entry point (re-exports Astro adapter)
 - `src/integrations/astro.ts` — Astro integration adapter
 - `src/integrations/vite.ts` — standalone Vite plugin adapter (`astro-inline-review/vite`)

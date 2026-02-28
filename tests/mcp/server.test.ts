@@ -182,6 +182,7 @@ describe('MCP server integration', () => {
     expect(toolNames).toContain('get_export');
     expect(toolNames).toContain('resolve_annotation');
     expect(toolNames).toContain('add_agent_reply');
+    expect(toolNames).toContain('set_in_progress');
   });
 
   it('list_annotations returns all annotations', async () => {

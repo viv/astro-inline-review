@@ -11,6 +11,7 @@ import { writeCache, readCache } from '../cache.js';
 import { showToast } from './toast.js';
 import type { Annotation, TextAnnotation, PageNote, ReviewStore, AgentReply, AnnotationStatus } from '../types.js';
 import { isTextAnnotation, getAnnotationStatus } from '../types.js';
+import type { OrphanState } from '../orphan-tracker.js';
 import type { ReviewMediator } from '../mediator.js';
 
 export interface PanelElements {
@@ -26,7 +27,7 @@ export interface PanelCallbacks {
   onAnnotationClick: (annotationId: string, pageUrl: string) => void;
   onAnnotationDelete: (annotationId: string) => Promise<void>;
   onAnnotationStatusChange: (annotationId: string, status: AnnotationStatus, replyMessage?: string) => Promise<void>;
-  isAnnotationOrphaned: (annotationId: string, pageUrl: string) => boolean;
+  getOrphanState: (annotationId: string, pageUrl: string, status: AnnotationStatus) => OrphanState;
   onRefreshBadge: () => Promise<void>;
   onExport: () => Promise<void>;
 }
@@ -351,17 +352,19 @@ function createAnnotationItem(annotation: Annotation, callbacks: PanelCallbacks)
 
 function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
-  const orphaned = callbacks.isAnnotationOrphaned(annotation.id, annotation.pageUrl);
   const status = getAnnotationStatus(annotation);
+  const orphanState = callbacks.getOrphanState(annotation.id, annotation.pageUrl, status);
   const classes = ['air-annotation-item'];
   if (status === 'resolved') classes.push('air-annotation-item--resolved');
   if (status === 'addressed') classes.push('air-annotation-item--addressed');
-  if (orphaned) classes.push('air-annotation-item--orphan');
+  if (status === 'in_progress') classes.push('air-annotation-item--in-progress');
+  if (orphanState === 'orphaned') classes.push('air-annotation-item--orphan');
+  if (orphanState === 'checking') classes.push('air-annotation-item--checking');
   item.className = classes.join(' ');
   item.setAttribute('data-air-el', 'annotation-item');
 
   if (status !== 'open') {
-    item.appendChild(createStatusBadge(status, annotation.addressedAt, annotation.resolvedAt));
+    item.appendChild(createStatusBadge(status, annotation.inProgressAt, annotation.addressedAt, annotation.resolvedAt));
   }
 
   const text = document.createElement('div');
@@ -408,24 +411,33 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
     }
   }
 
-  if (orphaned) {
+  if (orphanState === 'orphaned') {
     const orphanIndicator = document.createElement('div');
     orphanIndicator.className = 'air-annotation-item__orphan';
     orphanIndicator.textContent = 'Could not locate on page';
     item.appendChild(orphanIndicator);
+  } else if (orphanState === 'checking') {
+    const checkingIndicator = document.createElement('div');
+    checkingIndicator.className = 'air-annotation-item__checking';
+    checkingIndicator.setAttribute('data-air-el', 'checking-indicator');
+    checkingIndicator.textContent = 'Checking…';
+    item.appendChild(checkingIndicator);
   }
 
-  const actions = document.createElement('div');
-  actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
+  // Hide action buttons for in_progress annotations — only the agent or reviewer can transition out
+  if (status !== 'in_progress') {
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
 
-  appendStatusActions(actions, annotation.id, status, callbacks, item);
+    appendStatusActions(actions, annotation.id, status, callbacks, item);
 
-  if (status === 'open') {
-    const deleteBtn = createDeleteButton(annotation.id, callbacks);
-    actions.appendChild(deleteBtn);
+    if (status === 'open') {
+      const deleteBtn = createDeleteButton(annotation.id, callbacks);
+      actions.appendChild(deleteBtn);
+    }
+
+    item.appendChild(actions);
   }
-
-  item.appendChild(actions);
 
   item.setAttribute('tabindex', '0');
   item.addEventListener('click', () => {
@@ -443,17 +455,19 @@ function createTextAnnotationItem(annotation: TextAnnotation, callbacks: PanelCa
 
 function createElementAnnotationItem(annotation: Annotation & { type: 'element' }, callbacks: PanelCallbacks): HTMLDivElement {
   const item = document.createElement('div');
-  const orphaned = callbacks.isAnnotationOrphaned(annotation.id, annotation.pageUrl);
   const status = getAnnotationStatus(annotation);
+  const orphanState = callbacks.getOrphanState(annotation.id, annotation.pageUrl, status);
   const classes = ['air-annotation-item'];
   if (status === 'resolved') classes.push('air-annotation-item--resolved');
   if (status === 'addressed') classes.push('air-annotation-item--addressed');
-  if (orphaned) classes.push('air-annotation-item--orphan');
+  if (status === 'in_progress') classes.push('air-annotation-item--in-progress');
+  if (orphanState === 'orphaned') classes.push('air-annotation-item--orphan');
+  if (orphanState === 'checking') classes.push('air-annotation-item--checking');
   item.className = classes.join(' ');
   item.setAttribute('data-air-el', 'element-annotation-item');
 
   if (status !== 'open') {
-    item.appendChild(createStatusBadge(status, annotation.addressedAt, annotation.resolvedAt));
+    item.appendChild(createStatusBadge(status, annotation.inProgressAt, annotation.addressedAt, annotation.resolvedAt));
   }
 
   const desc = document.createElement('div');
@@ -474,24 +488,33 @@ function createElementAnnotationItem(annotation: Annotation & { type: 'element' 
     }
   }
 
-  if (orphaned) {
+  if (orphanState === 'orphaned') {
     const orphanIndicator = document.createElement('div');
     orphanIndicator.className = 'air-annotation-item__orphan';
     orphanIndicator.textContent = 'Could not locate on page';
     item.appendChild(orphanIndicator);
+  } else if (orphanState === 'checking') {
+    const checkingIndicator = document.createElement('div');
+    checkingIndicator.className = 'air-annotation-item__checking';
+    checkingIndicator.setAttribute('data-air-el', 'checking-indicator');
+    checkingIndicator.textContent = 'Checking…';
+    item.appendChild(checkingIndicator);
   }
 
-  const actions = document.createElement('div');
-  actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
+  // Hide action buttons for in_progress annotations
+  if (status !== 'in_progress') {
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
 
-  appendStatusActions(actions, annotation.id, status, callbacks, item);
+    appendStatusActions(actions, annotation.id, status, callbacks, item);
 
-  if (status === 'open') {
-    const deleteBtn = createDeleteButton(annotation.id, callbacks);
-    actions.appendChild(deleteBtn);
+    if (status === 'open') {
+      const deleteBtn = createDeleteButton(annotation.id, callbacks);
+      actions.appendChild(deleteBtn);
+    }
+
+    item.appendChild(actions);
   }
-
-  item.appendChild(actions);
 
   item.setAttribute('tabindex', '0');
   item.addEventListener('click', () => {
@@ -851,7 +874,7 @@ function formatTimestamp(iso: string): string {
   }
 }
 
-function createStatusBadge(status: AnnotationStatus, addressedAt?: string, resolvedAt?: string): HTMLDivElement {
+function createStatusBadge(status: AnnotationStatus, inProgressAt?: string, addressedAt?: string, resolvedAt?: string): HTMLDivElement {
   const badge = document.createElement('div');
   if (status === 'resolved') {
     badge.setAttribute('data-air-el', 'resolved-badge');
@@ -871,6 +894,16 @@ function createStatusBadge(status: AnnotationStatus, addressedAt?: string, resol
       const time = document.createElement('span');
       time.className = 'air-annotation-item__addressed-time';
       time.textContent = formatTimestamp(addressedAt);
+      badge.appendChild(time);
+    }
+  } else if (status === 'in_progress') {
+    badge.setAttribute('data-air-el', 'in-progress-badge');
+    badge.className = 'air-annotation-item__in-progress-badge';
+    badge.textContent = '\u23F3 Agent working\u2026';
+    if (inProgressAt) {
+      const time = document.createElement('span');
+      time.className = 'air-annotation-item__in-progress-time';
+      time.textContent = formatTimestamp(inProgressAt);
       badge.appendChild(time);
     }
   }
