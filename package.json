@@ -1,6 +1,6 @@
 {
   "name": "review-loop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bridge between human reviewers and coding agents — annotate rendered pages in-browser and export location-aware feedback. Works with Astro, Vite, and Express.",
   "type": "module",
   "main": "./dist/index.js",
