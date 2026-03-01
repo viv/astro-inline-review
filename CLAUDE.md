@@ -129,7 +129,7 @@ npm version <major|minor|patch|1.0.0> -m "chore: release v%s"
 git push origin main --tags
 ```
 
-- The `NPM_TOKEN` secret (granular access token, 90-day expiry) must be configured in GitHub repository settings
+- Authentication uses OIDC trusted publishing — no tokens or secrets to manage
 - The `prepublishOnly` script guards against accidental local publishes
 - Version in `package.json` must match the tag or the workflow fails
 

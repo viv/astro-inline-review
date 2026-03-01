@@ -22,7 +22,7 @@
     }
   },
   "bin": {
-    "review-loop-mcp": "./dist/mcp/server.js"
+    "review-loop-mcp": "dist/mcp/server.js"
   },
   "files": [
     "dist"
@@ -64,8 +64,12 @@
     "vite": "^5.0.0 || ^6.0.0"
   },
   "peerDependenciesMeta": {
-    "astro": { "optional": true },
-    "vite": { "optional": true }
+    "astro": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^25.3.0",

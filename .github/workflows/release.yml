@@ -28,6 +28,9 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
 
+      - name: Upgrade npm (OIDC trusted publishing requires npm >= 11.5.1)
+        run: npm install -g npm@latest
+
       - run: npm ci
 
       - run: npm run build
@@ -56,8 +59,8 @@ jobs:
 
       - name: Publish to npm
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Authentication via OIDC trusted publisher — no token needed.
+        # Requires npm >= 11.5.1 (upgraded above) and id-token: write permission (already set).
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
