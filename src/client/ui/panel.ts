@@ -565,7 +565,7 @@ function createPageNoteItem(note: PageNote, callbacks: PanelCallbacks, mediator:
       await callbacks.onRefreshBadge();
       mediator.refreshPanel();
     } catch (err) {
-      console.error('[astro-inline-review] Failed to delete page note:', err);
+      console.error('[review-loop] Failed to delete page note:', err);
       const root = item.getRootNode() as ShadowRoot;
       showToast(root, 'Failed to delete page note');
     }
@@ -601,7 +601,7 @@ function showAddNoteForm(content: HTMLDivElement, callbacks: PanelCallbacks, med
       await callbacks.onRefreshBadge();
       mediator.refreshPanel();
     } catch (err) {
-      console.error('[astro-inline-review] Failed to create page note:', err);
+      console.error('[review-loop] Failed to create page note:', err);
       const root = content.getRootNode() as ShadowRoot;
       showToast(root, 'Failed to save page note');
     }
@@ -627,7 +627,7 @@ function showEditNoteForm(
       await callbacks.onRefreshBadge();
       mediator.refreshPanel();
     } catch (err) {
-      console.error('[astro-inline-review] Failed to update page note:', err);
+      console.error('[review-loop] Failed to update page note:', err);
       const root = item.getRootNode() as ShadowRoot;
       showToast(root, 'Failed to update page note');
     }
@@ -853,7 +853,7 @@ function setupClearAll(clearBtn: HTMLButtonElement, callbacks: PanelCallbacks, m
       // Refresh panel content
       mediator.refreshPanel();
     } catch (err) {
-      console.error('[astro-inline-review] Failed to clear all:', err);
+      console.error('[review-loop] Failed to clear all:', err);
       const root = clearBtn.getRootNode() as ShadowRoot;
       showToast(root, 'Failed to clear annotations');
     }

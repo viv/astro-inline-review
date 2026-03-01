@@ -7,12 +7,12 @@ status: resolved
 reviewed_document: docs/spec/specification.md
 cross_references:
   - src/ (component source code)
-  - ../astro-inline-review-tests/ (acceptance test suite)
-  - ../viv.github.io/docs/engineering-plans/2026-02-astro-inline-review.md
+  - ../review-loop-tests/ (acceptance test suite)
+  - ../viv.github.io/docs/engineering-plans/2026-02-review-loop.md
 tags: [review, specification, quality, gaps, ai-agent-readability]
 ---
 
-# Specification Review: astro-inline-review
+# Specification Review: review-loop
 
 **Reviewed**: `docs/spec/specification.md`
 **Review date**: 2026-02-21
@@ -391,7 +391,7 @@ Add to Section 6.1 under a **Known Issues** or **State Synchronisation** heading
 - **Category**: Contract Completeness
 - **Spec section**: 14 (Automation Contract)
 - **Source file**: `src/client/highlights.ts` (pulse animation)
-- **Test file**: `astro-inline-review-tests/tests/06-panel.spec.ts` lines 173-186
+- **Test file**: `review-loop-tests/tests/06-panel.spec.ts` lines 173-186
 
 **Finding**:
 

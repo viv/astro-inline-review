@@ -1,4 +1,4 @@
-# Architecture Review: astro-inline-review
+# Architecture Review: review-loop
 
 **Date:** 2026-02-22
 **Reviewer:** arch-reviewer (automated)
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-astro-inline-review has a clean, well-partitioned architecture that effectively serves its purpose as a dev-only annotation overlay. The three-tier build (server integration, browser client, MCP server) maps directly to three distinct runtime contexts with appropriate boundaries. The codebase is small enough that its current patterns are proportionate — most findings are forward-looking concerns rather than present-day problems.
+review-loop has a clean, well-partitioned architecture that effectively serves its purpose as a dev-only annotation overlay. The three-tier build (server integration, browser client, MCP server) maps directly to three distinct runtime contexts with appropriate boundaries. The codebase is small enough that its current patterns are proportionate — most findings are forward-looking concerns rather than present-day problems.
 
 **Key strengths:**
 - Sharp dev-only boundary via `command !== 'dev'` guard
@@ -374,7 +374,7 @@ No circular dependencies. The `mediator.ts` interface breaks what would otherwis
 - MCP tools depend only on `ReviewStorage`, not on middleware
 
 **Hidden coupling:**
-- The client cache key (`'astro-inline-review'` in localStorage) is hardcoded. If two instances of the integration were ever used on the same origin, they'd share cache.
+- The client cache key (`'review-loop'` in localStorage) is hardcoded. If two instances of the integration were ever used on the same origin, they'd share cache.
 - The API prefix (`/__inline-review/api`) is hardcoded in both `middleware.ts` and `api.ts` but not shared via a constant.
 
 ---
@@ -456,10 +456,10 @@ The `package.json` `exports` map defines the public API:
 ```
 
 **Everything not in `exports` is internal.** This is the correct approach. However:
-- The `"files": ["dist"]` field means all of `dist/` is published, including internal modules that could be imported via deep paths (e.g., `astro-inline-review/dist/server/storage.js`).
+- The `"files": ["dist"]` field means all of `dist/` is published, including internal modules that could be imported via deep paths (e.g., `review-loop/dist/server/storage.js`).
 - Only the `.` entry has a `types` export — consumer TypeScript projects can't get types for `./client` or `./mcp`.
 
-**The `./client` export is unusual** — it's loaded by the integration itself via `injectScript('page', "import 'astro-inline-review/client'")`. End users don't import it directly. This is a clever use of the exports map as an internal wiring mechanism.
+**The `./client` export is unusual** — it's loaded by the integration itself via `injectScript('page', "import 'review-loop/client'")`. End users don't import it directly. This is a clever use of the exports map as an internal wiring mechanism.
 
 ---
 

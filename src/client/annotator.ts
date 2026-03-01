@@ -366,7 +366,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
 
       await refreshCacheAndBadge();
     } catch (err) {
-      console.error('[astro-inline-review] Failed to save annotation:', err);
+      console.error('[review-loop] Failed to save annotation:', err);
       showToast(shadowRoot, 'Failed to save annotation');
     }
 
@@ -397,7 +397,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       applyElementHighlight(element, annotation.id);
       await refreshCacheAndBadge();
     } catch (err) {
-      console.error('[astro-inline-review] Failed to save element annotation:', err);
+      console.error('[review-loop] Failed to save element annotation:', err);
       showToast(shadowRoot, 'Failed to save annotation');
     }
   }
@@ -423,7 +423,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           await api.updateAnnotation(annotationId, { note: newNote });
           await refreshCacheAndBadge();
         } catch (err) {
-          console.error('[astro-inline-review] Failed to update annotation:', err);
+          console.error('[review-loop] Failed to update annotation:', err);
           showToast(shadowRoot, 'Failed to update annotation');
         }
       },
@@ -435,7 +435,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           removeHighlight(annotationId);
           await refreshCacheAndBadge();
         } catch (err) {
-          console.error('[astro-inline-review] Failed to delete annotation:', err);
+          console.error('[review-loop] Failed to delete annotation:', err);
           showToast(shadowRoot, 'Failed to delete annotation');
         }
       },
@@ -462,7 +462,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           await api.updateAnnotation(annotationId, { note: newNote });
           await refreshCacheAndBadge();
         } catch (err) {
-          console.error('[astro-inline-review] Failed to update element annotation:', err);
+          console.error('[review-loop] Failed to update element annotation:', err);
           showToast(shadowRoot, 'Failed to update annotation');
         }
       },
@@ -474,7 +474,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
           await api.deleteAnnotation(annotationId);
           await refreshCacheAndBadge();
         } catch (err) {
-          console.error('[astro-inline-review] Failed to delete element annotation:', err);
+          console.error('[review-loop] Failed to delete element annotation:', err);
           showToast(shadowRoot, 'Failed to delete annotation');
         }
       },
@@ -568,7 +568,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
               freshRange,
               !!annotation.replacedText,
             ).catch(err => {
-              console.error('[astro-inline-review] Failed to re-anchor annotation:', err);
+              console.error('[review-loop] Failed to re-anchor annotation:', err);
             });
           }
         }
@@ -586,7 +586,7 @@ export function createAnnotator(deps: AnnotatorDeps): AnnotatorInstance {
       // Update badge with current page count
       updateBadge(badge, pageAnnotations.length);
     } catch (err) {
-      console.error('[astro-inline-review] Failed to restore highlights:', err);
+      console.error('[review-loop] Failed to restore highlights:', err);
       showToast(shadowRoot, 'Failed to load annotations');
       // Try cache fallback
       const cached = readCache();

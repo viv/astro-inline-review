@@ -8,11 +8,11 @@ human_reviewer: matthewvivian
 tags: [astro, integration, annotation, dev-tools, specification, element-annotation, status-lifecycle]
 ---
 
-# astro-inline-review: Component Specification
+# review-loop: Component Specification
 
 ## 1. Overview
 
-**astro-inline-review** is a dev-only annotation overlay that bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback. It supports Astro, any Vite-based framework (SvelteKit, Nuxt, Remix), and Express/Connect servers.
+**review-loop** is a dev-only annotation overlay that bridges the gap between a human reviewing a rendered site and a coding agent acting on that feedback. It supports Astro, any Vite-based framework (SvelteKit, Nuxt, Remix), and Express/Connect servers.
 
 A reviewer browses the live dev site and annotates it in two ways: **selecting text** and attaching notes, or **Alt+clicking elements** (cards, images, buttons, layout sections) to annotate non-text targets. Each annotation captures the page URL, the precise location (text range or CSS selector), and the reviewer's instruction — providing both the *what* and the *where*. The result can be consumed by coding agents (Claude Code, Codex, Cursor, etc.) in three ways:
 
@@ -39,7 +39,7 @@ The integration ships **zero bytes** in production builds. All UI, storage, and 
 The integration is added as a dev dependency and configured in `astro.config.mjs`:
 
 ```javascript
-import inlineReview from 'astro-inline-review';
+import inlineReview from 'review-loop';
 
 export default defineConfig({
   integrations: [inlineReview()],
@@ -77,9 +77,9 @@ The core functionality (REST API middleware, client overlay, JSON storage, MCP s
 
 | Entry point | Framework | Client injection | Notes |
 |---|---|---|---|
-| `astro-inline-review` | Astro | `injectScript('page', ...)` | Default export, wraps Vite plugin inside Astro integration |
-| `astro-inline-review/vite` | Vite (SvelteKit, Nuxt, Remix) | `transformIndexHtml` | Standalone Vite `Plugin`, `apply: 'serve'` |
-| `astro-inline-review/express` | Express/Connect | Manual `<script>` tag | Returns `{ apiMiddleware, clientMiddleware }` |
+| `review-loop` | Astro | `injectScript('page', ...)` | Default export, wraps Vite plugin inside Astro integration |
+| `review-loop/vite` | Vite (SvelteKit, Nuxt, Remix) | `transformIndexHtml` | Standalone Vite `Plugin`, `apply: 'serve'` |
+| `review-loop/express` | Express/Connect | Manual `<script>` tag | Returns `{ apiMiddleware, clientMiddleware }` |
 
 All adapters share `ReviewStorage` and `createMiddleware` directly — no shared setup abstraction. Each adapter is 15-50 lines. The `createMiddleware` function uses native `http.IncomingMessage`/`http.ServerResponse` types, making it compatible with any Node.js HTTP framework.
 
@@ -588,7 +588,7 @@ All parameters are validated via Zod schemas at the MCP SDK layer. ID parameters
 ```json
 {
   "mcpServers": {
-    "astro-inline-review": {
+    "review-loop": {
       "type": "stdio",
       "command": "node",
       "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]
@@ -618,8 +618,8 @@ The server assumes single-agent use. Write tools perform read-modify-write opera
 
 The client entry point runs on every page during dev. The bootstrap sequence is:
 
-1. **Idempotency check**: If `window.__astro_inline_review_init` is truthy, exit immediately
-2. Set `window.__astro_inline_review_init = true`
+1. **Idempotency check**: If `window.__review_loop_init` is truthy, exit immediately
+2. Set `window.__review_loop_init = true`
 3. **Create Shadow DOM host**: `createHost()` returns the shadow root
 4. **Create panel**: `createPanel(shadowRoot, callbacks, mediator)` — the slide-in sidebar
 5. **Create FAB**: `createFab(shadowRoot, onToggle)` — the floating action button
@@ -642,13 +642,13 @@ The bootstrap runs when `DOMContentLoaded` fires, or immediately if the document
 
 The integration guards against creating duplicate hosts:
 
-- The `window.__astro_inline_review_init` flag prevents the entire bootstrap from running twice
-- `createHost()` checks for an existing `#astro-inline-review-host` element and returns its shadow root if found
+- The `window.__review_loop_init` flag prevents the entire bootstrap from running twice
+- `createHost()` checks for an existing `#review-loop-host` element and returns its shadow root if found
 - The `astro:page-load` event handler calls `restoreHighlights()` (which clears and re-applies highlights) rather than re-running the full bootstrap
 
 ### 5.3 Shadow DOM Host
 
-- **Element**: `<div id="astro-inline-review-host">`
+- **Element**: `<div id="review-loop-host">`
 - **Shadow root**: Open mode (inspectable in DevTools)
 - **Style isolation**: `:host { all: initial; }` resets all inherited styles
 - **Appended to**: `document.body`
@@ -659,7 +659,7 @@ The integration guards against creating duplicate hosts:
 
 ### 5.4 Client-Side Caching
 
-**localStorage key**: `astro-inline-review`
+**localStorage key**: `review-loop`
 
 **Purpose**:
 - Fast reads when the API is available (avoids network round-trip for cached data)
@@ -1092,7 +1092,7 @@ Tests should use `data-air-state` (the automation contract) rather than CSS disp
 - Inspector mode deactivates — mouse movement no longer highlights elements
 
 **Excluded elements**:
-- The Shadow DOM host (`#astro-inline-review-host`) and its children are excluded from inspection
+- The Shadow DOM host (`#review-loop-host`) and its children are excluded from inspection
 - Elements inside the Shadow DOM are excluded
 - The `<html>` and `<body>` elements are excluded (too broad to be useful)
 
@@ -1547,7 +1547,7 @@ The "All Pages" tab and the export endpoint both aggregate data across all pages
 When the site is built with `astro build`:
 
 1. **No scripts**: The integration's client script must not appear in any HTML file
-2. **No host element**: No `<div id="astro-inline-review-host">` in the rendered HTML
+2. **No host element**: No `<div id="review-loop-host">` in the rendered HTML
 3. **No API references**: No references to `__inline-review` in any JavaScript bundle
 4. **No JSON file references**: No references to `inline-review.json` in built output
 
@@ -1698,7 +1698,7 @@ When a fallback tier (Tier 2.5 or Tier 3) successfully restores a highlight, the
 
 ### 16.2 Console Logging
 
-Errors are logged with the prefix `[astro-inline-review]` for easy filtering. No errors should appear during normal operation — the integration should not pollute the console.
+Errors are logged with the prefix `[review-loop]` for easy filtering. No errors should appear during normal operation — the integration should not pollute the console.
 
 
 ## 17. Style Reference

@@ -1,8 +1,8 @@
-# CI/CD Pipeline Review — astro-inline-review
+# CI/CD Pipeline Review — review-loop
 
 **Date**: 2026-02-22
 **Reviewer**: CI/CD Pipeline Review Agent
-**Scope**: All GitHub Actions workflows in `astro-inline-review` and `astro-inline-review-tests`
+**Scope**: All GitHub Actions workflows in `review-loop` and `review-loop-tests`
 
 ---
 
@@ -11,10 +11,10 @@
 The CI/CD setup covers the core workflow well: build, test, type-check, pack verification, acceptance tests, and release validation. The separation of concerns across three workflows in the main repo is clean and appropriate for the project's stage. However, there are several gaps around dependency management, security hardening, and missing quality gates that should be addressed before the first public release.
 
 **Workflows reviewed:**
-- `astro-inline-review/.github/workflows/ci.yml` — Build, test, type-check, audit, pack
-- `astro-inline-review/.github/workflows/release.yml` — Release validation (manual)
-- `astro-inline-review/.github/workflows/acceptance.yml` — Cross-repo Playwright E2E
-- `astro-inline-review-tests/.github/workflows/ci.yml` — Acceptance tests (triggered from test repo)
+- `review-loop/.github/workflows/ci.yml` — Build, test, type-check, audit, pack
+- `review-loop/.github/workflows/release.yml` — Release validation (manual)
+- `review-loop/.github/workflows/acceptance.yml` — Cross-repo Playwright E2E
+- `review-loop-tests/.github/workflows/ci.yml` — Acceptance tests (triggered from test repo)
 
 ---
 
@@ -68,7 +68,7 @@ updates:
       - "ci"
 ```
 
-Do the same for the `astro-inline-review-tests` repository.
+Do the same for the `review-loop-tests` repository.
 
 ---
 
@@ -135,8 +135,8 @@ The main `ci.yml` correctly uses `cache: npm`. The acceptance workflow runs thre
     node-version: 22
     cache: npm
     cache-dependency-path: |
-      astro-inline-review/package-lock.json
-      astro-inline-review-tests/package-lock.json
+      review-loop/package-lock.json
+      review-loop-tests/package-lock.json
 ```
 
 Note: The fixture uses `npm install` (not `npm ci`) which is correct since it uses a `file:` dependency, but this means it won't benefit from lockfile-based caching directly.
@@ -150,11 +150,11 @@ Note: The fixture uses `npm install` (not `npm ci`) which is correct since it us
 
 ```yaml
 - name: Install fixture deps
-  working-directory: astro-inline-review-tests/fixture
+  working-directory: review-loop-tests/fixture
   run: npm install
 ```
 
-The fixture uses `npm install` rather than `npm ci`. This is likely intentional because the `file:../../astro-inline-review` dependency requires resolution rather than strict lockfile install. However, this means the fixture install is non-deterministic in CI.
+The fixture uses `npm install` rather than `npm ci`. This is likely intentional because the `file:../../review-loop` dependency requires resolution rather than strict lockfile install. However, this means the fixture install is non-deterministic in CI.
 
 **Recommendation:** This is acceptable given the `file:` dependency constraint, but add a comment explaining the rationale:
 ```yaml
@@ -166,7 +166,7 @@ The fixture uses `npm install` rather than `npm ci`. This is likely intentional 
 ### 7. Test Repo Acceptance Workflow Duplicates Main Repo Workflow
 
 **Severity: Info**
-**File**: `astro-inline-review-tests/.github/workflows/ci.yml`
+**File**: `review-loop-tests/.github/workflows/ci.yml`
 
 The acceptance workflow in the test repo is essentially identical to `acceptance.yml` in the main repo, with the checkout order reversed. This duplication means changes must be kept in sync manually.
 
@@ -176,8 +176,8 @@ This is a reasonable design choice — each repo can trigger tests independently
 ```yaml
 # NOTE: This workflow is intentionally mirrored in the other repo.
 # Changes here should be reflected in:
-#   astro-inline-review/.github/workflows/acceptance.yml
-#   astro-inline-review-tests/.github/workflows/ci.yml
+#   review-loop/.github/workflows/acceptance.yml
+#   review-loop-tests/.github/workflows/ci.yml
 ```
 
 ---
@@ -401,7 +401,7 @@ The `${{ inputs.version }}` is interpolated directly into the shell script. Whil
 ### 18. Playwright Browser Cache Not Utilised
 
 **Severity: Low**
-**Files**: `acceptance.yml:42-43`, `astro-inline-review-tests/.github/workflows/ci.yml:45`
+**Files**: `acceptance.yml:42-43`, `review-loop-tests/.github/workflows/ci.yml:45`
 
 Playwright browsers are downloaded fresh on every run (`npx playwright install --with-deps chromium`). This adds approximately 100-200MB of download per run.
 

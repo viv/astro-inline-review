@@ -4,7 +4,7 @@ generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: code_review
 status: resolved
-scope: [astro-inline-review, mcp-server]
+scope: [review-loop, mcp-server]
 tags: [code-review, mcp, agent-integration, quality]
 ---
 
@@ -88,7 +88,7 @@ The integration tests cover the full stack: process spawn → stdio transport �
 
 ### 5. Dead Code and Unnecessary Exports
 
-**`src/mcp/index.ts`** — This barrel file (`export * from './server.js'`) re-exports from `server.ts`. It is not imported anywhere in the source code. The MCP server entry point is `src/mcp/server.ts` (configured directly in `tsup.config.ts`). The barrel may have been created for future use (e.g., if consumers wanted to import `parseStoragePath` programmatically via `astro-inline-review/mcp`).
+**`src/mcp/index.ts`** — This barrel file (`export * from './server.js'`) re-exports from `server.ts`. It is not imported anywhere in the source code. The MCP server entry point is `src/mcp/server.ts` (configured directly in `tsup.config.ts`). The barrel may have been created for future use (e.g., if consumers wanted to import `parseStoragePath` programmatically via `review-loop/mcp`).
 
 **Handler function exports** — Each tool file exports both the handler function and the register function. The register functions are used by `server.ts`. The handler functions are used only by tests. Exporting handlers for testability is a common and acceptable pattern. The alternative (testing only through the MCP protocol) would be slower and less targeted.
 

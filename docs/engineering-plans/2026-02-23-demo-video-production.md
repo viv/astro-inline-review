@@ -13,7 +13,7 @@ tags: [demo, video, readme, kap, imovie, gif, mcp, marketing]
 
 ## Goal
 
-Produce a short screen recording (MP4 + optional GIF) demonstrating the end-to-end `astro-inline-review` workflow for embedding in the README. The video shows a human reviewer annotating a live Astro site, then an AI agent (Claude Code via MCP) addressing the annotations and making real code changes, then the result reflected back in the browser.
+Produce a short screen recording (MP4 + optional GIF) demonstrating the end-to-end `review-loop` workflow for embedding in the README. The video shows a human reviewer annotating a live Astro site, then an AI agent (Claude Code via MCP) addressing the annotations and making real code changes, then the result reflected back in the browser.
 
 ---
 
@@ -38,7 +38,7 @@ Complete all of this before touching the record button.
 
 You need a clean, self-contained Astro project separate from this repo. It should:
 
-- Have `astro-inline-review` installed and configured
+- Have `review-loop` installed and configured
 - Have a real-looking page with 2–3 paragraphs of copy
 - Include at least one **deliberate flaw** a reviewer would plausibly flag — this is the text Claude will fix
 
@@ -196,7 +196,7 @@ A simple **cross-dissolve** between scenes looks professional and signals the vi
 
 ### Titles (optional)
 
-Consider a brief title card at the start: "astro-inline-review — review your site, fix it with AI"
+Consider a brief title card at the start: "review-loop — review your site, fix it with AI"
 
 ### Export
 
@@ -246,7 +246,7 @@ GitHub renders this as an inline video player automatically.
 Commit the GIF to the repo (e.g., `docs/assets/demo.gif`) and reference it:
 
 ```markdown
-![Demo of astro-inline-review](docs/assets/demo.gif)
+![Demo of review-loop](docs/assets/demo.gif)
 ```
 
 ---
@@ -275,7 +275,7 @@ Add a collapsible transcript below the video in the README:
 
 ## Success Criteria
 
-- [ ] Demo Astro project set up with `astro-inline-review` installed
+- [ ] Demo Astro project set up with `review-loop` installed
 - [ ] At least one deliberate copy flaw for Claude to fix
 - [ ] All 8 scenes recorded as separate clips in Kap
 - [ ] Clips assembled and edited in iMovie (terminal scene sped up)

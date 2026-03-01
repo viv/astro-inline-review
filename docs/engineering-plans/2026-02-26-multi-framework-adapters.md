@@ -12,7 +12,7 @@ tags: [multi-framework, vite, express, adapters, architecture]
 
 ## Problem
 
-astro-inline-review was Astro-only despite having no fundamental Astro dependency in its core — the REST API middleware, browser annotation overlay, JSON storage, and MCP server are all framework-agnostic. The only Astro-specific code was ~55 lines in `src/index.ts`.
+review-loop was Astro-only despite having no fundamental Astro dependency in its core — the REST API middleware, browser annotation overlay, JSON storage, and MCP server are all framework-agnostic. The only Astro-specific code was ~55 lines in `src/index.ts`.
 
 Users of Vite-based frameworks (SvelteKit, Nuxt, Remix) and Express/Connect servers couldn't use the tool without adopting Astro.
 
@@ -33,14 +33,14 @@ Extract the Astro adapter, decouple the middleware from Vite types, and add thin
 - `apply: 'serve'` ensures dev-only
 - `configureServer` registers API middleware, serves client.js at `/__inline-review/client.js`, unwatches storage
 - `transformIndexHtml` injects client script tag
-- Export: `astro-inline-review/vite`
+- Export: `review-loop/vite`
 
 ### Phase 3: Express/Connect adapter
 
 - Created `src/integrations/express.ts` — returns `{ apiMiddleware, clientMiddleware }`
 - No auto-HTML-injection — users add one `<script>` tag manually
 - `clientMiddleware` serves bundled client.js from the package's dist directory
-- Export: `astro-inline-review/express`
+- Export: `review-loop/express`
 
 ## Key Design Decisions
 
@@ -48,7 +48,7 @@ Extract the Astro adapter, decouple the middleware from Vite types, and add thin
 2. **`transformIndexHtml` for Vite** — standard Vite mechanism, works with all Vite-based frameworks
 3. **No auto-HTML-injection for Express** — fragile to implement; explicit `<script>` tag is one line and reliable
 4. **`astro:page-load` listener stays in client** — never fires in non-Astro frameworks, zero cost
-5. **Zero breaking changes** — `import inlineReview from 'astro-inline-review'` continues to work identically
+5. **Zero breaking changes** — `import inlineReview from 'review-loop'` continues to work identically
 
 ## Verification
 

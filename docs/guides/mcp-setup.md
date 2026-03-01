@@ -5,7 +5,7 @@ Connect your coding agent to review annotations via the [Model Context Protocol]
 ## Before you begin
 
 - **Node.js** >= 20
-- **astro-inline-review** installed in your Astro project (`npm install -D astro-inline-review`)
+- **review-loop** installed in your Astro project (`npm install -D review-loop`)
 - An **MCP-compatible coding agent** (Claude Code, Cursor, Windsurf, etc.)
 - **Annotations exist** — reviewers create them using the browser UI during `astro dev`, stored in `inline-review.json`
 
@@ -13,16 +13,16 @@ The MCP server reads directly from `inline-review.json`. The Astro dev server do
 
 ## Claude Code
 
-Add a `.mcp.json` file to your Astro project root (the project that has `astro-inline-review` installed as a dependency):
+Add a `.mcp.json` file to your Astro project root (the project that has `review-loop` installed as a dependency):
 
 ```json
 {
   "mcpServers": {
-    "astro-inline-review": {
+    "review-loop": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "./node_modules/astro-inline-review/dist/mcp/server.js",
+        "./node_modules/review-loop/dist/mcp/server.js",
         "--storage",
         "./inline-review.json"
       ]
@@ -36,7 +36,7 @@ No other configuration is needed — Claude Code reads `.mcp.json` on startup.
 ### What happens
 
 1. Claude Code reads `.mcp.json` on startup
-2. It spawns `node ./node_modules/astro-inline-review/dist/mcp/server.js` as a child process using stdio transport
+2. It spawns `node ./node_modules/review-loop/dist/mcp/server.js` as a child process using stdio transport
 3. The MCP server reads `inline-review.json` from disk on every tool call
 4. Claude Code gains access to seven tools for listing, reading, addressing, replying to, and updating annotations
 
@@ -47,11 +47,11 @@ The `--storage` flag is optional and defaults to `./inline-review.json` relative
 ```json
 {
   "mcpServers": {
-    "astro-inline-review": {
+    "review-loop": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "./node_modules/astro-inline-review/dist/mcp/server.js",
+        "./node_modules/review-loop/dist/mcp/server.js",
         "--storage",
         "./reviews/sprint-42.json"
       ]
@@ -65,7 +65,7 @@ The `--storage` flag is optional and defaults to `./inline-review.json` relative
 For agents that don't support `.mcp.json` auto-discovery, configure the stdio transport manually. The exact format varies by client, but the core configuration is:
 
 - **Command**: `node`
-- **Arguments**: `["./node_modules/astro-inline-review/dist/mcp/server.js", "--storage", "./inline-review.json"]`
+- **Arguments**: `["./node_modules/review-loop/dist/mcp/server.js", "--storage", "./inline-review.json"]`
 - **Transport**: stdio
 - **Working directory**: your Astro project root
 
@@ -108,7 +108,7 @@ Human reviewer (browser)        AI coding agent (MCP)
 
 ### "Server not found" or connection errors
 
-- Ensure the package is installed — the server runs from `node_modules/astro-inline-review/dist/mcp/server.js`
+- Ensure the package is installed — the server runs from `node_modules/review-loop/dist/mcp/server.js`
 - Check that the path in `.mcp.json` is correct relative to the project root
 - Verify Node.js >= 20 is available in your PATH
 
@@ -126,6 +126,6 @@ Human reviewer (browser)        AI coding agent (MCP)
 ### Tools not appearing in the agent
 
 - Some MCP clients cache tool lists — restart the agent or reconnect the MCP server
-- Verify the server starts without errors: `node ./node_modules/astro-inline-review/dist/mcp/server.js` should run silently (output goes to stderr only on errors)
+- Verify the server starts without errors: `node ./node_modules/review-loop/dist/mcp/server.js` should run silently (output goes to stderr only on errors)
 
 See [MCP Tools Reference](./mcp-tools.md) for detailed documentation of each tool.

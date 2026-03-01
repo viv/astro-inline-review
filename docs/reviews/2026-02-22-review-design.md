@@ -8,7 +8,7 @@
 
 ## Summary
 
-The astro-inline-review client UI is well-structured, using Shadow DOM for style isolation and a clean component architecture. The annotation workflow (text selection and Alt+click) is functional and the panel/popup model is intuitive. However, there are significant accessibility gaps — particularly around ARIA semantics, focus management, colour contrast, and motion preferences — that should be addressed to meet WCAG 2.1 AA compliance.
+The review-loop client UI is well-structured, using Shadow DOM for style isolation and a clean component architecture. The annotation workflow (text selection and Alt+click) is functional and the panel/popup model is intuitive. However, there are significant accessibility gaps — particularly around ARIA semantics, focus management, colour contrast, and motion preferences — that should be addressed to meet WCAG 2.1 AA compliance.
 
 **Severity counts:** Critical: 2 | High: 7 | Medium: 8 | Low: 6 | Info: 4
 

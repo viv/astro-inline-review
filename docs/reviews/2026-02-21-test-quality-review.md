@@ -4,11 +4,11 @@ generation_date: 2026-02-21
 model_version: claude-opus-4-6
 purpose: test_quality_review
 status: complete
-scope: astro-inline-review-tests (13 spec files, 156 tests, 3 helper files)
+scope: review-loop-tests (13 spec files, 156 tests, 3 helper files)
 tags: [testing, playwright, flakiness, test-quality, automation-contract, spec-coverage]
 ---
 
-# Test Quality Review: astro-inline-review-tests
+# Test Quality Review: review-loop-tests
 
 ## Executive Summary
 
@@ -266,7 +266,7 @@ The first `goto('/')` exists solely to provide a page context for `cleanReviewDa
 ```typescript
 cleanReviewJsonFile();  // Node-side only
 await page.goto('/');
-await page.evaluate(() => localStorage.removeItem('astro-inline-review'));
+await page.evaluate(() => localStorage.removeItem('review-loop'));
 await waitForIntegration(page);
 ```
 
@@ -390,11 +390,11 @@ Clear All deletes annotations one-by-one via sequential DELETE requests. Tests w
 
 ## Resolution Status
 
-The P0 recommendations in this review apply to the external acceptance test repository ([astro-inline-review-tests](https://github.com/viv/astro-inline-review-tests)), not to this repository's unit test suite. Their implementation status is **unverified** from this repository.
+The P0 recommendations in this review apply to the external acceptance test repository ([review-loop-tests](https://github.com/viv/review-loop-tests)), not to this repository's unit test suite. Their implementation status is **unverified** from this repository.
 
 | Priority | Scope | Status |
 |----------|-------|--------|
-| P0 (1–3) | External test repo — `addPageNote` API wait, redundant `waitForTimeout` removal, `resp.ok()` fix | Unverified — requires changes in astro-inline-review-tests |
+| P0 (1–3) | External test repo — `addPageNote` API wait, redundant `waitForTimeout` removal, `resp.ok()` fix | Unverified — requires changes in review-loop-tests |
 | P1 (4–7) | External test repo — `switchPanelTab` coupling, page note PATCH/DELETE waits, production safety, pulse CSS check | Unverified |
 | P2 (8–11) | External test repo — `beforeEach` optimisation, negative assertions, highlight removal retry, multi-page Enter key | Unverified |
 | P3 (12–15) | External test repo — CI retries, toast content, inline-element tests, normalize verification | Unverified |

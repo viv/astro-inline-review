@@ -38,7 +38,7 @@ This is not a bug in the implementation — it is an expected behavioural change
 
 ### Fix Applied
 
-The acceptance test in `astro-inline-review-tests` was updated:
+The acceptance test in `review-loop-tests` was updated:
 
 1. **Renamed and modified** the existing test to "popup is dismissed when user scrolls in passive mode" — it now explicitly blurs the textarea before scrolling, simulating a user who has moved focus away from the popup.
 2. **Added new test** "popup is NOT dismissed when textarea is focused and user scrolls" — verifies the new behaviour that the popup remains visible when the textarea has focus.
@@ -93,7 +93,7 @@ Existing test sections were renumbered (3→4, 4→5, 5→6, 6→7) to accommoda
 
 **Original state**: The Playwright E2E test "popup is dismissed when user scrolls" failed because it did not account for the auto-focus behaviour.
 
-**Action taken**: Updated the test in `astro-inline-review-tests` to blur the textarea before scrolling (testing passive mode) and added a companion test verifying the new focus-preservation behaviour. All 211 acceptance tests pass.
+**Action taken**: Updated the test in `review-loop-tests` to blur the textarea before scrolling (testing passive mode) and added a companion test verifying the new focus-preservation behaviour. All 211 acceptance tests pass.
 
 ### F3: No edge case for mobile/touch scroll (Informational)
 

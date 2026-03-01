@@ -126,7 +126,7 @@ With `resolved` removed, the green highlight colour (`rgba(34,197,94,0.2)`) beco
 
 ## Files to Modify
 
-### Main Repository: `astro-inline-review`
+### Main Repository: `review-loop`
 
 #### Types & Shared
 
@@ -186,7 +186,7 @@ With `resolved` removed, the green highlight colour (`rgba(34,197,94,0.2)`) beco
 | `docs/reviews/2026-02-28-annotation-status-workflow-review.md` | Update to reflect resolved removal |
 | `docs/reviews/2026-02-28-api-and-state-machine-review.md` | Add "resolution" annotations for addressed findings |
 
-### External Repository: `astro-inline-review-tests`
+### External Repository: `review-loop-tests`
 
 | File | Changes |
 |------|---------|

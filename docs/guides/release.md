@@ -1,6 +1,6 @@
 # Release Process
 
-How `astro-inline-review` gets from a commit on `main` to a published npm package.
+How `review-loop` gets from a commit on `main` to a published npm package.
 
 ## Overview
 
@@ -97,7 +97,7 @@ The `prepublishOnly` script in `package.json` runs `npm run build && npm test` b
 
 ### Why `--access public`?
 
-The package is unscoped (`astro-inline-review`, not `@scope/astro-inline-review`). Unscoped packages default to public, but being explicit avoids surprises if the package name or scope ever changes.
+The package is unscoped (`review-loop`, not `@scope/review-loop`). Unscoped packages default to public, but being explicit avoids surprises if the package name or scope ever changes.
 
 ### Why auto-generated release notes?
 
@@ -112,9 +112,9 @@ The release workflow authenticates with npm using a **granular access token** st
 1. Go to [npmjs.com → Access Tokens](https://www.npmjs.com/settings/~/tokens)
 2. Click **Generate New Token** → **Granular Access Token**
 3. Configure:
-   - **Token name**: `astro-inline-review-github-actions` (or similar)
+   - **Token name**: `review-loop-github-actions` (or similar)
    - **Expiration**: 90 days (maximum for read-write tokens — set a calendar reminder to rotate)
-   - **Packages and scopes**: Read and Write, scoped to `astro-inline-review`
+   - **Packages and scopes**: Read and Write, scoped to `review-loop`
    - **Organisations**: No permissions
 4. Copy the token
 

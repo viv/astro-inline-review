@@ -15,7 +15,7 @@ tags: [multi-framework, code-review]
 The multi-framework adapter implementation is **well-executed**. The extraction from a monolithic `src/index.ts` into three thin adapters (`astro.ts`, `vite.ts`, `express.ts`) is clean, and the middleware decoupling from Vite types to native `http` types was the right architectural move. The shared core (`ReviewStorage` + `createMiddleware`) is genuinely framework-agnostic now.
 
 **Key strengths:**
-- Zero breaking changes — the `import inlineReview from 'astro-inline-review'` path is fully preserved
+- Zero breaking changes — the `import inlineReview from 'review-loop'` path is fully preserved
 - Middleware uses only `http.IncomingMessage`/`http.ServerResponse` — no framework coupling
 - Each adapter is 15–55 lines with no shared abstraction layer (correctly avoids premature DRY)
 - Build outputs all correct: `.js`, `.d.ts`, and `.js.map` for every entry point
@@ -47,10 +47,10 @@ Both the Vite and Express adapters import `InlineReviewOptions` from `../types.j
 
 ```typescript
 // This works
-import type { InlineReviewOptions } from 'astro-inline-review';
+import type { InlineReviewOptions } from 'review-loop';
 
 // This does NOT work (type not exported)
-import type { InlineReviewOptions } from 'astro-inline-review/vite';
+import type { InlineReviewOptions } from 'review-loop/vite';
 ```
 
 This matters because a Vite-only or Express-only user may never install `astro` (it's an optional peer dep), and importing from the root entry point will produce a TypeScript error since `dist/index.d.ts` references `AstroIntegration` from `astro`.
@@ -61,7 +61,7 @@ This matters because a Vite-only or Express-only user may never install `astro` 
 
 **File:** `dist/index.d.ts`
 
-The generated declaration file has `import { AstroIntegration } from 'astro'` at the top. If a Vite-only user happens to import from `'astro-inline-review'` (e.g. for the `InlineReviewOptions` type, since it's only exported there — see I-1), TypeScript will error because `astro` is not installed.
+The generated declaration file has `import { AstroIntegration } from 'astro'` at the top. If a Vite-only user happens to import from `'review-loop'` (e.g. for the `InlineReviewOptions` type, since it's only exported there — see I-1), TypeScript will error because `astro` is not installed.
 
 This is partially mitigated by the optional peer dep declaration, but it means `InlineReviewOptions` is effectively inaccessible to non-Astro users without installing Astro's type declarations. Fixing I-1 resolves this for practical purposes.
 
@@ -130,9 +130,9 @@ This is a sensible default for Express (no config object provides a project root
 **Files:** `src/integrations/vite.ts` (line 23), `src/integrations/astro.ts` (line 34)
 
 - Vite standalone plugin: `name: 'inline-review'`
-- Astro's inner Vite plugin: `name: 'astro-inline-review-middleware'`
+- Astro's inner Vite plugin: `name: 'review-loop-middleware'`
 
-If a user accidentally includes both the Astro integration and the Vite plugin, there would be no name collision warning from Vite because the names differ. This is not necessarily wrong (Vite does not enforce unique plugin names anyway), but a shared prefix like `inline-review` or `astro-inline-review` would make it easier to spot in debug output. Low priority.
+If a user accidentally includes both the Astro integration and the Vite plugin, there would be no name collision warning from Vite because the names differ. This is not necessarily wrong (Vite does not enforce unique plugin names anyway), but a shared prefix like `inline-review` or `review-loop` would make it easier to spot in debug output. Low priority.
 
 ### Nit
 
@@ -151,8 +151,8 @@ Now that the middleware is framework-agnostic and used by all three adapters, th
 
 **Files:** `src/integrations/vite.ts`, `src/integrations/express.ts`
 
-- Vite: `export default function inlineReviewVite(...)` — usage: `import inlineReview from 'astro-inline-review/vite'`
-- Express: `export function inlineReview(...)` — usage: `import { inlineReview } from 'astro-inline-review/express'`
+- Vite: `export default function inlineReviewVite(...)` — usage: `import inlineReview from 'review-loop/vite'`
+- Express: `export function inlineReview(...)` — usage: `import { inlineReview } from 'review-loop/express'`
 
 The README documents both correctly, and the engineering plan notes this as a deliberate choice (Express returns an object with two functions rather than a single value, so a named export is more natural). The inconsistency is understandable but worth noting — some users may find it surprising that the import style changes between adapters.
 

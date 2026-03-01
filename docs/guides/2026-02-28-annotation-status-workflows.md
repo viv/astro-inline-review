@@ -10,7 +10,7 @@ tags: [status, workflow, annotations, lifecycle, guide]
 
 # Annotation Status Workflows
 
-Canonical guide to the annotation status lifecycle in astro-inline-review. Covers all statuses, transitions, UI behaviour, MCP agent integration, and edge cases.
+Canonical guide to the annotation status lifecycle in review-loop. Covers all statuses, transitions, UI behaviour, MCP agent integration, and edge cases.
 
 ## Status Model
 

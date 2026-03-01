@@ -18,7 +18,7 @@ related_plans:
 
 ## Overview
 
-This plan implements **Approach B** from the [Agent Bridge engineering plan](../engineering-plans/2026-02-22-agent-bridge.md): an MCP (Model Context Protocol) server that exposes `astro-inline-review` annotations as structured tools for coding agents like Claude Code.
+This plan implements **Approach B** from the [Agent Bridge engineering plan](../engineering-plans/2026-02-22-agent-bridge.md): an MCP (Model Context Protocol) server that exposes `review-loop` annotations as structured tools for coding agents like Claude Code.
 
 This document is designed to be executed in a **single Claude Code session** using autonomous iteration (the "Ralph Wiggum" loop). The agent should work through each phase sequentially, committing after each phase, and self-verifying via tests, type-checks, and build before moving on.
 
@@ -200,8 +200,8 @@ docs/
 > 1. Install `@modelcontextprotocol/sdk` and `zod` as dependencies (not devDependencies — they're needed at runtime by the MCP server).
 > 2. Update `tsup.config.ts` to add a third entry point for `src/mcp/server.ts` that builds as ESM with a shebang (`#!/usr/bin/env node`) so it can be run directly. This entry should be named `mcp` and output to `dist/mcp/`. It should externalise `@modelcontextprotocol/sdk` and `zod` (they're runtime deps, not bundled).
 > 3. Update `package.json` exports to add `"./mcp"` pointing to the new entry.
-> 4. Add a `"bin"` field in `package.json`: `{ "astro-inline-review-mcp": "./dist/mcp/server.js" }`.
-> 5. Create a minimal `src/mcp/server.ts` that imports `McpServer` and `StdioServerTransport`, creates a server with name `"astro-inline-review-mcp"` and version from package.json, connects to stdio transport, and exits cleanly. No tools registered yet.
+> 4. Add a `"bin"` field in `package.json`: `{ "review-loop-mcp": "./dist/mcp/server.js" }`.
+> 5. Create a minimal `src/mcp/server.ts` that imports `McpServer` and `StdioServerTransport`, creates a server with name `"review-loop-mcp"` and version from package.json, connects to stdio transport, and exits cleanly. No tools registered yet.
 > 6. Create a minimal `src/mcp/index.ts` that re-exports from `server.ts`.
 > 7. Run `npm run build` and verify it succeeds.
 > 8. Run `npm test` and verify all existing tests still pass.
@@ -435,7 +435,7 @@ docs/
 > ```json
 > {
 >   "mcpServers": {
->     "astro-inline-review": {
+>     "review-loop": {
 >       "type": "stdio",
 >       "command": "node",
 >       "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]
@@ -651,7 +651,7 @@ These items were identified but are explicitly out of scope for this plan:
 2. **Agent-created annotations** — Letting the agent create new annotations (e.g., "I changed this, please review"). This would make the flow truly bidirectional but adds complexity to the browser UI.
 3. **Annotation categories/priorities** — Adding structured metadata beyond free-text notes. Not needed for the initial implementation.
 4. **SSE transport** — An alternative to stdio that reuses the Vite dev server's HTTP port. More complex to set up but could be useful for remote dev environments. Deferred in favour of stdio simplicity.
-5. **Separate npm package** — The MCP server could be published as `astro-inline-review-mcp` for independent versioning. Deferred until the API stabilises.
+5. **Separate npm package** — The MCP server could be published as `review-loop-mcp` for independent versioning. Deferred until the API stabilises.
 
 ## Success Criteria
 

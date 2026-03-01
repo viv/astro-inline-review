@@ -23,37 +23,37 @@ jobs:
       - name: Checkout main repo
         uses: actions/checkout@v6
         with:
-          path: astro-inline-review
+          path: review-loop
 
       - name: Checkout test suite
         uses: actions/checkout@v6
         with:
-          repository: viv/astro-inline-review-tests
-          path: astro-inline-review-tests
+          repository: viv/review-loop-tests
+          path: review-loop-tests
 
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            astro-inline-review/package-lock.json
-            astro-inline-review-tests/package-lock.json
+            review-loop/package-lock.json
+            review-loop-tests/package-lock.json
 
       - name: Build main package
-        working-directory: astro-inline-review
+        working-directory: review-loop
         run: npm ci && npm run build
 
       - name: Install test runner deps
-        working-directory: astro-inline-review-tests
+        working-directory: review-loop-tests
         run: npm ci
 
       - name: Install fixture deps
-        working-directory: astro-inline-review-tests/fixture
+        working-directory: review-loop-tests/fixture
         run: npm install
 
       - name: Get Playwright version
         id: playwright-version
-        working-directory: astro-inline-review-tests
+        working-directory: review-loop-tests
         run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
@@ -63,11 +63,11 @@ jobs:
           key: playwright-${{ steps.playwright-version.outputs.version }}-chromium
 
       - name: Install Playwright Chromium
-        working-directory: astro-inline-review-tests
+        working-directory: review-loop-tests
         run: npx playwright install --with-deps chromium
 
       - name: Run Playwright tests
-        working-directory: astro-inline-review-tests
+        working-directory: review-loop-tests
         run: npx playwright test
         env:
           CI: "true"
@@ -77,4 +77,4 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: playwright-report
-          path: astro-inline-review-tests/playwright-report/
+          path: review-loop-tests/playwright-report/

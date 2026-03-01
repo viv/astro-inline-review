@@ -63,7 +63,7 @@ Write the body to a temp file using the Write tool (never use `--body` inline â€
 - [x] TypeScript compiles (`tsc --noEmit`)
 - [x] Other automated checks that have been verified
 - [ ] Manual verification items not yet confirmed
-- [ ] Scenario tests updated in `astro-inline-review-tests` (if behaviour changes)
+- [ ] Scenario tests updated in `review-loop-tests` (if behaviour changes)
 
 Closes #N
 See: `docs/engineering-plans/YYYY-MM-DD-slug.md`
@@ -118,7 +118,7 @@ Update the issue if checkboxes need ticking:
 #### 5c. Scenario tests
 
 If the PR changes UI behaviour, CSS, status model, MCP tools, or export format:
-- Check whether scenario tests in `astro-inline-review-tests` need updating
+- Check whether scenario tests in `review-loop-tests` need updating
 - Check whether a "Scenario tests updated" checkbox exists on both the PR and issue
 - **Flag to the user** if scenario tests appear to need updating but haven't been
 

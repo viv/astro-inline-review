@@ -233,7 +233,7 @@ Ensure the server advertises `subscribe: true` in its resource capabilities. The
 
 ```typescript
 const server = new McpServer({
-  name: 'astro-inline-review-mcp',
+  name: 'review-loop-mcp',
   version: '0.2.0',
   capabilities: {
     resources: {

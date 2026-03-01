@@ -85,7 +85,7 @@ describe('ReviewStorage', () => {
 
       expect(store).toEqual(createEmptyStore());
       expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy.mock.calls[0][0]).toContain('[astro-inline-review] Failed to read');
+      expect(warnSpy.mock.calls[0][0]).toContain('[review-loop] Failed to read');
       expect(warnSpy.mock.calls[0][0]).toContain(TEST_FILE);
       warnSpy.mockRestore();
     });

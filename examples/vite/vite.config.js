@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
-import inlineReview from 'astro-inline-review/vite';
+import inlineReview from 'review-loop/vite';
 
 export default defineConfig({
   plugins: [inlineReview()],

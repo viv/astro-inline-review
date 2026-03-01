@@ -23,7 +23,7 @@ async function main() {
   const storage = new ReviewStorage(storagePath);
 
   const server = new McpServer({
-    name: 'astro-inline-review-mcp',
+    name: 'review-loop-mcp',
     version: '0.1.0',
   });
 

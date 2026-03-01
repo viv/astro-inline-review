@@ -10,11 +10,11 @@ prior_reviews:
   - docs/reviews/2026-02-21-spec-review-round-2.md (Round 2 - 15 findings, resolved)
 cross_references:
   - src/ (19 TypeScript source files)
-  - /Users/matthewvivian/Documents/code/cpd/astro-inline-review-tests/ (acceptance test suite)
+  - /Users/matthewvivian/Documents/code/cpd/review-loop-tests/ (acceptance test suite)
 tags: [review, specification, quality, accuracy, ai-agent-readability, round-3]
 ---
 
-# Specification Review Round 3: astro-inline-review
+# Specification Review Round 3: review-loop
 
 **Reviewed**: `docs/spec/specification.md` (1,461 lines, 19 sections + 2 appendices)
 **Review date**: 2026-02-21

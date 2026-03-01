@@ -5,7 +5,7 @@ import { ReviewStorage } from '../server/storage.js';
 import { createMiddleware } from '../server/middleware.js';
 
 /**
- * astro-inline-review — dev-only text annotation overlay.
+ * review-loop — dev-only text annotation overlay.
  *
  * Injects a client-side annotation UI during `astro dev` and registers
  * Vite middleware for a REST API that persists annotations to a JSON file.
@@ -13,7 +13,7 @@ import { createMiddleware } from '../server/middleware.js';
  */
 export default function inlineReview(options: InlineReviewOptions = {}): AstroIntegration {
   return {
-    name: 'astro-inline-review',
+    name: 'review-loop',
     hooks: {
       'astro:config:setup': ({ command, injectScript, updateConfig, config }) => {
         // Only activate during dev — ship nothing in production
@@ -31,7 +31,7 @@ export default function inlineReview(options: InlineReviewOptions = {}): AstroIn
           vite: {
             plugins: [
               {
-                name: 'astro-inline-review-middleware',
+                name: 'review-loop-middleware',
                 configureServer(server) {
                   server.middlewares.use(createMiddleware(storage));
 
@@ -48,7 +48,7 @@ export default function inlineReview(options: InlineReviewOptions = {}): AstroIn
         });
 
         // Inject client script on every page
-        injectScript('page', `import 'astro-inline-review/client';`);
+        injectScript('page', `import 'review-loop/client';`);
       },
     },
   };

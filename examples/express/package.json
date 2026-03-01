@@ -7,6 +7,6 @@
   },
   "dependencies": {
     "express": "^5.1.0",
-    "astro-inline-review": "file:../../"
+    "review-loop": "file:../../"
   }
 }

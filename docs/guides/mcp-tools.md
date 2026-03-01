@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-Detailed reference for all tools provided by the astro-inline-review MCP server. These tools are the primary way coding agents interact with review annotations.
+Detailed reference for all tools provided by the review-loop MCP server. These tools are the primary way coding agents interact with review annotations.
 
 ## Tools
 

@@ -12,9 +12,9 @@ tags: [idea, remote-mcp, uat, annotation, new-project]
 
 ## Origin
 
-astro-inline-review is a dev-only tool: reviewers annotate during `astro dev`, and coding agents consume annotations via MCP. The question arose — what if non-developers (product owners, QA, stakeholders) could annotate a deployed UAT or staging site, and those annotations flowed directly to a developer's coding agent?
+review-loop is a dev-only tool: reviewers annotate during `astro dev`, and coding agents consume annotations via MCP. The question arose — what if non-developers (product owners, QA, stakeholders) could annotate a deployed UAT or staging site, and those annotations flowed directly to a developer's coding agent?
 
-This document captures the idea, architectural considerations, and open questions. **This would be a separate product**, not a mode of astro-inline-review. The dev-only tool stays focused on the developer-agent feedback loop.
+This document captures the idea, architectural considerations, and open questions. **This would be a separate product**, not a mode of review-loop. The dev-only tool stays focused on the developer-agent feedback loop.
 
 ## The Vision
 
@@ -28,7 +28,7 @@ The feedback loop becomes: reviewer annotates staging site → agent reads annot
 
 ## Why This Is a Separate Product
 
-astro-inline-review has a clear identity: dev-only, ships zero bytes in production, single-developer workflow. Extending it to deployed environments would:
+review-loop has a clear identity: dev-only, ships zero bytes in production, single-developer workflow. Extending it to deployed environments would:
 
 - Dilute the "zero bytes in production" promise
 - Add operational complexity (auth, persistent services, multi-user concurrency)
@@ -116,7 +116,7 @@ This is another reason for a separate product — the deployment model is entire
 
 For Astro SSR sites specifically, an integration could register the API as SSR routes and inject the client script. But the standalone server approach is more universal.
 
-## What Can Be Shared with astro-inline-review
+## What Can Be Shared with review-loop
 
 Despite being a separate product, significant code and design can be shared:
 
@@ -174,5 +174,5 @@ This is an idea, not a commitment. To progress:
 
 1. Validate the workflow — does the reviewer-to-agent loop via MCP actually change how feedback is handled? Could test this manually with the existing tool's markdown export.
 2. Assess MCP remote auth maturity — can Claude Code (and other clients) actually connect to a remote MCP server with OAuth today?
-3. Prototype the standalone annotation server — extract the middleware and storage from astro-inline-review into a standalone Express app.
+3. Prototype the standalone annotation server — extract the middleware and storage from review-loop into a standalone Express app.
 4. Prototype the client as an external script — extract the shadow DOM UI and make it configurable (API base URL, no Astro dependency).

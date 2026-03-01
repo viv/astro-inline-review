@@ -16,7 +16,7 @@ tags: [documentation, engineering-plans, review, completeness, accuracy]
 
 ## Executive Summary
 
-The documentation for astro-inline-review is comprehensive and well-structured. There are 5 engineering plans, 2 guides, 11 previous review documents, a detailed README, and a thorough CLAUDE.md. The engineering plans follow a consistent format with frontmatter metadata and clear session boundaries. The MCP server plan is the most detailed, with 7 fully-completed sessions, and serves as an exemplar of the project's planning approach.
+The documentation for review-loop is comprehensive and well-structured. There are 5 engineering plans, 2 guides, 11 previous review documents, a detailed README, and a thorough CLAUDE.md. The engineering plans follow a consistent format with frontmatter metadata and clear session boundaries. The MCP server plan is the most detailed, with 7 fully-completed sessions, and serves as an exemplar of the project's planning approach.
 
 The main findings are: (1) one engineering plan has a stale status (`agent-prompt-export` is marked `draft` / `not_started` but appears to have been intentionally deferred — needs clarification), (2) the CLAUDE.md is accurate but missing the annotation dismissal feature documentation, (3) the README is accurate and well-written, (4) most previous review recommendations have been addressed, and (5) several plans have minor metadata inconsistencies.
 
@@ -110,7 +110,7 @@ The MCP server plan is the gold standard — each of its 7 sessions has a detail
 - **Severity**: Info
 - **File**: `docs/engineering-plans/2026-02-22-annotation-dismissal.md`
 
-Session 2 describes changes to `../astro-inline-review-tests/` which is a separate repository. The plan clearly notes this is the test repo, and the session boundary is well-defined. However, it's worth noting that Session 2's scenario tests and spec updates may not have been fully executed yet, as the most recent commits focus on Session 1 (the implementation in the main repo).
+Session 2 describes changes to `../review-loop-tests/` which is a separate repository. The plan clearly notes this is the test repo, and the session boundary is well-defined. However, it's worth noting that Session 2's scenario tests and spec updates may not have been fully executed yet, as the most recent commits focus on Session 1 (the implementation in the main repo).
 
 The git log shows:
 - `600c7c2 feat: add annotation delete button and orphan indicator in panel` (Session 1)

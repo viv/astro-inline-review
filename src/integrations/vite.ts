@@ -10,7 +10,7 @@ import { createMiddleware } from '../server/middleware.js';
 const CLIENT_ROUTE = '/__inline-review/client.js';
 
 /**
- * astro-inline-review Vite plugin — dev-only annotation overlay.
+ * review-loop Vite plugin — dev-only annotation overlay.
  *
  * Registers REST API middleware and injects the client script during
  * Vite dev server. Works with any Vite-based framework (SvelteKit,

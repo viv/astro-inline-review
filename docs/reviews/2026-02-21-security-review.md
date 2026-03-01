@@ -4,15 +4,15 @@ generation_date: 2026-02-21
 model_version: claude-opus-4-6
 purpose: security_review
 status: resolved
-scope: [astro-inline-review, astro-inline-review-tests]
+scope: [review-loop, review-loop-tests]
 tags: [security, npm, supply-chain, code-review]
 ---
 
-# Security Review: astro-inline-review & astro-inline-review-tests
+# Security Review: review-loop & review-loop-tests
 
 ## Executive Summary
 
-astro-inline-review is a dev-only Astro integration that provides a text annotation overlay during `astro dev`, persisting annotations to a local JSON file via a REST API served through Vite dev server middleware. The integration ships zero bytes in production builds. astro-inline-review-tests is a separate Playwright acceptance test suite.
+review-loop is a dev-only Astro integration that provides a text annotation overlay during `astro dev`, persisting annotations to a local JSON file via a REST API served through Vite dev server middleware. The integration ships zero bytes in production builds. review-loop-tests is a separate Playwright acceptance test suite.
 
 Overall, the security posture is good for a dev-only tool. The codebase is small (approximately 1,100 lines of source across 19 files), with no runtime dependencies (all dependencies are devDependencies or peerDependencies), clean git history, and no secrets or credentials. The attack surface is constrained to `localhost` during development. I found no critical or high-severity issues. There are several medium and low severity findings related to request body handling, prototype pollution via object spread in the PATCH endpoint, and the use of `innerHTML` with hardcoded strings. Most are low-risk given the dev-only context but worth addressing before wider adoption.
 
@@ -35,7 +35,7 @@ Overall, the security posture is good for a dev-only tool. The codebase is small
 
 ### 1. No Request Body Size Limit (Medium)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/server/middleware.ts` lines 178-191
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/src/server/middleware.ts` lines 178-191
 
 The `readBody()` function accumulates request body chunks into a string with no upper bound:
 
@@ -73,7 +73,7 @@ req.on('data', (chunk: Buffer) => {
 
 ### 2. PATCH Endpoint Field Injection via Object Spread (Medium)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/server/middleware.ts` lines 71-78, 124-129
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/src/server/middleware.ts` lines 71-78, 124-129
 
 The PATCH handlers use object spread to merge the request body into the existing record:
 
@@ -100,7 +100,7 @@ store.annotations[idx] = {
 
 ### 3. innerHTML Usage with Hardcoded Content (Low)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/ui/fab.ts` lines 27, 39; `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/ui/panel.ts` lines 163, 177, 215, 242, 398
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/ui/fab.ts` lines 27, 39; `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/ui/panel.ts` lines 163, 177, 215, 242, 398
 
 Several locations use `innerHTML` assignments:
 
@@ -118,7 +118,7 @@ All `innerHTML` usages are either clearing containers or injecting hardcoded str
 
 ### 4. Storage Path Traversal (Low)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/index.ts` lines 23-25
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/src/index.ts` lines 23-25
 
 ```typescript
 const storagePath = options.storagePath
@@ -132,7 +132,7 @@ The `storagePath` option is passed directly to `resolve()`, which allows paths l
 
 ### 5. Error Message Information Disclosure (Low)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/server/middleware.ts` lines 155-158
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/src/server/middleware.ts` lines 155-158
 
 ```typescript
 catch (err) {
@@ -147,7 +147,7 @@ Internal error messages (e.g. from filesystem errors) are forwarded to the clien
 
 ### 6. ID Generation Predictability (Low)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/server/middleware.ts` lines 164-166
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/src/server/middleware.ts` lines 164-166
 
 ```typescript
 function generateId(): string {
@@ -161,7 +161,7 @@ IDs are generated from `Date.now()` (predictable) and `Math.random()` (not crypt
 
 ### 7. Open Shadow DOM (Informational)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/ui/host.ts` line 21
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/ui/host.ts` line 21
 
 ```typescript
 const shadow = host.attachShadow({ mode: 'open' });
@@ -173,7 +173,7 @@ The Shadow DOM is created with `mode: 'open'`, meaning any script on the page ca
 
 ### 8. npm Package Scope (Informational)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/package.json` lines 15-17
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop/package.json` lines 15-17
 
 ```json
 "files": [
@@ -198,7 +198,7 @@ No source files, tests, docs, assets, or configuration files are included. There
 
 ### 9. Committed inline-review.json (Informational)
 
-**Location:** `/Users/matthewvivian/Documents/code/cpd/astro-inline-review-tests/fixture/inline-review.json`
+**Location:** `/Users/matthewvivian/Documents/code/cpd/review-loop-tests/fixture/inline-review.json`
 
 The test fixture contains an `inline-review.json` file that is committed to the repository. It contains only test fixture data (a single annotation for "dynamically added after page load" on the home page). The file is listed in `.gitignore` but was committed before the ignore rule was added (or the fixture copy is outside the ignore pattern).
 
@@ -265,7 +265,7 @@ The package has **zero runtime dependencies**. The only `peerDependency` is `ast
 
 ### Test Repository
 
-The test repo (`astro-inline-review-tests`) is marked `"private": true` with a single dev dependency (`@playwright/test@^1.50.0`). The `playwright.config.ts` uses only `localhost:4321` - no external URLs or hardcoded credentials. The fixture site contains only synthetic test content with no real personal data. The `.gitignore` correctly excludes `node_modules/`, `test-results/`, `playwright-report/`, and `inline-review.json`.
+The test repo (`review-loop-tests`) is marked `"private": true` with a single dev dependency (`@playwright/test@^1.50.0`). The `playwright.config.ts` uses only `localhost:4321` - no external URLs or hardcoded credentials. The fixture site contains only synthetic test content with no real personal data. The `.gitignore` correctly excludes `node_modules/`, `test-results/`, `playwright-report/`, and `inline-review.json`.
 
 ### Build Configuration
 

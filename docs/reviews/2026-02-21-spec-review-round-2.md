@@ -8,11 +8,11 @@ reviewed_document: docs/spec/specification.md
 prior_review: docs/reviews/2026-02-21-spec-review.md
 cross_references:
   - src/ (component source code)
-  - ../astro-inline-review-tests/ (acceptance test suite)
+  - ../review-loop-tests/ (acceptance test suite)
 tags: [review, specification, quality, gaps, ai-agent-readability, round-2]
 ---
 
-# Specification Review Round 2: astro-inline-review
+# Specification Review Round 2: review-loop
 
 **Reviewed**: `docs/spec/specification.md`
 **Review date**: 2026-02-21
@@ -52,7 +52,7 @@ tags: [review, specification, quality, gaps, ai-agent-readability, round-2]
 - **Severity**: Major
 - **Category**: Source Code Accuracy
 - **Spec section**: 6.3 (Selection Popup) -- Positioning algorithm
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/ui/popup.ts` lines 136-157
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/ui/popup.ts` lines 136-157
 
 **Finding**:
 
@@ -93,7 +93,7 @@ Or add a note:
 - **Severity**: Major
 - **Category**: Source Code Accuracy / Completeness
 - **Spec section**: 15.3 (Context Matching) and 3.4 (SerializedRange)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/selection.ts` lines 193-211
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/selection.ts` lines 193-211
 
 **Finding**:
 
@@ -145,7 +145,7 @@ Add a note to Section 15.3:
 - **Severity**: Major
 - **Category**: Source Code Accuracy / Consistency
 - **Spec section**: 10.4 (Escape Precedence)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/index.ts` lines 73-84
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/index.ts` lines 73-84
 
 **Finding**:
 
@@ -198,7 +198,7 @@ Add to Section 10.4 under the Escape handling:
 - **Severity**: Major
 - **Category**: Source Code Accuracy
 - **Spec section**: 9.3 (Clipboard Export)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/index.ts` lines 85-89
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/index.ts` lines 85-89
 
 **Finding**:
 
@@ -236,7 +236,7 @@ Update Section 9.3 step 1:
 - **Severity**: Minor
 - **Category**: Source Code Accuracy
 - **Spec section**: 7.3 (Selection Filtering)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/annotator.ts` lines 70-73
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/annotator.ts` lines 70-73
 
 **Finding**:
 
@@ -268,7 +268,7 @@ Update condition 4 in Section 7.3:
 - **Severity**: Minor
 - **Category**: Completeness
 - **Spec section**: 7.2 (Editing an Annotation)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/annotator.ts` lines 54-58
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/annotator.ts` lines 54-58
 
 **Finding**:
 
@@ -304,7 +304,7 @@ Add a note to Section 7.2:
 - **Severity**: Minor
 - **Category**: Source Code Accuracy
 - **Spec section**: 14.1 (Automation Contract) and 6.3 (Selection Popup)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/styles.ts` lines 237-248
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/styles.ts` lines 237-248
 
 **Finding**:
 
@@ -342,7 +342,7 @@ Add a brief note to Section 6.3:
 - **Severity**: Minor
 - **Category**: Testability / Consistency
 - **Spec section**: 14.2 (State Tracking)
-- **Test file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review-tests/helpers/actions.ts` lines 207-214
+- **Test file**: `/Users/matthewvivian/Documents/code/cpd/review-loop-tests/helpers/actions.ts` lines 207-214
 
 **Finding**:
 
@@ -389,7 +389,7 @@ This is primarily guidance for test authors and is already partially documented 
 - **Severity**: Minor
 - **Category**: Completeness
 - **Spec section**: 5.6.2 (Shadow Root Bridge)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/ui/panel.ts` lines 119-122 and 491-508
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/ui/panel.ts` lines 119-122 and 491-508
 
 **Finding**:
 
@@ -423,7 +423,7 @@ Add to Section 5.6.2:
 - **Severity**: Minor
 - **Category**: Source Code Accuracy
 - **Spec section**: 4.2.3 (Export Endpoint) and 5.5 (API Client)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/api.ts` lines 62-65
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/api.ts` lines 62-65
 
 **Finding**:
 
@@ -510,7 +510,7 @@ Add a brief note to Section 14 (Automation Contract):
 - **Severity**: Suggestion
 - **Category**: Completeness
 - **Spec section**: 5.1 (Bootstrap Sequence)
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/annotator.ts` lines 270-273
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/annotator.ts` lines 270-273
 
 **Finding**:
 
@@ -538,7 +538,7 @@ Add a brief note to Section 5.1:
 - **Severity**: Suggestion
 - **Category**: Precision & Ambiguity
 - **Spec section**: 5.1 (Bootstrap Sequence), step 8
-- **Source file**: `/Users/matthewvivian/Documents/code/cpd/astro-inline-review/src/client/index.ts` lines 102-107
+- **Source file**: `/Users/matthewvivian/Documents/code/cpd/review-loop/src/client/index.ts` lines 102-107
 
 **Finding**:
 

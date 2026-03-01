@@ -8,7 +8,7 @@ on:
 # NOTE: Acceptance tests (Playwright E2E) run in the separate acceptance.yml
 # workflow on push to main. Verify that acceptance tests pass on main before
 # tagging a release. The acceptance tests require the external test suite repo
-# (viv/astro-inline-review-tests) which makes them impractical to duplicate here.
+# (viv/review-loop-tests) which makes them impractical to duplicate here.
 
 jobs:
   release:

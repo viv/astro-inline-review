@@ -10,7 +10,7 @@ tags: [auto-refresh, polling, mcp, panel, store-poller]
 
 # Auto-Refresh Annotations Panel When MCP Agent Makes Changes
 
-**Issue**: [#15](https://github.com/viv/astro-inline-review/issues/15)
+**Issue**: [#15](https://github.com/viv/review-loop/issues/15)
 
 ## Problem
 

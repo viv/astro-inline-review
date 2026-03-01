@@ -4,7 +4,7 @@ generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: design_review
 status: resolved
-scope: [astro-inline-review, mcp-server]
+scope: [review-loop, mcp-server]
 tags: [mcp, architecture, design-review, agent-integration]
 ---
 
@@ -12,7 +12,7 @@ tags: [mcp, architecture, design-review, agent-integration]
 
 ## Executive Summary
 
-The MCP server adds agent integration to astro-inline-review via 6 tools (4 read, 2 write) over stdio transport. The implementation is ~250 lines of source across 7 files, backed by 30 tests. It reuses the existing `ReviewStorage` class, ensuring file I/O behaviour is identical to the REST API.
+The MCP server adds agent integration to review-loop via 6 tools (4 read, 2 write) over stdio transport. The implementation is ~250 lines of source across 7 files, backed by 30 tests. It reuses the existing `ReviewStorage` class, ensuring file I/O behaviour is identical to the REST API.
 
 Overall the implementation is clean, minimal, and well-suited to purpose. The architecture decision to use stdio transport and run independently of Vite is sound. The tool interfaces are clear for LLM agents. One medium finding around the duplicated `ErrorResult` interface and one around race conditions in write tools are worth addressing.
 

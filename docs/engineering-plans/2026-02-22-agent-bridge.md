@@ -192,7 +192,7 @@ Reasoning:
 
 ## Open questions
 
-- Should the MCP server be a separate package (`astro-inline-review-mcp`) or part of the main integration?
+- Should the MCP server be a separate package (`review-loop-mcp`) or part of the main integration?
 - What's the right transport for local dev — stdio (simpler) or SSE (reuses Vite's HTTP server)?
 - Should `resolve_annotation` actually delete the annotation or just mark it? (Marking is safer — preserves history)
 - Do we need annotation categories/priorities, or is that over-engineering for now?

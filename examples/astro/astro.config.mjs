@@ -1,5 +1,5 @@
 import { defineConfig } from 'astro/config';
-import inlineReview from 'astro-inline-review';
+import inlineReview from 'review-loop';
 
 export default defineConfig({
   integrations: [inlineReview()],

@@ -57,7 +57,7 @@ Every issue's task list must include these standard quality gates:
 Add feature-specific quality gates as needed, for example:
 - `[ ] MCP tools tested end-to-end` (for MCP changes)
 - `[ ] Backward compatibility verified with existing data` (for schema changes)
-- `[ ] Scenario tests updated in `astro-inline-review-tests`` (for UI/behaviour changes)
+- `[ ] Scenario tests updated in `review-loop-tests`` (for UI/behaviour changes)
 - `[ ] No references to removed concept remain in source code` (for removal refactors)
 
 ## Never do this

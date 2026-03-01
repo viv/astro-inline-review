@@ -10,11 +10,11 @@ supersedes: docs/agent-loop-plans/2026-02-22-mcp-server-implementation.md
 tags: [mcp, agent-integration, json, developer-experience, architecture]
 ---
 
-# MCP Server for astro-inline-review
+# MCP Server for review-loop
 
 ## Summary
 
-Add an MCP (Model Context Protocol) server to `astro-inline-review` so that coding agents like Claude Code can read and respond to reviewer annotations via structured tools, without requiring manual copy-paste of markdown exports.
+Add an MCP (Model Context Protocol) server to `review-loop` so that coding agents like Claude Code can read and respond to reviewer annotations via structured tools, without requiring manual copy-paste of markdown exports.
 
 This plan implements **Approach B** from the [Agent Bridge plan](./2026-02-22-agent-bridge.md). Approach A (direct JSON file access via CLAUDE.md) is already implemented.
 
@@ -106,7 +106,7 @@ tests/mcp/
 - MCP notifications/streaming (push-based annotation updates)
 - Agent-created annotations ("I changed this, please review")
 - SSE transport (alternative to stdio for remote dev)
-- Separate npm package (`astro-inline-review-mcp`)
+- Separate npm package (`review-loop-mcp`)
 
 ---
 
@@ -140,12 +140,12 @@ Steps:
 
 3. Update `package.json`:
    - Add export `"./mcp"` pointing to the new entry
-   - Add `"bin": { "astro-inline-review-mcp": "./dist/mcp/server.js" }`
+   - Add `"bin": { "review-loop-mcp": "./dist/mcp/server.js" }`
 
 4. Create `src/mcp/server.ts` — a minimal MCP server:
    - Import `McpServer` from `@modelcontextprotocol/sdk/server/mcp.js`
    - Import `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js`
-   - Create a server with name `"astro-inline-review-mcp"` and version `"0.1.0"`
+   - Create a server with name `"review-loop-mcp"` and version `"0.1.0"`
    - Connect to stdio transport
    - No tools registered yet — just the bare skeleton
 
@@ -372,7 +372,7 @@ Create `.mcp.json` at the project root:
 ```json
 {
   "mcpServers": {
-    "astro-inline-review": {
+    "review-loop": {
       "type": "stdio",
       "command": "node",
       "args": ["./dist/mcp/server.js", "--storage", "./inline-review.json"]

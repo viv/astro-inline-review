@@ -42,7 +42,7 @@ export class ReviewStorage {
             return true;
           }
           console.warn(
-            `[astro-inline-review] Filtering invalid annotation (missing id, pageUrl, or note):`,
+            `[review-loop] Filtering invalid annotation (missing id, pageUrl, or note):`,
             JSON.stringify(a),
           );
           return false;
@@ -56,7 +56,7 @@ export class ReviewStorage {
       }
       // Parse errors or other I/O failures — warn so data loss is debuggable
       console.warn(
-        `[astro-inline-review] Failed to read ${this.filePath}: ${err instanceof Error ? err.message : err}`,
+        `[review-loop] Failed to read ${this.filePath}: ${err instanceof Error ? err.message : err}`,
       );
       return createEmptyStore();
     }

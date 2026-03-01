@@ -2,7 +2,7 @@
 created: 2026-02-24
 status: in-progress
 purpose: Package rename candidates — tracking shortlisted names, availability, and rationale
-context: astro-inline-review is being renamed to drop the Astro-specific branding ahead of multi-framework support
+context: review-loop is being renamed to drop the Astro-specific branding ahead of multi-framework support
 ---
 
 # Package Name Candidates

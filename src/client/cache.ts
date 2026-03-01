@@ -1,6 +1,6 @@
 import type { ReviewStore } from './types.js';
 
-const STORAGE_KEY = 'astro-inline-review';
+const STORAGE_KEY = 'review-loop';
 
 /** Read cached store from localStorage (fast, may be stale) */
 export function readCache(): ReviewStore | null {

@@ -1,5 +1,5 @@
 {
-  "name": "astro-inline-review",
+  "name": "review-loop",
   "version": "0.1.0",
   "description": "Bridge between human reviewers and coding agents — annotate rendered pages in-browser and export location-aware feedback. Works with Astro, Vite, and Express.",
   "type": "module",
@@ -22,7 +22,7 @@
     }
   },
   "bin": {
-    "astro-inline-review-mcp": "./dist/mcp/server.js"
+    "review-loop-mcp": "./dist/mcp/server.js"
   },
   "files": [
     "dist"
@@ -45,11 +45,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/viv/astro-inline-review.git"
+    "url": "git+https://github.com/viv/review-loop.git"
   },
-  "homepage": "https://github.com/viv/astro-inline-review#readme",
+  "homepage": "https://github.com/viv/review-loop#readme",
   "bugs": {
-    "url": "https://github.com/viv/astro-inline-review/issues"
+    "url": "https://github.com/viv/review-loop/issues"
   },
   "scripts": {
     "prepublishOnly": "npm run build && npm test",

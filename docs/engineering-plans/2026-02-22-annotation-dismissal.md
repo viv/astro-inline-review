@@ -13,7 +13,7 @@ tags: [panel, annotation, orphan, delete, dismiss, review-workflow]
 
 ## Context
 
-The astro-inline-review integration supports a review workflow where a human annotates a dev site, exports annotations as Markdown, and feeds them to a coding agent. After the agent makes changes to address annotations, the reviewer reloads the page to verify.
+The review-loop integration supports a review workflow where a human annotates a dev site, exports annotations as Markdown, and feeds them to a coding agent. After the agent makes changes to address annotations, the reviewer reloads the page to verify.
 
 Two problems exist in this verification step:
 
@@ -118,7 +118,7 @@ onAnnotationDelete: async (id) => {
     await refreshBadge();
     mediator.refreshPanel();
   } catch (err) {
-    console.error('[astro-inline-review] Failed to delete annotation:', err);
+    console.error('[review-loop] Failed to delete annotation:', err);
   }
 },
 isAnnotationOrphaned: (id, pageUrl) => {
@@ -179,10 +179,10 @@ Tests will need to trigger `mediator.refreshPanel()` with a store containing ann
 
 **Files to modify:**
 
-1. **`../astro-inline-review-tests/helpers/selectors.ts`** — Add `annotationDelete` selector
-2. **`../astro-inline-review-tests/helpers/actions.ts`** — Add `deleteAnnotationFromPanel`, `seedOrphanAnnotation`
-3. **`../astro-inline-review-tests/helpers/assertions.ts`** — Add `expectAnnotationOrphanIndicator`
-4. **`../astro-inline-review-tests/tests/14-annotation-dismissal.spec.ts`** — New test file
+1. **`../review-loop-tests/helpers/selectors.ts`** — Add `annotationDelete` selector
+2. **`../review-loop-tests/helpers/actions.ts`** — Add `deleteAnnotationFromPanel`, `seedOrphanAnnotation`
+3. **`../review-loop-tests/helpers/assertions.ts`** — Add `expectAnnotationOrphanIndicator`
+4. **`../review-loop-tests/tests/14-annotation-dismissal.spec.ts`** — New test file
 5. **`docs/spec/specification.md`** — Update sections 6.2.3, 6.2.3a, 8.4, 14.1, Appendix A
 
 ### Scenario Tests
@@ -280,7 +280,7 @@ export async function expectAnnotationOrphanIndicator(page: Page, count: number)
   // Orphan indicators are inside the shadow DOM panel
   await expect.poll(async () => {
     return page.evaluate(() => {
-      const host = document.getElementById('astro-inline-review-host');
+      const host = document.getElementById('review-loop-host');
       return host?.shadowRoot?.querySelectorAll('.air-annotation-item__orphan').length ?? 0;
     });
   }).toBe(count);

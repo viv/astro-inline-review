@@ -1,6 +1,6 @@
 import { getAllStyles } from '../styles.js';
 
-const HOST_ID = 'astro-inline-review-host';
+const HOST_ID = 'review-loop-host';
 
 /**
  * Creates the Shadow DOM host element and attaches an open shadow root.

@@ -13,7 +13,7 @@ export interface InlineReviewMiddleware {
 }
 
 /**
- * astro-inline-review Express/Connect adapter — dev-only annotation overlay.
+ * review-loop Express/Connect adapter — dev-only annotation overlay.
  *
  * Returns two middleware functions for use with Express, Connect, or any
  * compatible HTTP framework. Users must manually add the client script tag

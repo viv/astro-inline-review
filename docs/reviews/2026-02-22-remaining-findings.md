@@ -10,7 +10,7 @@ tags: [review, remaining-findings, second-wave, quality-assurance]
 prior_review: docs/reviews/2026-02-22-comprehensive-review.md
 ---
 
-# Remaining Review Findings — astro-inline-review
+# Remaining Review Findings — review-loop
 
 **Date:** 2026-02-22
 **Context:** The comprehensive review identified 144 findings across 7 dimensions and produced 10 implementation prompts, all now completed. This document captures the remaining valid findings from all individual reviews that were not addressed by those 10 prompts.
@@ -176,7 +176,7 @@ Below are ready-to-use prompts for implementing the remaining findings, organise
 **Findings addressed:** REM-01, REM-02, REM-07, REM-08, REM-16, REM-17, REM-18
 
 ```
-Read the following files in the astro-inline-review repository:
+Read the following files in the review-loop repository:
 - src/client/annotator.ts
 - src/client/export.ts
 - src/shared/export.ts
@@ -238,7 +238,7 @@ to get started on the next session.
 **Findings addressed:** REM-03, REM-09, REM-11, REM-19
 
 ```
-Read src/server/storage.ts in the astro-inline-review repository.
+Read src/server/storage.ts in the review-loop repository.
 
 Make these improvements to the ReviewStorage class:
 
@@ -286,7 +286,7 @@ to get started on the next session.
 **Findings addressed:** REM-20 through REM-39
 
 ```
-Read docs/spec/specification.md in the astro-inline-review repository.
+Read docs/spec/specification.md in the review-loop repository.
 Also read src/server/middleware.ts, src/client/annotator.ts,
 src/client/element-selector.ts, and src/client/highlights.ts
 for reference.
@@ -372,7 +372,7 @@ to get started on the next session.
 **Findings addressed:** REM-05, REM-13, REM-14, REM-15
 
 ```
-Read the following files in the astro-inline-review repository:
+Read the following files in the review-loop repository:
 - src/client/shortcuts.ts
 - src/client/index.ts
 - src/client/ui/fab.ts
@@ -490,7 +490,7 @@ to get started on the next session.
 **Findings addressed:** REM-54, REM-55, REM-56, REM-57, REM-61
 
 ```
-Read the following files in the astro-inline-review repository:
+Read the following files in the review-loop repository:
 - src/client/annotator.ts
 - src/client/ui/panel.ts
 - src/client/ui/toast.ts
@@ -588,7 +588,7 @@ to get started on the next session.
 **Findings addressed:** REM-73, REM-74, REM-75, REM-76
 
 ```
-Read the following files in the astro-inline-review repository:
+Read the following files in the review-loop repository:
 - docs/engineering-plans/2026-02-22-mcp-server.md
 - docs/reviews/2026-02-21-test-quality-review.md
 - README.md
@@ -637,7 +637,7 @@ to get started on the next session.
 **Findings addressed:** REM-60, REM-63, REM-64, REM-65, REM-68
 
 ```
-Read the following files in the astro-inline-review repository:
+Read the following files in the review-loop repository:
 - src/client/ui/popup.ts
 - src/client/ui/panel.ts
 - src/client/ui/fab.ts
@@ -731,7 +731,7 @@ These findings were assessed as valid but not worth addressing now:
 Use the following prompt to begin working on remaining findings:
 
 ```
-Read docs/reviews/2026-02-22-remaining-findings.md in the astro-inline-review
+Read docs/reviews/2026-02-22-remaining-findings.md in the review-loop
 repo. This document captures all findings from the independent reviews that
 were not addressed by the comprehensive review's 10 prompts.
 

@@ -77,6 +77,6 @@ All updated documents use British English spelling throughout. Verified: no inst
 | Item | Status | Notes |
 |------|--------|-------|
 | Cursor/Windsurf MCP config examples | Proposed follow-up | The "Other MCP clients" section gives generic guidance. Specific config examples for Cursor and Windsurf would be valuable once their MCP configuration formats stabilise. |
-| Package rename | Pending | The README references `astro-inline-review` throughout. A rename is noted as pending in other docs — documentation will need updating when the new name is finalised. |
-| Acceptance test repo link | To confirm | The link to `astro-inline-review-tests` in Contributing should be verified as accessible. |
+| Package rename | Pending | The README references `review-loop` throughout. A rename is noted as pending in other docs — documentation will need updating when the new name is finalised. |
+| Acceptance test repo link | To confirm | The link to `review-loop-tests` in Contributing should be verified as accessible. |
 | Element annotation in specification | Already covered | The specification already documents Alt+click element annotation thoroughly. No changes needed beyond the overview reframing. |

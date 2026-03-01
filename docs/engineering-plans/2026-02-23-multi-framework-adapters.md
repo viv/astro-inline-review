@@ -35,10 +35,10 @@ The `Connect` type import in `middleware.ts` represents the only non-Astro coupl
 
 Introduce two new adapter entry points alongside the existing Astro integration:
 
-1. **Vite plugin** (`astro-inline-review/vite`) — dev-only Vite plugin; covers SvelteKit, Nuxt 3, Remix (Vite mode), and plain Vite apps with a one-line config change
-2. **Express/Connect middleware** (`astro-inline-review/express`) — explicit mount + HTML injection helper; covers server-rendered Node apps and any Connect-compatible server
+1. **Vite plugin** (`review-loop/vite`) — dev-only Vite plugin; covers SvelteKit, Nuxt 3, Remix (Vite mode), and plain Vite apps with a one-line config change
+2. **Express/Connect middleware** (`review-loop/express`) — explicit mount + HTML injection helper; covers server-rendered Node apps and any Connect-compatible server
 
-The existing Astro integration (`astro-inline-review`) is unchanged and remains the primary entry point. All three adapters share the same `ReviewStorage` and `createMiddleware` internals.
+The existing Astro integration (`review-loop`) is unchanged and remains the primary entry point. All three adapters share the same `ReviewStorage` and `createMiddleware` internals.
 
 A package rename (`inline-review`) is out of scope for this issue but worth noting as a future consideration if non-Astro adoption is strong.
 
@@ -77,7 +77,7 @@ export function inlineReview(options: InlineReviewViteOptions = {}): Plugin {
       return [{
         tag: 'script',
         attrs: { type: 'module' },
-        children: `import 'astro-inline-review/client';`,
+        children: `import 'review-loop/client';`,
         injectTo: 'body',
       }];
     },
@@ -87,7 +87,7 @@ export function inlineReview(options: InlineReviewViteOptions = {}): Plugin {
 
 **Usage (vite.config.ts):**
 ```typescript
-import { inlineReview } from 'astro-inline-review/vite';
+import { inlineReview } from 'review-loop/vite';
 export default { plugins: [inlineReview()] };
 ```
 
@@ -131,7 +131,7 @@ export function inlineReview(options: InlineReviewExpressOptions = {}): InlineRe
 **Usage (Express app):**
 ```typescript
 import express from 'express';
-import { inlineReview } from 'astro-inline-review/express';
+import { inlineReview } from 'review-loop/express';
 
 const app = express();
 if (process.env.NODE_ENV !== 'production') {
@@ -228,7 +228,7 @@ Add a new section covering the adapter model: how each adapter wires up the midd
 7. Write tests for the Vite plugin
 8. Run full test suite and verify build
 
-**Exit state:** `astro-inline-review/vite` works in a plain Vite app. All existing tests pass.
+**Exit state:** `review-loop/vite` works in a plain Vite app. All existing tests pass.
 
 ---
 
@@ -244,7 +244,7 @@ Add a new section covering the adapter model: how each adapter wires up the midd
 5. Write tests for Express adapter (use `node:http` test server, no Express required for tests)
 6. Run full test suite and verify build
 
-**Exit state:** `astro-inline-review/express` works in a Connect-compatible Node.js app. All existing tests pass.
+**Exit state:** `review-loop/express` works in a Connect-compatible Node.js app. All existing tests pass.
 
 ---
 

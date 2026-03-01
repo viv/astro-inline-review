@@ -1,9 +1,9 @@
-# astro-inline-review
+# review-loop
 
-[![CI](https://github.com/viv/astro-inline-review/actions/workflows/ci.yml/badge.svg)](https://github.com/viv/astro-inline-review/actions/workflows/ci.yml)
-[![Acceptance Tests](https://github.com/viv/astro-inline-review/actions/workflows/acceptance.yml/badge.svg)](https://github.com/viv/astro-inline-review/actions/workflows/acceptance.yml)
-[![npm version](https://img.shields.io/npm/v/astro-inline-review)](https://www.npmjs.com/package/astro-inline-review)
-[![licence](https://img.shields.io/npm/l/astro-inline-review)](LICENSE)
+[![CI](https://github.com/viv/review-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/viv/review-loop/actions/workflows/ci.yml)
+[![Acceptance Tests](https://github.com/viv/review-loop/actions/workflows/acceptance.yml/badge.svg)](https://github.com/viv/review-loop/actions/workflows/acceptance.yml)
+[![npm version](https://img.shields.io/npm/v/review-loop)](https://www.npmjs.com/package/review-loop)
+[![licence](https://img.shields.io/npm/l/review-loop)](LICENSE)
 
 A dev-only annotation overlay that bridges human reviewers and AI coding agents. Browse your rendered site, annotate what needs changing, and let your coding agent act on the feedback directly via [MCP](https://modelcontextprotocol.io) — no copy-paste, no hunting through source files.
 
@@ -13,7 +13,7 @@ Works with [Astro](https://astro.build), any [Vite](https://vite.dev)-based fram
 
 Reviewing a live site and turning that into actionable code changes is tedious. You spot a typo, an awkward heading, a paragraph that needs rewriting — but translating "that bit on the homepage, third section down" into a precise instruction means switching context, finding the right file, and describing what you saw.
 
-**astro-inline-review** keeps you in the browser. Select text, write your note, move on. Your coding agent reads the annotations directly and acts on them.
+**review-loop** keeps you in the browser. Select text, write your note, move on. Your coding agent reads the annotations directly and acts on them.
 
 ```
 Human reviewer                    AI coding agent
@@ -49,7 +49,7 @@ A secondary **Markdown export** is also available for agents that don't support 
 ### 1. Install
 
 ```bash
-npm install -D astro-inline-review
+npm install -D review-loop
 ```
 
 ### 2. Add the integration
@@ -60,7 +60,7 @@ npm install -D astro-inline-review
 ```javascript
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
-import inlineReview from 'astro-inline-review';
+import inlineReview from 'review-loop';
 
 export default defineConfig({
   integrations: [inlineReview()],
@@ -75,7 +75,7 @@ export default defineConfig({
 ```javascript
 // vite.config.js
 import { defineConfig } from 'vite';
-import inlineReview from 'astro-inline-review/vite';
+import inlineReview from 'review-loop/vite';
 
 export default defineConfig({
   plugins: [inlineReview()],
@@ -91,7 +91,7 @@ The Vite plugin uses `transformIndexHtml` to inject the client script automatica
 
 ```javascript
 import express from 'express';
-import { inlineReview } from 'astro-inline-review/express';
+import { inlineReview } from 'review-loop/express';
 
 const app = express();
 const { apiMiddleware, clientMiddleware } = inlineReview();
@@ -116,11 +116,11 @@ Add a `.mcp.json` file to your project root:
 ```json
 {
   "mcpServers": {
-    "astro-inline-review": {
+    "review-loop": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "./node_modules/astro-inline-review/dist/mcp/server.js",
+        "./node_modules/review-loop/dist/mcp/server.js",
         "--storage",
         "./inline-review.json"
       ]
@@ -183,7 +183,7 @@ The MCP server lets coding agents read and respond to annotations directly — n
 For MCP clients other than Claude Code, configure the stdio transport manually:
 
 - **Command**: `node`
-- **Arguments**: `["./node_modules/astro-inline-review/dist/mcp/server.js", "--storage", "./inline-review.json"]`
+- **Arguments**: `["./node_modules/review-loop/dist/mcp/server.js", "--storage", "./inline-review.json"]`
 - **Transport**: stdio
 - **Working directory**: your Astro project root
 
@@ -301,13 +301,13 @@ Each example includes two pages with navigation links so you can test multi-page
 
 Contributions are welcome. Please open an issue first to discuss what you'd like to change.
 
-The acceptance test suite lives in a separate repository: [astro-inline-review-tests](https://github.com/viv/astro-inline-review-tests).
+The acceptance test suite lives in a separate repository: [review-loop-tests](https://github.com/viv/review-loop-tests).
 
 ## Alternatives
 
 [astro-annotate](https://github.com/jan-nikolov/astro-annotate) is a similar Astro integration built independently around the same time. Both tools solve the same core problem — annotating a rendered Astro site and producing structured output for coding agents — but take different approaches:
 
-| | astro-inline-review | astro-annotate |
+| | review-loop | astro-annotate |
 |---|---|---|
 | **Selection model** | Text selection + element selection (Alt+click) | Element selection (annotate whole HTML elements) |
 | **Agent integration** | MCP server (primary) + Markdown export | JSON file |
@@ -316,7 +316,7 @@ The acceptance test suite lives in a separate repository: [astro-inline-review-t
 | **Device tagging** | No | Yes, desktop/mobile/tablet with viewport dimensions |
 | **Deployment model** | Dev-only by design | Dev-only now, deployed mode planned (Cloudflare Pages) |
 
-**Choose astro-inline-review** if you want a tight feedback loop between human reviewers and coding agents. The MCP integration lets agents read, act on, and resolve annotations without copy-paste.
+**Choose review-loop** if you want a tight feedback loop between human reviewers and coding agents. The MCP integration lets agents read, act on, and resolve annotations without copy-paste.
 
 **Choose astro-annotate** if you're collecting UI/layout feedback from clients or stakeholders and want device-tagged element-level annotations.
 
@@ -324,7 +324,7 @@ The acceptance test suite lives in a separate repository: [astro-inline-review-t
 
 [Vibe Annotations](https://www.vibe-annotations.com/) is a Chrome extension + MCP server that takes a framework-agnostic approach to the same problem:
 
-| | astro-inline-review | Vibe Annotations |
+| | review-loop | Vibe Annotations |
 |---|---|---|
 | **Delivery** | Framework integration (zero-config, auto-injected) | Chrome extension + separate MCP server |
 | **Framework support** | Astro, Vite (SvelteKit/Nuxt/Remix), Express/Connect | Any localhost dev server |
@@ -333,7 +333,7 @@ The acceptance test suite lives in a separate repository: [astro-inline-review-t
 | **Status lifecycle** | open → addressed → resolved, with agent replies | Read → implement → delete (batch cycle) |
 | **Persistence** | JSON file in project root (survives restarts, committable) | Server-side (cleared per cycle) |
 
-**Choose astro-inline-review** if you need text-level precision for copy review, a persistent status lifecycle with agent replies, or zero-install setup for Astro projects.
+**Choose review-loop** if you need text-level precision for copy review, a persistent status lifecycle with agent replies, or zero-install setup for Astro projects.
 
 **Choose Vibe Annotations** if you need framework-agnostic coverage today and element-level annotation is sufficient for your workflow.
 

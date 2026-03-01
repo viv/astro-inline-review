@@ -50,7 +50,7 @@ Next.js middleware runs on the Edge Runtime, which doesn't support Node.js APIs 
 
 ## Adapter Design
 
-### Entry point: `astro-inline-review/nextjs`
+### Entry point: `review-loop/nextjs`
 
 ```typescript
 // src/integrations/nextjs.ts
@@ -102,7 +102,7 @@ export function createHandler(options: InlineReviewOptions = {}): NextRouteHandl
 }
 ```
 
-### Client component: `astro-inline-review/nextjs/script`
+### Client component: `review-loop/nextjs/script`
 
 ```tsx
 // src/integrations/nextjs-script.tsx
@@ -115,7 +115,7 @@ import Script from 'next/script';
  * Injects the inline-review client script in development only.
  *
  * Usage in app/layout.tsx:
- *   import { InlineReviewScript } from 'astro-inline-review/nextjs/script';
+ *   import { InlineReviewScript } from 'review-loop/nextjs/script';
  *   // ... in JSX: <InlineReviewScript />
  */
 export function InlineReviewScript() {
@@ -171,14 +171,14 @@ Add a second function in `middleware.ts` that works directly with `Request`/`Res
 ### 1. Install
 
 ```bash
-npm install -D astro-inline-review
+npm install -D review-loop
 ```
 
 ### 2. Create the API route
 
 ```typescript
 // app/api/__inline-review/[...route]/route.ts
-import { createHandler } from 'astro-inline-review/nextjs';
+import { createHandler } from 'review-loop/nextjs';
 
 export const { GET, POST, PATCH, DELETE } = createHandler();
 ```
@@ -187,7 +187,7 @@ export const { GET, POST, PATCH, DELETE } = createHandler();
 
 ```tsx
 // app/layout.tsx
-import { InlineReviewScript } from 'astro-inline-review/nextjs/script';
+import { InlineReviewScript } from 'review-loop/nextjs/script';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -241,7 +241,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 3. **Next.js version support**: Target Next.js 14+ (App Router) or also support Pages Router? Recommendation: App Router only (14+) — Pages Router is legacy and declining in adoption.
 
-4. **Package naming**: Currently `astro-inline-review/nextjs`. If non-Astro adoption grows, a package rename to `inline-review` may be warranted (out of scope for this plan).
+4. **Package naming**: Currently `review-loop/nextjs`. If non-Astro adoption grows, a package rename to `inline-review` may be warranted (out of scope for this plan).
 
 ## Test Plan
 

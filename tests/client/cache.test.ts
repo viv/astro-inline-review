@@ -19,7 +19,7 @@ describe('cache', () => {
   });
 
   it('returns null on corrupted localStorage data', () => {
-    localStorage.setItem('astro-inline-review', 'not json!!!');
+    localStorage.setItem('review-loop', 'not json!!!');
 
     expect(readCache()).toBeNull();
   });

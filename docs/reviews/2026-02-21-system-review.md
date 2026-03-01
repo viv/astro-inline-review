@@ -8,11 +8,11 @@ human_reviewer: matthewvivian
 tags: [architecture, code-review, technical-debt, element-annotation, system-review]
 ---
 
-# System Architecture Review: astro-inline-review
+# System Architecture Review: review-loop
 
 ## Executive Summary
 
-astro-inline-review is a well-structured, focused dev-only Astro integration providing an annotation overlay for bridging human reviewers and coding agents. The codebase is approximately 1,500 lines of TypeScript across 20 source files, split cleanly between server (storage + middleware) and client (UI + annotation logic). The architecture follows a clear top-down initialisation pattern with component composition in the client bootstrap, and a straightforward REST API served via Vite dev server middleware on the server side.
+review-loop is a well-structured, focused dev-only Astro integration providing an annotation overlay for bridging human reviewers and coding agents. The codebase is approximately 1,500 lines of TypeScript across 20 source files, split cleanly between server (storage + middleware) and client (UI + annotation logic). The architecture follows a clear top-down initialisation pattern with component composition in the client bootstrap, and a straightforward REST API served via Vite dev server middleware on the server side.
 
 The recent addition of element annotations via Alt+click has been integrated thoughtfully using a discriminated union pattern (`type: 'text' | 'element'`) that extends naturally from the existing text annotation model. The type guards (`isTextAnnotation`, `isElementAnnotation`) provide clean narrowing throughout the codebase, and the three-tier resolution strategy (CSS selector → XPath → orphaned) mirrors the existing text restoration pattern. The element-selector module is well-isolated with a clear single responsibility.
 
@@ -195,7 +195,7 @@ Error handling follows a consistent "swallow and fallback" strategy appropriate 
 - Server: corrupted JSON → empty store, missing file → empty store
 - Client: API failure → fall back to localStorage cache, cache failure → ignore
 - Highlights: restoration failure → annotation becomes orphaned (visible in panel, no highlight)
-- Console errors prefixed with `[astro-inline-review]` for filtering
+- Console errors prefixed with `[review-loop]` for filtering
 
 This is pragmatic and correct — an annotation overlay should never crash the dev site.
 

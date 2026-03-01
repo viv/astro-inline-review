@@ -1,6 +1,6 @@
 # Vite Example
 
-Minimal Vite project for manually testing the astro-inline-review Vite plugin.
+Minimal Vite project for manually testing the review-loop Vite plugin.
 
 ## Setup
 

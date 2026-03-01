@@ -17,15 +17,15 @@ review_agents:
   - arch-reviewer
 ---
 
-# Comprehensive Review — astro-inline-review
+# Comprehensive Review — review-loop
 
 **Date:** 2026-02-22
 **Method:** Parallel multi-agent review across 7 dimensions
-**Repositories:** `astro-inline-review`, `astro-inline-review-tests`
+**Repositories:** `review-loop`, `review-loop-tests`
 
 ## Executive Summary
 
-astro-inline-review is a well-architected, dev-only Astro integration with clean separation of concerns across client, server, and MCP layers. The codebase is mature for its stage (~7,000 lines of TypeScript across source and tests) with comprehensive documentation, a thorough specification, and good test infrastructure.
+review-loop is a well-architected, dev-only Astro integration with clean separation of concerns across client, server, and MCP layers. The codebase is mature for its stage (~7,000 lines of TypeScript across source and tests) with comprehensive documentation, a thorough specification, and good test infrastructure.
 
 **Overall health: Good — with targeted improvements needed in accessibility, concurrency safety, and test coverage.**
 
@@ -427,7 +427,7 @@ Below are ready-to-use prompts for independent AI agents to implement each recom
 ### Prompt 1: Fix Read-Modify-Write Race Condition — ✅ Implemented
 
 ```
-Read src/server/storage.ts in the astro-inline-review repository.
+Read src/server/storage.ts in the review-loop repository.
 
 Add a new async method `mutate(fn)` to the ReviewStorage class that:
 1. Queues behind the existing writeQueue
@@ -461,7 +461,7 @@ plans in docs/). Commit all changes and push.
 ### Prompt 2: Replace innerHTML with DOM API — ✅ Implemented
 
 ```
-Read src/client/ui/panel.ts in the astro-inline-review repository.
+Read src/client/ui/panel.ts in the review-loop repository.
 
 Find all instances of `innerHTML` assignment and replace them with
 equivalent DOM API calls using createElement, textContent, and appendChild.
@@ -486,7 +486,7 @@ plans in docs/). Commit all changes and push.
 ### Prompt 3: Add REST API Input Validation — ✅ Implemented
 
 ```
-Read src/server/middleware.ts in the astro-inline-review repository.
+Read src/server/middleware.ts in the review-loop repository.
 
 The POST /annotations and POST /page-notes endpoints accept arbitrary
 JSON. Add validation to reject malformed payloads.
@@ -519,7 +519,7 @@ plans in docs/). Commit all changes and push.
 ### Prompt 4: Add ARIA Semantics and Focus Management — ✅ Implemented
 
 ```
-Read the following files in astro-inline-review:
+Read the following files in review-loop:
 - src/client/ui/panel.ts
 - src/client/ui/popup.ts
 - src/client/ui/fab.ts
@@ -565,7 +565,7 @@ plans in docs/). Commit all changes and push.
 ### Prompt 5: Add annotator.ts Unit Tests — ✅ Implemented
 
 ```
-Read src/client/annotator.ts in the astro-inline-review repository.
+Read src/client/annotator.ts in the review-loop repository.
 Also read tests/client/highlights.test.ts and tests/client/selection.test.ts
 for examples of how the test environment is set up.
 
@@ -613,7 +613,7 @@ plans in docs/). Commit all changes and push.
 ### Prompt 6: Add element-selector.ts Unit Tests — ✅ Implemented
 
 ```
-Read src/client/element-selector.ts in the astro-inline-review repository.
+Read src/client/element-selector.ts in the review-loop repository.
 
 Create tests/client/element-selector.test.ts with tests covering:
 
@@ -646,7 +646,7 @@ plans in docs/). Commit all changes and push.
 ### Prompt 7: Update Specification — ✅ Implemented
 
 ```
-Read docs/spec/specification.md in the astro-inline-review repository.
+Read docs/spec/specification.md in the review-loop repository.
 Also read src/shared/types.ts, src/client/mediator.ts, and
 src/client/ui/panel.ts for the current implementation.
 
@@ -690,7 +690,7 @@ changes and push.
 
 ```
 Read .github/workflows/ci.yml, .github/workflows/acceptance.yml,
-and .github/workflows/release.yml in the astro-inline-review repository.
+and .github/workflows/release.yml in the review-loop repository.
 
 Make the following changes:
 
@@ -732,7 +732,7 @@ Print the next prompt (Prompt 9) from this file.
 ### Prompt 9: Update CLAUDE.md and Documentation
 
 ```
-Read CLAUDE.md in the astro-inline-review repository root.
+Read CLAUDE.md in the review-loop repository root.
 
 1. Update the Schema section to add these fields to the annotation example:
    "resolvedAt": "ISO 8601 (optional)",
@@ -765,7 +765,7 @@ Print the next prompt (Prompt 10) from this file.
 ### Prompt 10: Add Delete Confirmation and Scroll Threshold
 
 ```
-Read src/client/ui/panel.ts in the astro-inline-review repository.
+Read src/client/ui/panel.ts in the review-loop repository.
 Focus on the annotation delete button and the "Clear All" confirmation pattern.
 
 1. Add a two-click confirmation to individual delete buttons,
@@ -799,7 +799,7 @@ This is the final prompt. All review recommendations have been implemented.
 Use the following prompt to begin the next implementation session. Replace `N` with the prompt number you want to work on.
 
 ```
-Read docs/reviews/2026-02-22-comprehensive-review.md in the astro-inline-review
+Read docs/reviews/2026-02-22-comprehensive-review.md in the review-loop
 repo. This is a consolidated review with prioritised findings.
 
 Prompt 1 (race condition fix) is already implemented. Continue with

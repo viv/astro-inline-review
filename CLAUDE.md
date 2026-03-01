@@ -1,4 +1,4 @@
-# astro-inline-review
+# review-loop
 
 Dev-only annotation overlay that bridges human reviewers and AI coding agents. Works with Astro, Vite-based frameworks (SvelteKit, Nuxt, Remix), and Express/Connect. Reviewers annotate the site in-browser; annotations persist to a JSON file. Ships zero bytes in production.
 
@@ -142,8 +142,8 @@ git push origin main --tags
 - `src/client/orphan-tracker.ts` — grace period tracker for orphaned annotations during agent work
 - `src/index.ts` — main entry point (re-exports Astro adapter)
 - `src/integrations/astro.ts` — Astro integration adapter
-- `src/integrations/vite.ts` — standalone Vite plugin adapter (`astro-inline-review/vite`)
-- `src/integrations/express.ts` — Express/Connect adapter (`astro-inline-review/express`)
+- `src/integrations/vite.ts` — standalone Vite plugin adapter (`review-loop/vite`)
+- `src/integrations/express.ts` — Express/Connect adapter (`review-loop/express`)
 - `src/mcp/server.ts` — MCP server entry point (CLI argument parsing, tool registration)
 - `src/mcp/types.ts` — shared MCP tool result types (ToolResult, ErrorResult)
 - `src/mcp/tools/` — individual MCP tool handlers

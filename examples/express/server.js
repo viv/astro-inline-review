@@ -1,5 +1,5 @@
 import express from 'express';
-import { inlineReview } from 'astro-inline-review/express';
+import { inlineReview } from 'review-loop/express';
 
 const app = express();
 const { apiMiddleware, clientMiddleware } = inlineReview();
@@ -31,7 +31,7 @@ app.get('/', (req, res) => {
 
   <h1>Express Inline Review Example</h1>
 
-  <p>This page exists to test the <strong>astro-inline-review</strong> Express adapter.
+  <p>This page exists to test the <strong>review-loop</strong> Express adapter.
   Select any text to create a text annotation, or <kbd>Alt+click</kbd> an element to
   create an element annotation.</p>
 
@@ -84,7 +84,7 @@ app.get('/about', (req, res) => {
 
   <div class="card">
     <h3>Project Details</h3>
-    <p>This project demonstrates the Express/Connect adapter for astro-inline-review.
+    <p>This project demonstrates the Express/Connect adapter for review-loop.
     The adapter provides <code>apiMiddleware</code> for the REST API and
     <code>clientMiddleware</code> to serve the bundled client script.</p>
   </div>

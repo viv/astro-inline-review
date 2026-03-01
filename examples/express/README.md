@@ -1,6 +1,6 @@
 # Express Inline Review Example
 
-Minimal Express server for manually testing the astro-inline-review Express adapter.
+Minimal Express server for manually testing the review-loop Express adapter.
 
 ## Setup
 

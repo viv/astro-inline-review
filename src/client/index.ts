@@ -41,7 +41,7 @@ function scrollToAnnotation(id: string): void {
 }
 
 // Idempotency guard
-const INIT_FLAG = '__astro_inline_review_init';
+const INIT_FLAG = '__review_loop_init';
 
 declare global {
   interface Window {
@@ -107,7 +107,7 @@ function init(): void {
         await refreshBadge();
         mediator.refreshPanel();
       } catch (err) {
-        console.error('[astro-inline-review] Failed to delete annotation:', err);
+        console.error('[review-loop] Failed to delete annotation:', err);
         showToast(shadowRoot, 'Failed to delete annotation');
       }
     },
@@ -122,7 +122,7 @@ function init(): void {
         await refreshBadge();
         mediator.refreshPanel();
       } catch (err) {
-        console.error('[astro-inline-review] Failed to update annotation status:', err);
+        console.error('[review-loop] Failed to update annotation status:', err);
         showToast(shadowRoot, 'Failed to update status');
       }
     },

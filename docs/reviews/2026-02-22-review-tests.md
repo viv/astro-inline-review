@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-22
 **Reviewer:** test-reviewer agent
-**Repository:** astro-inline-review
+**Repository:** review-loop
 **Test Framework:** Vitest 3.2.4
 **Test Status:** All 161 tests passing (18 test files)
 
@@ -265,7 +265,7 @@ tests/
 |----------|--------|----------|-------|
 | **Unit tests** | Partial | **Critical** | Major modules untested (annotator, element-selector, popup) |
 | **Integration tests** | Good (MCP) | **Medium** | MCP server has full integration tests. Missing: REST API integration (real HTTP), Astro integration hook |
-| **End-to-end / Acceptance** | None | **High** | No browser-based tests (Playwright, Cypress). The `astro-inline-review-test` repo does not exist. No tests verify the tool works in an actual Astro dev server. |
+| **End-to-end / Acceptance** | None | **High** | No browser-based tests (Playwright, Cypress). The `review-loop-test` repo does not exist. No tests verify the tool works in an actual Astro dev server. |
 | **Performance tests** | None | **Medium** | No tests for large stores (1000+ annotations), DOM with 10,000+ text nodes, rapid annotation creation |
 | **Accessibility tests** | None | **Medium** | FAB has `aria-label` (tested), but no tests for panel keyboard navigation, screen reader compatibility, focus management |
 | **Snapshot tests** | None | **Low** | Could be useful for export markdown format stability |

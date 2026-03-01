@@ -8,7 +8,7 @@ human_reviewer: matthewvivian
 tags: [testing, playwright, coverage, acceptance-tests, quality-assurance]
 ---
 
-# Test Coverage Report: astro-inline-review
+# Test Coverage Report: review-loop
 
 ## Scope
 
@@ -315,7 +315,7 @@ The test helpers (`actions.ts`, `assertions.ts`, `selectors.ts`) are well-design
 | G23 | External JSON file editing picked up on reload | 4.1 | Niche workflow |
 | G24 | Style isolation `:host { all: initial }` | 5.3 | Low risk |
 | G25 | SerializedRange context strings exactly 30 chars | 3.4 | Implementation detail |
-| G26 | Console error prefix `[astro-inline-review]` | 16.2 | Observability only |
+| G26 | Console error prefix `[review-loop]` | 16.2 | Observability only |
 
 ---
 
@@ -401,7 +401,7 @@ All 10 recommended tests were implemented on 2026-02-21. See implementation log 
 
 **2026-02-21 — All 10 recommended tests implemented**
 
-Tests T1–T10 were written and added to the `astro-inline-review-tests` repo:
+Tests T1–T10 were written and added to the `review-loop-tests` repo:
 
 Each test was placed in the existing spec file where it naturally belongs:
 

@@ -5,15 +5,15 @@ model_version: claude-opus-4-6
 purpose: security_review_round_2
 status: resolved
 prior_review: docs/reviews/2026-02-21-security-review.md
-scope: [astro-inline-review, client, server, element-annotation, supply-chain]
+scope: [review-loop, client, server, element-annotation, supply-chain]
 tags: [security, npm, xss, dom, api, supply-chain, code-review]
 ---
 
-# Security Review Round 2: astro-inline-review
+# Security Review Round 2: review-loop
 
 ## Executive Summary
 
-This is a deep follow-up security review of `astro-inline-review`, building on the initial review performed earlier on 2026-02-21. The two medium-severity findings from the first review (body size limit, PATCH field allowlisting) have been **correctly fixed** and are **verified with tests**. The codebase maintains a strong security posture for a dev-only tool running on localhost.
+This is a deep follow-up security review of `review-loop`, building on the initial review performed earlier on 2026-02-21. The two medium-severity findings from the first review (body size limit, PATCH field allowlisting) have been **correctly fixed** and are **verified with tests**. The codebase maintains a strong security posture for a dev-only tool running on localhost.
 
 This review goes deeper into DOM security, API edge cases, the new element annotation feature, file system concerns, client-side attack vectors, and supply chain security. No critical or high-severity vulnerabilities were found. The new findings are predominantly low-severity or informational, reflecting the narrow attack surface of a localhost dev tool that ships zero bytes in production.
 
@@ -41,7 +41,7 @@ Overall risk posture: **Low**. The codebase demonstrates consistent security awa
 | 14 | Low | Race Condition | Read-modify-write cycle in PATCH/DELETE not serialised per record | Acceptable for single-user dev tool; document the assumption |
 | 15 | Low | Dependency | `minimatch` ReDoS vulnerability in dev dependency chain | Update `@vitest/coverage-v8` when a patched version is available |
 | 16 | Informational | Source Maps | Source maps published in npm package | Not a concern for MIT-licensed open source |
-| 17 | Informational | Global State | `window.__astro_inline_review_init` and ShadowRoot `__` properties | Documented convention; low risk in dev context |
+| 17 | Informational | Global State | `window.__review_loop_init` and ShadowRoot `__` properties | Documented convention; low risk in dev context |
 | 18 | Informational | Event Handling | Capture-phase click handler (`onClickCapture`) intercepts Alt+clicks | Correct use of capture phase; no security implication |
 | 19 | Informational | Element Selector | `CSS.escape()` correctly used in CSS selector generation | Good security practice — positive observation |
 | 20 | Informational | Inspector Overlay | Light DOM overlay during Alt+hover has no injection vectors | Clean implementation using `textContent` and inline styles |
@@ -158,15 +158,15 @@ These map back to the original TypeScript source. For an MIT-licensed open-sourc
 ### 17. Global State and ShadowRoot Properties (Informational)
 
 **Location:**
-- `src/client/index.ts` line 20: `window.__astro_inline_review_init`
+- `src/client/index.ts` line 20: `window.__review_loop_init`
 - `src/client/annotator.ts` lines 532-533: `(shadowRoot as any).__scrollToAnnotation`, `(shadowRoot as any).__restoreHighlights`
 - `src/client/ui/panel.ts` line 120: `(shadowRoot as any).__refreshPanel`
 
 The codebase uses a global flag for idempotency and attaches functions to the shadow root for cross-component communication. These use `__` prefixed names to signal they are internal.
 
 **Security implications:**
-- `window.__astro_inline_review_init` could be set by malicious code to prevent the tool from initialising. Impact: minor — it just disables the dev tool.
-- The shadow root `__` properties are accessible via `document.getElementById('astro-inline-review-host').shadowRoot.__scrollToAnnotation` etc. A script on the same page could call these to scroll, refresh, or restore highlights. Impact: negligible — these are read-only-like operations on a dev tool.
+- `window.__review_loop_init` could be set by malicious code to prevent the tool from initialising. Impact: minor — it just disables the dev tool.
+- The shadow root `__` properties are accessible via `document.getElementById('review-loop-host').shadowRoot.__scrollToAnnotation` etc. A script on the same page could call these to scroll, refresh, or restore highlights. Impact: negligible — these are read-only-like operations on a dev tool.
 
 **Assessment:** Acceptable for a dev tool with open shadow DOM. The `__` convention is a reasonable signal of internal API.
 

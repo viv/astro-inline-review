@@ -4,7 +4,7 @@ generation_date: 2026-02-22
 model_version: claude-opus-4-6
 purpose: security_review
 status: resolved
-scope: [astro-inline-review, mcp-server]
+scope: [review-loop, mcp-server]
 tags: [security, mcp, agent-integration, code-review]
 ---
 
@@ -12,7 +12,7 @@ tags: [security, mcp, agent-integration, code-review]
 
 ## Executive Summary
 
-The MCP server adds agent integration to astro-inline-review via 6 tools (4 read, 2 write) over stdio transport. The implementation is ~280 lines of source across 8 files (`server.ts`, `types.ts`, and 6 tool files), backed by 45 tests (35 unit + 10 integration). It reuses the existing `ReviewStorage` class for all file I/O.
+The MCP server adds agent integration to review-loop via 6 tools (4 read, 2 write) over stdio transport. The implementation is ~280 lines of source across 8 files (`server.ts`, `types.ts`, and 6 tool files), backed by 45 tests (35 unit + 10 integration). It reuses the existing `ReviewStorage` class for all file I/O.
 
 The security posture is good. The stdio transport constrains the attack surface to the local machine — there is no network listener, no HTTP port, and no authentication surface. Input validation uses Zod schemas at the MCP SDK layer. The main concern is the `--storage` CLI argument which accepts arbitrary file paths, but this is consistent with the trust model established for the REST API's `storagePath` option (developer-controlled configuration).
 
